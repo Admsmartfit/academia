@@ -1,0 +1,264 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Pagamentos em Atraso{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="fas fa-exclamation-triangle text-danger"></i>
+        Pagamentos em Atraso
+    </h4>
+    <div>
+        <a href="{{ url_for('admin_payments.pending_payments') }}" class="btn btn-outline-warning">
+            <i class="fas fa-clock"></i> Ver Pendentes
+        </a>
+        <form action="{{ url_for('admin_payments.send_payment_reminders') }}" method="POST" class="d-inline">
+            <button type="submit" class="btn btn-success">
+                <i class="fab fa-whatsapp"></i> Enviar Lembretes
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Cards de Resumo -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Atraso Recente</h6>
+                        <h3 class="mb-0">{{ payments_recent|length }}</h3>
+                        <small class="text-muted">Ate 14 dias</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-clock fa-2x text-warning"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card danger">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Bloqueio Necessario</h6>
+                        <h3 class="mb-0">{{ payments_15days|length }}</h3>
+                        <small class="text-muted">15 a 89 dias</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-ban fa-2x text-danger"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card" style="border-left-color: #6c757d;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Cancelamento</h6>
+                        <h3 class="mb-0">{{ payments_90days|length }}</h3>
+                        <small class="text-muted">90+ dias</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-user-slash fa-2x text-secondary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Atraso Recente (até 14 dias) -->
+{% if payments_recent %}
+<div class="card mb-4">
+    <div class="card-header bg-warning text-dark">
+        <i class="fas fa-clock"></i> Atraso Recente (ate 14 dias) - Enviar lembrete
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Aluno</th>
+                        <th>Pacote</th>
+                        <th>Parcela</th>
+                        <th>Valor</th>
+                        <th>Vencimento</th>
+                        <th>Dias Atraso</th>
+                        <th class="text-center">Acoes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments_recent %}
+                    <tr>
+                        <td>
+                            <strong>{{ payment.subscription.user.name }}</strong>
+                            <br>
+                            <small class="text-muted">{{ payment.subscription.user.phone }}</small>
+                        </td>
+                        <td>{{ payment.subscription.package.name }}</td>
+                        <td>{{ payment.installment_number }}/{{ payment.installment_total }}</td>
+                        <td><strong>R$ {{ "%.2f"|format(payment.amount) }}</strong></td>
+                        <td>{{ payment.due_date.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <span class="badge bg-warning text-dark">{{ payment.overdue_days }} dias</span>
+                        </td>
+                        <td class="text-center">
+                            <a href="https://wa.me/55{{ payment.subscription.user.phone|replace('-', '')|replace(' ', '') }}"
+                               target="_blank" class="btn btn-sm btn-success" title="WhatsApp">
+                                <i class="fab fa-whatsapp"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Bloqueio Necessário (15-89 dias) -->
+{% if payments_15days %}
+<div class="card mb-4">
+    <div class="card-header bg-danger text-white">
+        <i class="fas fa-ban"></i> Bloqueio Necessario (15 a 89 dias) - Suspender acesso
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Aluno</th>
+                        <th>Pacote</th>
+                        <th>Parcela</th>
+                        <th>Valor</th>
+                        <th>Dias Atraso</th>
+                        <th>Status</th>
+                        <th class="text-center">Acoes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments_15days %}
+                    <tr>
+                        <td>
+                            <strong>{{ payment.subscription.user.name }}</strong>
+                            <br>
+                            <small class="text-muted">{{ payment.subscription.user.phone }}</small>
+                        </td>
+                        <td>{{ payment.subscription.package.name }}</td>
+                        <td>{{ payment.installment_number }}/{{ payment.installment_total }}</td>
+                        <td><strong>R$ {{ "%.2f"|format(payment.amount) }}</strong></td>
+                        <td>
+                            <span class="badge bg-danger">{{ payment.overdue_days }} dias</span>
+                        </td>
+                        <td>
+                            {% if payment.subscription.is_blocked %}
+                            <span class="badge bg-dark">Bloqueado</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">Ativo</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if not payment.subscription.is_blocked %}
+                            <form action="{{ url_for('admin_payments.block_subscription', subscription_id=payment.subscription.id) }}"
+                                  method="POST" class="d-inline"
+                                  onsubmit="return confirm('Bloquear assinatura de {{ payment.subscription.user.name }}?');">
+                                <button type="submit" class="btn btn-sm btn-danger" title="Bloquear">
+                                    <i class="fas fa-ban"></i> Bloquear
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="text-muted">Ja bloqueado</span>
+                            {% endif %}
+                            <a href="https://wa.me/55{{ payment.subscription.user.phone|replace('-', '')|replace(' ', '') }}"
+                               target="_blank" class="btn btn-sm btn-success" title="WhatsApp">
+                                <i class="fab fa-whatsapp"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Cancelamento (90+ dias) -->
+{% if payments_90days %}
+<div class="card mb-4">
+    <div class="card-header bg-secondary text-white">
+        <i class="fas fa-user-slash"></i> Cancelamento (90+ dias) - Encerrar assinatura
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Aluno</th>
+                        <th>Pacote</th>
+                        <th>Parcela</th>
+                        <th>Valor</th>
+                        <th>Dias Atraso</th>
+                        <th>Status</th>
+                        <th class="text-center">Acoes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments_90days %}
+                    <tr>
+                        <td>
+                            <strong>{{ payment.subscription.user.name }}</strong>
+                            <br>
+                            <small class="text-muted">{{ payment.subscription.user.phone }}</small>
+                        </td>
+                        <td>{{ payment.subscription.package.name }}</td>
+                        <td>{{ payment.installment_number }}/{{ payment.installment_total }}</td>
+                        <td><strong>R$ {{ "%.2f"|format(payment.amount) }}</strong></td>
+                        <td>
+                            <span class="badge bg-dark">{{ payment.overdue_days }} dias</span>
+                        </td>
+                        <td>
+                            {% if payment.subscription.is_cancelled %}
+                            <span class="badge bg-dark">Cancelado</span>
+                            {% elif payment.subscription.is_blocked %}
+                            <span class="badge bg-danger">Bloqueado</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">Ativo</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if not payment.subscription.is_cancelled %}
+                            <form action="{{ url_for('admin_payments.cancel_subscription', subscription_id=payment.subscription.id) }}"
+                                  method="POST" class="d-inline"
+                                  onsubmit="return confirm('CANCELAR assinatura de {{ payment.subscription.user.name }}? Esta acao nao pode ser desfeita!');">
+                                <button type="submit" class="btn btn-sm btn-dark" title="Cancelar">
+                                    <i class="fas fa-user-slash"></i> Cancelar
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="text-muted">Ja cancelado</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if not payments_recent and not payments_15days and not payments_90days %}
+<div class="text-center py-5">
+    <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+    <h5>Nenhum pagamento em atraso!</h5>
+    <p class="text-muted">Todos os alunos estao com pagamentos em dia.</p>
+</div>
+{% endif %}
+{% endblock %}

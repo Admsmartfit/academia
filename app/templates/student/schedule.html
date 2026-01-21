@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}Grade de Horarios{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-calendar-alt text-primary"></i> Agendar Aula</h2>
+            <p class="text-muted mb-0">Selecione uma data e horario para agendar sua aula</p>
+        </div>
+        <a href="{{ url_for('student.my_bookings') }}" class="btn btn-outline-primary">
+            <i class="fas fa-list"></i> Minhas Aulas
+        </a>
+    </div>
+
+    <!-- Navegacao de Datas -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <a href="{{ url_for('student.schedule', date=(selected_date - timedelta(days=7)).strftime('%Y-%m-%d')) }}"
+                   class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-chevron-left"></i> Semana Anterior
+                </a>
+                <h5 class="mb-0">{{ selected_date.strftime('%B %Y') }}</h5>
+                <a href="{{ url_for('student.schedule', date=(selected_date + timedelta(days=7)).strftime('%Y-%m-%d')) }}"
+                   class="btn btn-outline-secondary btn-sm">
+                    Proxima Semana <i class="fas fa-chevron-right"></i>
+                </a>
+            </div>
+
+            <div class="row text-center">
+                {% for date in week_dates %}
+                <div class="col">
+                    <a href="{{ url_for('student.schedule', date=date.strftime('%Y-%m-%d')) }}"
+                       class="btn w-100 {% if date == selected_date %}btn-primary{% elif date < now().date() %}btn-outline-secondary disabled{% else %}btn-outline-primary{% endif %}">
+                        <small>{{ ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'][date.weekday()] }}</small>
+                        <br>
+                        <strong>{{ date.day }}</strong>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Selecao de Assinatura -->
+    {% if active_subscriptions %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <h6 class="card-title"><i class="fas fa-credit-card"></i> Usar creditos de:</h6>
+            <div class="row">
+                {% for sub in active_subscriptions %}
+                <div class="col-md-4">
+                    <div class="form-check">
+                        <input class="form-check-input subscription-radio" type="radio"
+                               name="subscription_select" id="sub_{{ sub.id }}"
+                               value="{{ sub.id }}"
+                               {% if loop.first %}checked{% endif %}
+                               data-credits="{{ sub.credits_remaining }}"
+                               data-end-date="{{ sub.end_date.strftime('%d/%m/%Y') }}">
+                        <label class="form-check-label" for="sub_{{ sub.id }}">
+                            <strong>{{ sub.package.name }}</strong>
+                            <br>
+                            <small class="text-muted">
+                                {{ sub.credits_remaining }} credito(s) | Ate {{ sub.end_date.strftime('%d/%m/%Y') }}
+                            </small>
+                        </label>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle"></i>
+        Voce nao possui creditos disponiveis.
+        <a href="{{ url_for('shop.packages') }}" class="alert-link">Adquira um pacote</a> para agendar aulas.
+    </div>
+    {% endif %}
+
+    <!-- Grade de Horarios -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-clock"></i>
+                Horarios de {{ selected_date.strftime('%d/%m/%Y') }} ({{ ['Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado', 'Domingo'][selected_date.weekday()] }})
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if schedules %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Horario</th>
+                            <th>Modalidade</th>
+                            <th>Instrutor</th>
+                            <th class="text-center">Vagas</th>
+                            <th class="text-center">Acao</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for schedule in schedules %}
+                        <tr>
+                            <td>
+                                <strong>{{ schedule.start_time.strftime('%H:%M') }}</strong>
+                                <span class="text-muted">- {{ schedule.end_time.strftime('%H:%M') }}</span>
+                            </td>
+                            <td>
+                                {% if schedule.modality.icon_url %}
+                                <span class="me-1">{{ schedule.modality.icon_url }}</span>
+                                {% endif %}
+                                <strong>{{ schedule.modality.name }}</strong>
+                                {% if schedule.modality.description %}
+                                <br><small class="text-muted">{{ schedule.modality.description[:50] }}...</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ schedule.instructor.name }}</td>
+                            <td class="text-center">
+                                {% if schedule.available_spots > 3 %}
+                                <span class="badge bg-success">{{ schedule.available_spots }} vagas</span>
+                                {% elif schedule.available_spots > 0 %}
+                                <span class="badge bg-warning text-dark">{{ schedule.available_spots }} vagas</span>
+                                {% else %}
+                                <span class="badge bg-danger">Lotado</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if schedule.user_booked %}
+                                <span class="badge bg-info">Ja agendado</span>
+                                {% elif schedule.available_spots <= 0 %}
+                                <button class="btn btn-sm btn-secondary" disabled>Lotado</button>
+                                {% elif not active_subscriptions %}
+                                <button class="btn btn-sm btn-secondary" disabled>Sem creditos</button>
+                                {% else %}
+                                <form action="{{ url_for('student.book_class', schedule_id=schedule.id) }}" method="POST" class="d-inline booking-form">
+                                    <input type="hidden" name="date" value="{{ selected_date.strftime('%Y-%m-%d') }}">
+                                    <input type="hidden" name="subscription_id" class="subscription-input" value="{{ active_subscriptions[0].id if active_subscriptions else '' }}">
+                                    <button type="submit" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-plus"></i> Agendar
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                <h5>Nenhuma aula disponivel</h5>
+                <p class="text-muted">Nao ha aulas programadas para esta data.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Atualizar subscription_id em todos os forms quando mudar o radio
+document.querySelectorAll('.subscription-radio').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+        document.querySelectorAll('.subscription-input').forEach(function(input) {
+            input.value = radio.value;
+        });
+    });
+});
+
+// Confirmar agendamento
+document.querySelectorAll('.booking-form').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+        if (!confirm('Confirmar agendamento desta aula? Um credito sera debitado.')) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Meus Agendamentos Recorrentes{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-sync-alt text-primary"></i> Agendamentos Recorrentes</h2>
+            <p class="text-muted mb-0">Suas aulas automaticas semanais</p>
+        </div>
+        <a href="{{ url_for('student.create_recurring') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Novo Recorrente
+        </a>
+    </div>
+
+    {% if recurring_bookings %}
+    <div class="row">
+        {% for recurring in recurring_bookings %}
+        <div class="col-md-6 mb-4">
+            <div class="card {% if not recurring.is_active %}border-secondary{% else %}border-primary{% endif %}">
+                <div class="card-header d-flex justify-content-between align-items-center
+                            {% if recurring.is_active %}bg-primary text-white{% else %}bg-secondary text-white{% endif %}">
+                    <span>
+                        {% if recurring.schedule.modality.icon_url %}
+                        {{ recurring.schedule.modality.icon_url }}
+                        {% endif %}
+                        {{ recurring.schedule.modality.name }}
+                    </span>
+                    {% if recurring.is_active %}
+                    <span class="badge bg-light text-primary">Ativo</span>
+                    {% else %}
+                    <span class="badge bg-dark">Inativo</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless mb-3">
+                        <tr>
+                            <td class="text-muted" style="width: 40%;">Dia:</td>
+                            <td><strong>{{ recurring.schedule.weekday_name }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Horario:</td>
+                            <td>
+                                <strong>{{ recurring.schedule.start_time.strftime('%H:%M') }}</strong>
+                                - {{ recurring.schedule.end_time.strftime('%H:%M') }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Instrutor:</td>
+                            <td>{{ recurring.schedule.instructor.name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Frequencia:</td>
+                            <td>
+                                {% if recurring.frequency.value == 'weekly' %}
+                                Toda semana
+                                {% elif recurring.frequency.value == 'biweekly' %}
+                                A cada 2 semanas
+                                {% else %}
+                                {{ recurring.frequency.value }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Pacote:</td>
+                            <td>{{ recurring.subscription.package.name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Valido ate:</td>
+                            <td>{{ recurring.end_date.strftime('%d/%m/%Y') }}</td>
+                        </tr>
+                        {% if recurring.next_occurrence and recurring.is_active %}
+                        <tr>
+                            <td class="text-muted">Proxima aula:</td>
+                            <td>
+                                <span class="badge bg-info">{{ recurring.next_occurrence.strftime('%d/%m/%Y') }}</span>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if recurring.last_created %}
+                        <tr>
+                            <td class="text-muted">Ultima agendada:</td>
+                            <td>{{ recurring.last_created.strftime('%d/%m/%Y') }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+
+                    <!-- Estatisticas -->
+                    <div class="d-flex justify-content-between text-center border-top pt-3">
+                        <div>
+                            <small class="text-muted d-block">Aulas Geradas</small>
+                            <strong>{{ recurring.generated_bookings|length }}</strong>
+                        </div>
+                        <div>
+                            <small class="text-muted d-block">Creditos Rest.</small>
+                            <strong>{{ recurring.subscription.credits_remaining }}</strong>
+                        </div>
+                        <div>
+                            <small class="text-muted d-block">Criado em</small>
+                            <strong>{{ recurring.created_at.strftime('%d/%m') }}</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    {% if recurring.is_active %}
+                    <form action="{{ url_for('student.cancel_recurring', id=recurring.id) }}" method="POST"
+                          onsubmit="return confirm('Cancelar este agendamento recorrente?\n\nAulas ja agendadas NAO serao canceladas automaticamente.');">
+                        <button type="submit" class="btn btn-outline-danger w-100">
+                            <i class="fas fa-stop-circle"></i> Cancelar Recorrencia
+                        </button>
+                    </form>
+                    {% else %}
+                    <button class="btn btn-secondary w-100" disabled>
+                        <i class="fas fa-ban"></i> Recorrencia Cancelada
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-sync-alt fa-4x text-muted mb-3"></i>
+        <h5>Nenhum agendamento recorrente</h5>
+        <p class="text-muted">Crie um agendamento recorrente para agendar suas aulas automaticamente toda semana.</p>
+        <a href="{{ url_for('student.create_recurring') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Criar Agendamento Recorrente
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Info -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="fas fa-question-circle"></i> Perguntas Frequentes</h6>
+        </div>
+        <div class="card-body">
+            <div class="accordion" id="faqAccordion">
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                            O que acontece quando meus creditos acabam?
+                        </button>
+                    </h2>
+                    <div id="faq1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            O sistema para de agendar automaticamente quando seus creditos acabam. Voce pode adquirir um novo pacote e criar uma nova recorrencia.
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                            Posso cancelar aulas individuais?
+                        </button>
+                    </h2>
+                    <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            Sim! Voce pode cancelar qualquer aula individual normalmente em "Minhas Aulas", respeitando a regra de 2 horas de antecedencia.
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                            Cancelar a recorrencia cancela aulas ja agendadas?
+                        </button>
+                    </h2>
+                    <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            Nao. Cancelar a recorrencia apenas impede que novas aulas sejam agendadas automaticamente. Aulas ja agendadas permanecem confirmadas.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

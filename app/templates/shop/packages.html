@@ -1,0 +1,452 @@
+{% extends "base.html" %}
+
+{% block title %}Loja - Academia{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hover-lift {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .hover-lift:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 1rem 3rem rgba(0, 0, 0, .175) !important;
+    }
+
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .navbar-shop {
+        background: rgba(0, 0, 0, 0.9);
+    }
+
+    /* Simulator Styles */
+    .simulator-card {
+        border-radius: 20px;
+        border: none;
+        background: white;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    .modality-input-card {
+        border-radius: 12px;
+        transition: all 0.2s;
+        border: 1px solid #eee;
+    }
+
+    .modality-input-card:hover {
+        border-color: var(--primary-color);
+        background: #fffcfb;
+    }
+
+    .recommendation-badge {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        z-index: 10;
+        transform: rotate(5deg);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- Hero Section -->
+    <section class="bg-gradient-primary text-white py-5">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <h1 class="display-4 fw-bold mb-3">Escolha seu Plano</h1>
+                    <p class="lead mb-4">
+                        Créditos flexíveis para você treinar no seu ritmo.
+                        Sem mensalidades fixas, sem fidelidade.
+                    </p>
+                    <div class="d-flex gap-4">
+                        <div class="text-center">
+                            <h3 class="mb-0">100+</h3>
+                            <small>Alunos Ativos</small>
+                        </div>
+                        <div class="text-center">
+                            <h3 class="mb-0">15+</h3>
+                            <small>Modalidades</small>
+                        </div>
+                        <div class="text-center">
+                            <h3 class="mb-0">4.9</h3>
+                            <small>Avaliação</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 d-none d-lg-block">
+                    <div class="text-center">
+                        <i class="fas fa-dumbbell fa-8x opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Simulator Section -->
+    <section class="py-5" id="simulator">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="card simulator-card p-4 p-md-5">
+                        <div class="row align-items-center">
+                            <div class="col-md-7">
+                                <h2 class="fw-bold mb-3">Simulador de Treino</h2>
+                                <p class="text-muted mb-4">Escolha quantas vezes por semana você pretende treinar em
+                                    cada
+                                    modalidade e nós calculamos o pacote ideal para você.</p>
+
+                                <div class="row g-3" id="modalityInputs">
+                                    {% for modality in modalities %}
+                                    <div class="col-sm-6">
+                                        <div class="modality-input-card p-3">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="fw-bold">
+                                                    <i class="{{ modality.icon or 'fas fa-dumbbell' }} me-2 modality-icon"
+                                                        data-color="{{ modality.color }}"></i>
+                                                    {{ modality.name }}
+                                                </span>
+                                                <span class="badge bg-light text-dark">{{ modality.credits_cost }}
+                                                    créditos/aula</span>
+                                            </div>
+                                            <div class="input-group input-group-sm">
+                                                <button class="btn btn-outline-secondary btn-minus" type="button"
+                                                    data-modality-id="{{ modality.id }}">-</button>
+                                                <input type="number" class="form-control text-center freq-input"
+                                                    value="0" min="0" max="7" data-modality-id="{{ modality.id }}"
+                                                    data-cost="{{ modality.credits_cost }}" id="freq-{{ modality.id }}">
+                                                <button class="btn btn-outline-secondary btn-plus" type="button"
+                                                    data-modality-id="{{ modality.id }}">+</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-5 mt-4 mt-md-0">
+                                <div class="bg-light p-4 rounded-4 text-center border">
+                                    <h6 class="text-uppercase text-muted small fw-bold mb-3">Estimativa Mensal</h6>
+                                    <div class="display-3 fw-bold text-primary mb-0" id="totalCredits">0</div>
+                                    <p class="text-muted fw-bold">Créditos Necessários</p>
+                                    <hr>
+                                    <div id="recommendationText">
+                                        <p class="small text-muted mb-0">Selecione suas aulas para ver a recomendação.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pacotes -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold">Nossos Planos</h2>
+                <p class="text-muted">Pague apenas pelas aulas que você fizer</p>
+            </div>
+
+            {% if packages %}
+            <div class="row g-4">
+                {% for package in packages %}
+                <div class="col-lg-3 col-md-6" id="package-{{ package.id }}">
+                    <div
+                        class="card h-100 {% if package.is_featured %}border-warning border-3 shadow-lg{% else %}shadow{% endif %} hover-lift">
+
+                        {% if package.is_featured %}
+                        <div class="card-header bg-warning text-dark text-center fw-bold py-2">
+                            MAIS VENDIDO
+                        </div>
+                        {% endif %}
+
+                        <!-- Foto -->
+                        {% if package.photo_url %}
+                        <img src="{{ url_for('static', filename='uploads/packages/' + package.photo_url) }}"
+                            class="card-img-top" alt="{{ package.name }}" style="height: 180px; object-fit: cover;">
+                        {% else %}
+                        <div class="card-img-top d-flex align-items-center justify-content-center package-img-placeholder"
+                            data-color="{{ package.color }}" style="height: 180px;">
+                            <i class="fas fa-box fa-4x text-white opacity-50"></i>
+                        </div>
+                        {% endif %}
+
+                        <div class="card-body text-center">
+                            <h5 class="card-title mb-3">{{ package.name }}</h5>
+
+                            <!-- Creditos -->
+                            <div class="display-4 fw-bold mb-2 package-credits" data-color="{{ package.color }}">
+                                {{ package.credits }}
+                            </div>
+                            <p class="text-muted mb-3">aula(s)</p>
+
+                            <!-- Preco -->
+                            <div class="mb-3">
+                                <h4 class="text-success mb-1">
+                                    R$ {{ "%.2f"|format(package.price) }}
+                                </h4>
+
+                                {% if package.installments > 1 %}
+                                <p class="mb-1">
+                                    <span class="badge bg-primary">
+                                        {{ package.installments }}x de R$ {{ "%.2f"|format(package.installment_price) }}
+                                    </span>
+                                </p>
+                                {% endif %}
+
+                                <small class="text-muted">
+                                    R$ {{ "%.2f"|format(package.price_per_credit) }}/aula
+                                </small>
+                            </div>
+
+                            <!-- Desconto -->
+                            {% if package.discount_percent > 0 %}
+                            <div class="alert alert-success py-2 mb-3">
+                                Economize {{ package.discount_percent }}%
+                            </div>
+                            {% endif %}
+
+                            <!-- Validade -->
+                            <p class="small text-muted mb-3">
+                                <i class="far fa-clock"></i>
+                                Válido por {{ package.validity_days }} dias
+                            </p>
+
+                            <!-- CTA -->
+                            <a href="{{ url_for('shop.package_detail', id=package.id) }}" class="btn btn-primary w-100">
+                                Ver Detalhes
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-box-open fa-4x text-muted mb-3"></i>
+                <h4>Nenhum pacote disponível</h4>
+                <p class="text-muted">Em breve teremos novidades!</p>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Como Funciona -->
+    <section class="py-5">
+        <div class="container">
+            <h2 class="text-center fw-bold mb-5">Como Funciona?</h2>
+            <div class="row g-4">
+                <div class="col-md-3 text-center">
+                    <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                        style="width: 80px; height: 80px;">
+                        <h2 class="mb-0">1</h2>
+                    </div>
+                    <h5>Escolha seu Plano</h5>
+                    <p class="text-muted">Selecione o pacote ideal para você</p>
+                </div>
+                <div class="col-md-3 text-center">
+                    <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                        style="width: 80px; height: 80px;">
+                        <h2 class="mb-0">2</h2>
+                    </div>
+                    <h5>Faça o Pagamento</h5>
+                    <p class="text-muted">PIX mensal, sem burocracia</p>
+                </div>
+                <div class="col-md-3 text-center">
+                    <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                        style="width: 80px; height: 80px;">
+                        <h2 class="mb-0">3</h2>
+                    </div>
+                    <h5>Agende suas Aulas</h5>
+                    <p class="text-muted">Escolha horários que cabem na sua rotina</p>
+                </div>
+                <div class="col-md-3 text-center">
+                    <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                        style="width: 80px; height: 80px;">
+                        <h2 class="mb-0">4</h2>
+                    </div>
+                    <h5>Treine!</h5>
+                    <p class="text-muted">Aproveite nossas modalidades</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <h2 class="text-center fw-bold mb-5">Perguntas Frequentes</h2>
+            <div class="row">
+                <div class="col-lg-8 offset-lg-2">
+                    <div class="accordion" id="faqAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#faq1">
+                                    Como funcionam as parcelas?
+                                </button>
+                            </h2>
+                            <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    Você paga o valor total dividido em parcelas mensais via PIX.
+                                    Por exemplo, um pacote de R$ 300 em 3x = R$ 100/mês.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#faq2">
+                                    O que acontece se eu atrasar o pagamento?
+                                </button>
+                            </h2>
+                            <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    Com 15 dias de atraso, sua agenda é bloqueada.
+                                    Com 90 dias, os créditos são cancelados sem reembolso.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#faq3">
+                                    Posso cancelar aulas agendadas?
+                                </button>
+                            </h2>
+                            <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    Sim! Você pode cancelar até 2 horas antes da aula e seu crédito volta para a
+                                    carteira.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#faq4">
+                                    Os créditos expiram?
+                                </button>
+                            </h2>
+                            <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    Sim, de acordo com a validade do pacote (30, 60 ou 90 dias).
+                                    Você receberá lembretes antes da expiração.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container text-center">
+            <p class="mb-0">Academia - Todos os direitos reservados</p>
+        </div>
+    </footer>
+</div>
+
+<!-- Data for JS -->
+<div id="packagesData" style="display: none;" data-json='{{ packages_json|safe }}'></div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Apply dynamic colors
+        document.querySelectorAll('.modality-icon').forEach(function (el) {
+            el.style.color = el.dataset.color;
+        });
+        document.querySelectorAll('.package-img-placeholder').forEach(function (el) {
+            var color = el.dataset.color;
+            el.style.background = 'linear-gradient(135deg, ' + color + ' 0%, ' + color + 'dd 100%)';
+        });
+        document.querySelectorAll('.package-credits').forEach(function (el) {
+            el.style.color = el.dataset.color;
+        });
+
+        const freqInputs = document.querySelectorAll('.freq-input');
+        const totalCreditsEl = document.getElementById('totalCredits');
+        const recommendationTextEl = document.getElementById('recommendationText');
+
+        // Load packages from JSON
+        const packagesDataEl = document.getElementById('packagesData');
+        const packages = JSON.parse(packagesDataEl.dataset.json || '[]');
+
+        function calculateTotal() {
+            let total = 0;
+            freqInputs.forEach(input => {
+                const freq = parseInt(input.value) || 0;
+                const cost = parseInt(input.dataset.cost) || 0;
+                total += (freq * cost * 4); // 4 semanas por mes
+            });
+
+            totalCreditsEl.innerText = total;
+            updateRecommendation(total);
+        }
+
+        function updateRecommendation(total) {
+            if (total === 0) {
+                recommendationTextEl.innerHTML = '<p class="small text-muted mb-0">Selecione suas aulas para ver a recomendação.</p>';
+                return;
+            }
+
+            const match = packages.find(p => p.credits >= total);
+
+            if (match) {
+                recommendationTextEl.innerHTML = `
+                    <div class="animate__animated animate__fadeIn">
+                        <p class="mb-2">O pacote ideal é:</p>
+                        <h5 class="fw-bold text-success mb-2">${match.name}</h5>
+                        <p class="small text-muted mb-3">Com ${match.credits} créditos, você cobre sua necessidade de ${total}.</p>
+                        <a href="#package-${match.id}" class="btn btn-primary btn-sm px-4 rounded-pill">Ver este plano</a>
+                    </div>
+                `;
+            } else {
+                recommendationTextEl.innerHTML = `
+                    <div class="alert alert-warning py-2 small mb-0">
+                        Sua necessidade (${total} créditos) excede nossos pacotes individuais. Entre em contato para um plano personalizado!
+                    </div>
+                `;
+            }
+        }
+
+        // Eventos Plus/Minus
+        document.querySelectorAll('.btn-plus').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const input = document.getElementById(`freq-${btn.dataset.modalityId}`);
+                if (input.value < 7) {
+                    input.value = parseInt(input.value) + 1;
+                    calculateTotal();
+                }
+            });
+        });
+
+        document.querySelectorAll('.btn-minus').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const input = document.getElementById(`freq-${btn.dataset.modalityId}`);
+                if (input.value > 0) {
+                    input.value = parseInt(input.value) - 1;
+                    calculateTotal();
+                }
+            });
+        });
+
+        // Evento input direto
+        freqInputs.forEach(input => {
+            input.addEventListener('change', calculateTotal);
+            input.addEventListener('keyup', calculateTotal);
+        });
+    });
+</script>
+{% endblock %}

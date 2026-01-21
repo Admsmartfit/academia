@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}{{ package.name }} - Academia{% endblock %}
+
+{% block content %}
+
+
+<div class="container py-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('shop.packages') }}">Loja</a></li>
+            <li class="breadcrumb-item active">{{ package.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Imagem -->
+        <div class="col-lg-6 mb-4">
+            {% if package.photo_url %}
+            <img src="{{ url_for('static', filename='uploads/packages/' + package.photo_url) }}"
+                class="img-fluid rounded shadow" alt="{{ package.name }}">
+            {% else %}
+            <div class="rounded shadow d-flex align-items-center justify-content-center package-photo-placeholder"
+                data-color="{{ package.color }}" style="height: 400px;">
+                <i class="fas fa-box fa-6x text-white opacity-50"></i>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Detalhes -->
+        <div class="col-lg-6">
+            {% if package.is_featured %}
+            <span class="badge bg-warning text-dark mb-2">MAIS VENDIDO</span>
+            {% endif %}
+
+            <h1 class="fw-bold mb-3">{{ package.name }}</h1>
+
+            {% if package.description %}
+            <p class="lead text-muted mb-4">{{ package.description }}</p>
+            {% endif %}
+
+            <!-- Creditos -->
+            <div class="d-flex align-items-center mb-4">
+                <div class="display-3 fw-bold me-3 package-title-color" data-color="{{ package.color }}">
+                    {{ package.credits }}
+                </div>
+                <div>
+                    <h5 class="mb-0">Aulas</h5>
+                    <small class="text-muted">R$ {{ "%.2f"|format(package.price_per_credit) }} por aula</small>
+                </div>
+            </div>
+
+            <!-- Preco -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h2 class="text-success mb-0">R$ {{ "%.2f"|format(package.price) }}</h2>
+                            {% if package.installments > 1 %}
+                            <p class="mb-0">
+                                ou <strong>{{ package.installments }}x de R$ {{ "%.2f"|format(package.installment_price)
+                                    }}</strong>
+                            </p>
+                            {% endif %}
+                        </div>
+                        {% if package.discount_percent > 0 %}
+                        <div class="col-auto">
+                            <span class="badge bg-success fs-5">-{{ package.discount_percent }}%</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Validade -->
+            <div class="alert alert-info mb-4">
+                <i class="far fa-clock me-2"></i>
+                <strong>Validade:</strong> {{ package.validity_days }} dias apos a compra
+            </div>
+
+            <!-- Beneficios -->
+            {% if package.extra_benefits %}
+            <div class="mb-4">
+                <h5>Beneficios inclusos:</h5>
+                <ul class="list-group list-group-flush">
+                    {% for benefit in package.extra_benefits %}
+                    <li class="list-group-item ps-0">
+                        <i class="fas fa-check-circle text-success me-2"></i>{{ benefit }}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- Botao Comprar -->
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('shop.checkout', package_id=package.id) }}" class="btn btn-primary btn-lg w-100">
+                <i class="fas fa-shopping-cart me-2"></i>Comprar Agora
+            </a>
+            {% else %}
+            <a href="{{ url_for('auth.login', next=url_for('shop.checkout', package_id=package.id)) }}"
+                class="btn btn-primary btn-lg w-100">
+                <i class="fas fa-sign-in-alt me-2"></i>Fazer Login para Comprar
+            </a>
+            <p class="text-center mt-2">
+                <small>Nao tem conta? <a href="{{ url_for('auth.register') }}">Cadastre-se</a></small>
+            </p>
+            {% endif %}
+
+            <!-- Garantias -->
+            <div class="row g-3 mt-4">
+                <div class="col-4 text-center">
+                    <i class="fas fa-shield-alt fa-2x text-muted mb-2"></i>
+                    <p class="small mb-0">Pagamento Seguro</p>
+                </div>
+                <div class="col-4 text-center">
+                    <i class="fab fa-whatsapp fa-2x text-muted mb-2"></i>
+                    <p class="small mb-0">Suporte WhatsApp</p>
+                </div>
+                <div class="col-4 text-center">
+                    <i class="fas fa-undo fa-2x text-muted mb-2"></i>
+                    <p class="small mb-0">Cancelamento Flexivel</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const placeholder = document.querySelector('.package-photo-placeholder');
+        if (placeholder) {
+            const color = placeholder.dataset.color;
+            placeholder.style.background = `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`;
+        }
+        const titleColor = document.querySelector('.package-title-color');
+        if (titleColor) {
+            titleColor.style.color = titleColor.dataset.color;
+        }
+    });
+</script>
+{% endblock %}

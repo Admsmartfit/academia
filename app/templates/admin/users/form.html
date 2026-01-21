@@ -1,0 +1,77 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}{{ 'Editar' if user else 'Criar' }} Usuário{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 offset-md-3">
+        <div class="card">
+            <div class="card-header">
+                <div class="row align-items-center mb-4">
+                    <div class="col">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb mb-1">
+                                <li class="breadcrumb-item"><a
+                                        href="{{ url_for('admin_users.list_users') }}">Usuários</a></li>
+                                <li class="breadcrumb-item active">{{ 'Editar' if user else 'Criar' }}</li>
+                            </ol>
+                        </nav>
+                        <h2 class="h4 mb-0">{{ 'Editar' if user else 'Criar' }} Usuário</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Papel (Role) *</label>
+                        <select name="role" class="form-select" required>
+                            <option value="student" {% if user and user.role=='student' %}selected{% endif %}>Aluno
+                            </option>
+                            <option value="instructor" {% if user and user.role=='instructor' %}selected{% endif %}>
+                                Instrutor</option>
+                            <option value="admin" {% if user and user.role=='admin' %}selected{% endif %}>Administrador
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Nome Completo *</label>
+                        <input type="text" name="name" class="form-control" value="{{ user.name if user else '' }}"
+                            required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">E-mail *</label>
+                        <input type="email" name="email" class="form-control" value="{{ user.email if user else '' }}"
+                            required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Telefone *</label>
+                        <input type="text" name="phone" class="form-control" value="{{ user.phone if user else '' }}"
+                            placeholder="Ex: 11999999999" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Senha {{ '(deixe em branco para não alterar)' if user else '*'
+                            }}</label>
+                        <input type="password" name="password" class="form-control" {{ 'required' if not user else ''
+                            }}>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin_users.list_users') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Salvar Usuário
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

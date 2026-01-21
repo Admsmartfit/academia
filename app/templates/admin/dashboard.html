@@ -1,0 +1,245 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <!-- Total Alunos -->
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Alunos</h6>
+                        <h2 class="mb-0">{{ total_students }}</h2>
+                    </div>
+                    <div class="text-primary">
+                        <i class="fas fa-users fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assinaturas Ativas -->
+    <div class="col-md-3">
+        <div class="card stat-card success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Assinaturas Ativas</h6>
+                        <h2 class="mb-0">{{ active_subscriptions }}</h2>
+                    </div>
+                    <div class="text-success">
+                        <i class="fas fa-check-circle fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Faturamento do Mes -->
+    <div class="col-md-3">
+        <div class="card stat-card info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Faturamento (Mes)</h6>
+                        <h2 class="mb-0">R$ {{ "%.2f"|format(monthly_revenue) }}</h2>
+                    </div>
+                    <div class="text-info">
+                        <i class="fas fa-dollar-sign fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagamentos Pendentes -->
+    <div class="col-md-3">
+        <div class="card stat-card warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Pagamentos Pendentes</h6>
+                        <h2 class="mb-0">{{ pending_payments }}</h2>
+                    </div>
+                    <div class="text-warning">
+                        <i class="fas fa-clock fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Aulas Hoje -->
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Aulas Hoje</h6>
+                        <h2 class="mb-0">{{ classes_today }}</h2>
+                        <small class="text-muted">{{ total_bookings_today }} agendamentos</small>
+                    </div>
+                    <div class="text-primary">
+                        <i class="fas fa-calendar-day fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Taxa de Ocupacao -->
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Taxa de Ocupacao (7d)</h6>
+                        <h2 class="mb-0">{{ occupancy_rate }}%</h2>
+                    </div>
+                    <div class="text-success">
+                        <i class="fas fa-chart-pie fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Novos Alunos -->
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Novos Alunos (Mes)</h6>
+                        <h2 class="mb-0">{{ new_students }}</h2>
+                    </div>
+                    <div class="text-info">
+                        <i class="fas fa-user-plus fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagamentos Atrasados -->
+    <div class="col-md-3">
+        <div class="card stat-card danger">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Pagamentos Atrasados</h6>
+                        <h2 class="mb-0">{{ overdue_payments }}</h2>
+                    </div>
+                    <div class="text-danger">
+                        <i class="fas fa-exclamation-triangle fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Pagamentos Aguardando Aprovacao -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-receipt me-2"></i>Pagamentos Aguardando Aprovacao</span>
+                <a href="#" class="btn btn-sm btn-outline-primary">Ver Todos</a>
+            </div>
+            <div class="card-body">
+                {% if pending_purchases %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Aluno</th>
+                                <th>Parcela</th>
+                                <th>Valor</th>
+                                <th>Acoes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in pending_purchases %}
+                            <tr>
+                                <td>{{ payment.subscription.user.name }}</td>
+                                <td>{{ payment.installment_number }}/{{ payment.installment_total }}</td>
+                                <td>R$ {{ "%.2f"|format(payment.amount) }}</td>
+                                <td>
+                                    <a href="#" class="btn btn-sm btn-success">
+                                        <i class="fas fa-check"></i>
+                                    </a>
+                                    <a href="#" class="btn btn-sm btn-danger">
+                                        <i class="fas fa-times"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center my-4">
+                    <i class="fas fa-check-circle fa-3x mb-3 d-block text-success"></i>
+                    Nenhum pagamento pendente de aprovacao!
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertas -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-bell me-2"></i>Alertas
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% if expiring_soon > 0 %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="fas fa-hourglass-half text-warning me-2"></i>
+                            Assinaturas expirando em 7 dias
+                        </span>
+                        <span class="badge bg-warning text-dark">{{ expiring_soon }}</span>
+                    </li>
+                    {% endif %}
+
+                    {% if overdue_payments > 0 %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="fas fa-exclamation-circle text-danger me-2"></i>
+                            Pagamentos em atraso
+                        </span>
+                        <span class="badge bg-danger">{{ overdue_payments }}</span>
+                    </li>
+                    {% endif %}
+
+                    {% if pending_payments > 0 %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="fas fa-clock text-info me-2"></i>
+                            Pagamentos pendentes
+                        </span>
+                        <span class="badge bg-info">{{ pending_payments }}</span>
+                    </li>
+                    {% endif %}
+
+                    {% if expiring_soon == 0 and overdue_payments == 0 and pending_payments == 0 %}
+                    <li class="list-group-item text-center text-muted">
+                        <i class="fas fa-check-circle fa-2x mb-2 d-block text-success"></i>
+                        Tudo em ordem!
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

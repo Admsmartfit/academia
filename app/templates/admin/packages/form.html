@@ -1,0 +1,198 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}{{ 'Editar' if package else 'Criar' }} Pacote{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <div class="row align-items-center mb-4">
+                    <div class="col">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb mb-1">
+                                <li class="breadcrumb-item"><a
+                                        href="{{ url_for('admin_packages.list_packages') }}">Pacotes</a></li>
+                                <li class="breadcrumb-item active">{{ 'Editar' if package else 'Criar' }}</li>
+                            </ol>
+                        </nav>
+                        <h2 class="h4 mb-0">{{ 'Editar' if package else 'Criar' }} Pacote</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <!-- Foto do pacote -->
+                    <div class="mb-3">
+                        <label class="form-label">Foto do Pacote</label>
+                        {% if package and package.photo_url %}
+                        <div class="mb-2">
+                            <img src="{{ url_for('static', filename='uploads/packages/' + package.photo_url) }}"
+                                class="img-thumbnail" style="max-height: 200px;">
+                        </div>
+                        {% endif %}
+                        <input type="file" name="photo" class="form-control" accept="image/*">
+                        <small class="text-muted">Recomendado: 800x600px, max 2MB</small>
+                    </div>
+
+                    <!-- Nome -->
+                    <div class="mb-3">
+                        <label class="form-label">Nome do Pacote *</label>
+                        <input type="text" name="name" class="form-control"
+                            value="{{ package.name if package else '' }}" placeholder="Ex: Plano Mensal Premium"
+                            required>
+                    </div>
+
+                    <!-- Descricao -->
+                    <div class="mb-3">
+                        <label class="form-label">Descricao</label>
+                        <textarea name="description" class="form-control" rows="3"
+                            placeholder="Descreva os beneficios deste pacote...">{{ package.description if package else '' }}</textarea>
+                    </div>
+
+                    <div class="row">
+                        <!-- Creditos -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Quantidade de Aulas *</label>
+                            <input type="number" name="credits" class="form-control"
+                                value="{{ package.credits if package else 10 }}" min="1" required>
+                        </div>
+
+                        <!-- Preco Total -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Preco Total (R$) *</label>
+                            <input type="number" name="price" class="form-control"
+                                value="{{ package.price if package else 400 }}" step="0.01" min="0.01" required>
+                        </div>
+
+                        <!-- Parcelas -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Parcelas Mensais *</label>
+                            <select name="installments" class="form-control" required>
+                                {% for i in range(1, 13) %}
+                                <option value="{{ i }}" {% if package and package.installments==i %}selected{% endif %}>
+                                    {{ i }}x
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Cobrar em quantos meses?</small>
+                        </div>
+                    </div>
+
+                    <!-- Validade -->
+                    <div class="mb-3">
+                        <label class="form-label">Validade (dias) *</label>
+                        <input type="number" name="validity_days" class="form-control"
+                            value="{{ package.validity_days if package else 90 }}" min="1" required>
+                        <small class="text-muted">Apos quantos dias os creditos expiram?</small>
+                    </div>
+
+                    <!-- Beneficios Extras -->
+                    <div class="mb-3">
+                        <label class="form-label">Beneficios Extras (opcional)</label>
+                        <textarea name="extra_benefits" class="form-control" rows="4"
+                            placeholder="Um beneficio por linha&#10;Ex:&#10;Toalha gratis&#10;Garrafinha personalizada&#10;Avaliacao fisica">{{ '\n'.join(package.extra_benefits) if package and package.extra_benefits else '' }}</textarea>
+                    </div>
+
+                    <div class="row">
+                        <!-- Cor -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Cor do Card</label>
+                            <input type="color" name="color" class="form-control form-control-color"
+                                value="{{ package.color if package else '#FF6B35' }}">
+                        </div>
+
+                        <!-- Ordem -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Ordem de Exibicao</label>
+                            <input type="number" name="display_order" class="form-control"
+                                value="{{ package.display_order if package else 0 }}" min="0">
+                            <small class="text-muted">0 = primeiro</small>
+                        </div>
+
+                        <!-- Destaque -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label d-block">Destacar?</label>
+                            <div class="form-check form-switch">
+                                <input type="checkbox" name="is_featured" class="form-check-input" {% if package and
+                                    package.is_featured %}checked{% endif %}>
+                                <label class="form-check-label">Pacote em Destaque</label>
+                            </div>
+                            <small class="text-muted">Mostra badge "MAIS VENDIDO"</small>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin_packages.list_packages') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Salvar Pacote
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview ao vivo -->
+    <div class="col-md-4">
+        <div class="card sticky-top" style="top: 100px;">
+            <div class="card-header">
+                <h6 class="mb-0">Preview (Como o cliente vera)</h6>
+            </div>
+            <div class="card-body">
+                <div id="package-preview">
+                    <!-- Preview sera atualizado via JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Preview em tempo real
+    document.querySelectorAll('input, textarea, select').forEach(element => {
+        element.addEventListener('input', updatePreview);
+    });
+
+    function updatePreview() {
+        const name = document.querySelector('[name="name"]').value || 'Nome do Pacote';
+        const credits = document.querySelector('[name="credits"]').value || 0;
+        const price = parseFloat(document.querySelector('[name="price"]').value) || 0;
+        const installments = parseInt(document.querySelector('[name="installments"]').value) || 1;
+        const color = document.querySelector('[name="color"]').value;
+        const isFeatured = document.querySelector('[name="is_featured"]').checked;
+
+        const installmentPrice = (price / installments).toFixed(2);
+        const pricePerClass = credits > 0 ? (price / credits).toFixed(2) : 0;
+        const basePrice = 50;
+        const discount = Math.max(0, Math.round(((basePrice - pricePerClass) / basePrice) * 100));
+
+        const preview = `
+        <div class="card ${isFeatured ? 'border-warning border-3' : ''} shadow-sm">
+            ${isFeatured ? '<div class="card-header bg-warning text-dark text-center fw-bold">MAIS VENDIDO</div>' : ''}
+            <div class="card-body text-center">
+                <h5 class="card-title">${name}</h5>
+                <div class="display-4 my-3" style="color: ${color}">${credits}</div>
+                <p class="text-muted">aula(s)</p>
+                <div class="my-3">
+                    <h4 class="text-success">R$ ${price.toFixed(2)}</h4>
+                    ${installments > 1 ? `<small class="text-muted">${installments}x de R$ ${installmentPrice}</small>` : ''}
+                    <br><small class="text-muted">R$ ${pricePerClass}/aula</small>
+                </div>
+                ${discount > 0 ? `<div class="alert alert-success py-2">Economize ${discount}%</div>` : ''}
+                <button class="btn btn-primary w-100" disabled>Comprar Agora</button>
+            </div>
+        </div>
+    `;
+
+        document.getElementById('package-preview').innerHTML = preview;
+    }
+
+    // Inicializar preview
+    updatePreview();
+</script>
+{% endblock %}

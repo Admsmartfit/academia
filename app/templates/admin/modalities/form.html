@@ -1,0 +1,124 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}{{ 'Editar' if modality else 'Criar' }} Modalidade{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 offset-md-3">
+        <div class="card">
+            <div class="card-header">
+                <div class="row align-items-center mb-4">
+                    <div class="col">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb mb-1">
+                                <li class="breadcrumb-item"><a
+                                        href="{{ url_for('admin_modalities.list_modalities') }}">Modalidades</a></li>
+                                <li class="breadcrumb-item active">{{ 'Editar' if modality else 'Criar' }}</li>
+                            </ol>
+                        </nav>
+                        <h2 class="h4 mb-0">{{ 'Editar' if modality else 'Criar' }} Modalidade</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <!-- Nome -->
+                    <div class="mb-3">
+                        <label class="form-label">Nome da Modalidade *</label>
+                        <input type="text" name="name" class="form-control"
+                            value="{{ modality.name if modality else '' }}" placeholder="Ex: Musculacao, Yoga, CrossFit"
+                            required>
+                    </div>
+
+                    <!-- Custo (Creditos) -->
+                    <div class="mb-3">
+                        <label class="form-label">Custo em Creditos (por aula) *</label>
+                        <input type="number" name="credits_cost" class="form-control"
+                            value="{{ modality.credits_cost if modality else 10 }}" min="1" required>
+                        <small class="text-muted">Ex: Musculacao=10, Eletro=30</small>
+                    </div>
+
+                    <!-- Descricao -->
+                    <div class="mb-3">
+                        <label class="form-label">Descricao</label>
+                        <textarea name="description" class="form-control" rows="3"
+                            placeholder="Descreva a modalidade...">{{ modality.description if modality else '' }}</textarea>
+                    </div>
+
+                    <div class="row">
+                        <!-- Cor -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Cor</label>
+                            <input type="color" name="color" class="form-control form-control-color w-100"
+                                value="{{ modality.color if modality else '#FF6B35' }}">
+                            <small class="text-muted">Cor exibida no calendario</small>
+                        </div>
+
+                        <!-- Icone -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Icone (Emoji)</label>
+                            <input type="text" name="icon" class="form-control"
+                                value="{{ modality.icon if modality else '' }}" placeholder="Ex: 💪 🧘 🏃">
+                            <small class="text-muted">Cole um emoji ou deixe em branco</small>
+                        </div>
+                    </div>
+
+                    <!-- Preview -->
+                    <div class="mb-4">
+                        <label class="form-label">Preview</label>
+                        <div class="d-flex align-items-center p-3 border rounded" id="preview-area">
+                            <div class="rounded-circle me-3 d-flex align-items-center justify-content-center"
+                                id="preview-icon" data-color="{{ modality.color if modality else '#FF6B35' }}"
+                                style="width: 50px; height: 50px;">
+                                <span class="text-white fs-5" id="preview-emoji">{{ modality.icon if modality and
+                                    modality.icon else '💪' }}</span>
+                            </div>
+                            <div>
+                                <strong id="preview-name">{{ modality.name if modality else 'Nome da Modalidade'
+                                    }}</strong>
+                                <br>
+                                <small class="text-muted" id="preview-desc">{{ modality.description[:50] if modality and
+                                    modality.description else 'Descricao da modalidade' }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin_modalities.list_modalities') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Salvar Modalidade
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Preview em tempo real
+    document.querySelector('[name="name"]').addEventListener('input', function () {
+        document.getElementById('preview-name').textContent = this.value || 'Nome da Modalidade';
+    });
+
+    document.querySelector('[name="description"]').addEventListener('input', function () {
+        document.getElementById('preview-desc').textContent = this.value.substring(0, 50) || 'Descricao da modalidade';
+    });
+
+    // Initial color
+    const previewIcon = document.getElementById('preview-icon');
+    previewIcon.style.backgroundColor = previewIcon.dataset.color;
+
+    document.querySelector('[name="color"]').addEventListener('input', function () {
+        document.getElementById('preview-icon').style.backgroundColor = this.value;
+    });
+
+    document.querySelector('[name="icon"]').addEventListener('input', function () {
+        document.getElementById('preview-emoji').textContent = this.value || '💪';
+    });
+</script>
+{% endblock %}

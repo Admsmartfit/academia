@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Painel do Instrutor{% endblock %}
+
+{% block extra_css %}
+<style>
+    .navbar-instructor {
+        background-color: #1a1a2e;
+    }
+
+    .instructor-header {
+        background: linear-gradient(135deg, #FF6B35 0%, #db592a 100%);
+        color: white;
+        padding: 30px 0;
+        margin-bottom: 30px;
+        border-radius: 0 0 20px 20px;
+    }
+
+    .class-card {
+        border-radius: 15px;
+        margin-bottom: 25px;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+    }
+
+    .class-card .card-header {
+        border-bottom: 1px solid #f0f0f0;
+        font-weight: 600;
+    }
+
+    .student-item {
+        border-bottom: 1px solid #f8f9fa;
+        padding: 12px 20px;
+        transition: background 0.2s;
+    }
+
+    .student-item:hover {
+        background-color: #fcfcfc;
+    }
+
+    .student-item:last-child {
+        border-bottom: none;
+    }
+
+    .checkin-btn {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        padding: 6px 15px;
+        border-radius: 20px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+
+    .checkin-btn:hover {
+        background-color: #218838;
+        transform: scale(1.05);
+    }
+
+    .modality-circle {
+        width: 40px;
+        height: 40px;
+        background-color: var(--modality-color, #FF6B35);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="instructor-header shadow-sm mt-0">
+    <div class="container text-center">
+        <h1 class="h3 mb-1">Minhas Aulas de Hoje</h1>
+        <p class="mb-0 opacity-75">
+            <i class="far fa-calendar-alt me-1"></i> {{ today.strftime('%d/%m/%Y') }}
+        </p>
+    </div>
+</header>
+
+<main class="container mb-5">
+    {% if schedules %}
+    <div class="row">
+        {% for sched in schedules %}
+        <div class="col-lg-6">
+            <div class="card class-card">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <div class="modality-circle me-3" data-color="{{ sched.modality.color }}">
+                            {{ sched.modality.icon if sched.modality.icon else '💪' }}
+                        </div>
+                        <div>
+                            <h6 class="mb-0">{{ sched.modality.name }}</h6>
+                            <small class="text-muted"><i class="far fa-clock me-1"></i>{{
+                                sched.start_time.strftime('%H:%M') }} - {{ sched.end_time.strftime('%H:%M') }}</small>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-light text-dark border">{{ sched.today_bookings|length }}/{{
+                            sched.capacity }}</span>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if sched.today_bookings %}
+                    <div class="student-list">
+                        {% for booking in sched.today_bookings %}
+                        <div class="student-item d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm me-3 bg-light rounded-circle d-flex align-items-center justify-content-center"
+                                    style="width: 35px; height: 35px;">
+                                    {% if booking.status.name == 'COMPLETED' %}
+                                    <i class="fas fa-user-check text-success"></i>
+                                    {% else %}
+                                    <i class="fas fa-user text-muted"></i>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <p
+                                        class="mb-0 fw-bold {{ 'text-muted text-decoration-line-through' if booking.status.name == 'COMPLETED' else '' }}">
+                                        {{ booking.user.name }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {% if booking.status.name == 'CONFIRMED' %}
+                            <div class="d-flex gap-2">
+                                <form action="{{ url_for('instructor.checkin', booking_id=booking.id) }}" method="POST">
+                                    <button type="submit" class="checkin-btn btn-sm">
+                                        <i class="fas fa-check me-1"></i> Check-in
+                                    </button>
+                                </form>
+                                <form action="{{ url_for('instructor.no_show', booking_id=booking.id) }}" method="POST"
+                                    onsubmit="return confirm('Marcar falta para este aluno?')">
+                                    <button type="submit"
+                                        class="btn btn-link btn-sm text-danger p-0 ms-2 text-decoration-none"
+                                        title="Registrar Falta">
+                                        <i class="fas fa-times"></i> Falta
+                                    </button>
+                                </form>
+                            </div>
+                            {% elif booking.status.name == 'COMPLETED' %}
+                            <span class="badge bg-success"><i class="fas fa-check-double"></i> Realizado</span>
+                            {% elif booking.status.name == 'NO_SHOW' %}
+                            <span class="badge bg-danger">Ausente</span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="p-4 text-center text-muted border-top">
+                        <p class="mb-0"><i class="fas fa-info-circle me-1"></i> Ninguém agendado.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5 bg-light rounded-3 shadow-sm border">
+        <i class="fas fa-calendar-times fa-4x text-muted mb-3 opacity-25"></i>
+        <h4 class="text-muted">Sem aulas registradas para hoje!</h4>
+        <p class="text-muted mb-0">Seus horários aparecerão aqui automaticamente.</p>
+    </div>
+    {% endif %}
+</main>
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.modality-circle').forEach(function (el) {
+            const color = el.getAttribute('data-color');
+            if (color) {
+                el.style.backgroundColor = color;
+            }
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

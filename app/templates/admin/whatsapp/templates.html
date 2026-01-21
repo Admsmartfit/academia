@@ -1,0 +1,176 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Templates WhatsApp{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">Templates WhatsApp</h4>
+    <div>
+        <button type="button" class="btn btn-outline-primary me-2" onclick="syncStatus()">
+            <i class="fas fa-sync me-2"></i>Sincronizar Status
+        </button>
+        <a href="{{ url_for('admin_whatsapp.create_template') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Novo Template
+        </a>
+    </div>
+</div>
+
+<div class="alert alert-info mb-4">
+    <i class="fab fa-whatsapp me-2"></i>
+    <strong>Importante:</strong> Templates precisam ser aprovados pela Megaapi/WhatsApp Business antes de serem usados.
+    O processo de aprovacao pode levar 24-48 horas.
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if templates %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Codigo</th>
+                        <th>Categoria</th>
+                        <th>Trigger</th>
+                        <th>Status Megaapi</th>
+                        <th>Envios</th>
+                        <th>Ativo</th>
+                        <th style="width: 180px;">Acoes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for template in templates %}
+                    <tr>
+                        <td>
+                            <strong>{{ template.name }}</strong>
+                        </td>
+                        <td>
+                            <code>{{ template.template_code }}</code>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">{{ template.category.value.title() }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ template.trigger.value.replace('_', ' ').title() }}</span>
+                        </td>
+                        <td>
+                            {% if template.megaapi_status == 'approved' %}
+                            <span class="badge bg-success">Aprovado</span>
+                            {% elif template.megaapi_status == 'rejected' %}
+                            <span class="badge bg-danger">Rejeitado</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">Pendente</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ template.send_count }}</span>
+                        </td>
+                        <td>
+                            {% if template.is_active %}
+                            <span class="badge bg-success">Ativo</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inativo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{{ url_for('admin_whatsapp.edit_template', id=template.id) }}"
+                                   class="btn btn-sm btn-outline-primary" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% if template.megaapi_status == 'approved' and template.is_active %}
+                                <button type="button" class="btn btn-sm btn-outline-success"
+                                        onclick="testTemplate({{ template.id }})" title="Testar">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                                {% endif %}
+                                {% if template.megaapi_status == 'pending' %}
+                                <form action="{{ url_for('admin_whatsapp.manual_approve_template', id=template.id) }}"
+                                      method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Aprovar manualmente (testes)"
+                                            onclick="return confirm('Aprovar manualmente? Use apenas para testes locais.')">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                                {% if template.is_active %}
+                                <form action="{{ url_for('admin_whatsapp.delete_template', id=template.id) }}"
+                                      method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Desativar"
+                                            onclick="return confirm('Desativar este template?')">
+                                        <i class="fas fa-pause"></i>
+                                    </button>
+                                </form>
+                                {% else %}
+                                <form action="{{ url_for('admin_whatsapp.activate_template', id=template.id) }}"
+                                      method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Ativar">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fab fa-whatsapp fa-4x text-muted mb-3"></i>
+            <h5>Nenhum template cadastrado</h5>
+            <p class="text-muted">Crie templates para enviar mensagens automaticas via WhatsApp.</p>
+            <a href="{{ url_for('admin_whatsapp.create_template') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Criar Template
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Link para Logs -->
+<div class="mt-4">
+    <a href="{{ url_for('admin_whatsapp.list_logs') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-history me-2"></i>Ver Logs de Envio
+    </a>
+</div>
+
+<script>
+function syncStatus() {
+    if (!confirm('Sincronizar status dos templates com a Megaapi?')) {
+        return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ url_for("admin_whatsapp.sync_megaapi_status") }}';
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function testTemplate(id) {
+    if (!confirm('Enviar mensagem de teste para seu WhatsApp?')) {
+        return;
+    }
+
+    fetch(`/admin/whatsapp/templates/test/${id}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Mensagem de teste enviada!');
+        } else {
+            alert('Erro: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Erro ao enviar: ' + error);
+    });
+}
+</script>
+{% endblock %}

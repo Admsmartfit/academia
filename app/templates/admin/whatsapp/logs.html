@@ -1,0 +1,152 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Logs de WhatsApp{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">Logs de Envio WhatsApp</h4>
+    <a href="{{ url_for('admin_whatsapp.list_templates') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Voltar para Templates
+    </a>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Filtrar por Status</label>
+                <select name="status" class="form-control">
+                    <option value="">Todos</option>
+                    <option value="sent" {% if status_filter == 'sent' %}selected{% endif %}>Enviados</option>
+                    <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>Falhas</option>
+                    <option value="delivered" {% if status_filter == 'delivered' %}selected{% endif %}>Entregues</option>
+                    <option value="read" {% if status_filter == 'read' %}selected{% endif %}>Lidos</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter me-2"></i>Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if logs.items %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Telefone</th>
+                        <th>Usuario</th>
+                        <th>Template</th>
+                        <th>Status</th>
+                        <th>Erro</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs.items %}
+                    <tr>
+                        <td>
+                            <small>{{ log.sent_at.strftime('%d/%m/%Y %H:%M:%S') if log.sent_at else '-' }}</small>
+                        </td>
+                        <td>
+                            <code>{{ log.phone }}</code>
+                        </td>
+                        <td>
+                            {% if log.user %}
+                            {{ log.user.name }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ log.template_name }}</span>
+                        </td>
+                        <td>
+                            {% if log.status == 'sent' %}
+                            <span class="badge bg-success">Enviado</span>
+                            {% elif log.status == 'delivered' %}
+                            <span class="badge bg-info">Entregue</span>
+                            {% elif log.status == 'read' %}
+                            <span class="badge bg-primary">Lido</span>
+                            {% elif log.status == 'failed' %}
+                            <span class="badge bg-danger">Falha</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ log.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.error_message %}
+                            <small class="text-danger" title="{{ log.error_message }}">
+                                {{ log.error_message[:50] }}{% if log.error_message|length > 50 %}...{% endif %}
+                            </small>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginacao -->
+        {% if logs.pages > 1 %}
+        <nav class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if logs.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('admin_whatsapp.list_logs', page=logs.prev_num, status=status_filter) }}">
+                        Anterior
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for page_num in logs.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                    <li class="page-item {% if page_num == logs.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('admin_whatsapp.list_logs', page=page_num, status=status_filter) }}">
+                            {{ page_num }}
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if logs.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('admin_whatsapp.list_logs', page=logs.next_num, status=status_filter) }}">
+                        Proximo
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        <div class="text-muted text-center mt-3">
+            Mostrando {{ logs.items|length }} de {{ logs.total }} registros
+        </div>
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+            <h5>Nenhum log encontrado</h5>
+            <p class="text-muted">
+                {% if status_filter %}
+                Nenhuma mensagem com status "{{ status_filter }}" foi encontrada.
+                {% else %}
+                Nenhuma mensagem foi enviada ainda.
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

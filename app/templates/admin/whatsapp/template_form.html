@@ -1,0 +1,174 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}{{ 'Editar' if template else 'Novo' }} Template WhatsApp{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">{{ 'Editar' if template else 'Criar' }} Template WhatsApp</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <strong><i class="fab fa-whatsapp me-2"></i>Atencao:</strong> Templates precisam ser aprovados pela Megaapi/WhatsApp antes de serem usados (24-48h).
+                        Use variaveis no formato <code>{% raw %}{{1}}{% endraw %}</code>, <code>{% raw %}{{2}}{% endraw %}</code>, etc.
+                    </div>
+
+                    <form method="POST">
+                        <!-- Nome -->
+                        <div class="mb-3">
+                            <label class="form-label">Nome Interno *</label>
+                            <input type="text" name="name" class="form-control"
+                                   value="{{ template.name if template else '' }}"
+                                   placeholder="Ex: Confirmacao de Pagamento" required>
+                        </div>
+
+                        <!-- Codigo -->
+                        <div class="mb-3">
+                            <label class="form-label">Codigo do Template *</label>
+                            <input type="text" name="template_code" class="form-control"
+                                   value="{{ template.template_code if template else '' }}"
+                                   placeholder="Ex: confirmacao_pagamento"
+                                   pattern="[a-z0-9_]+"
+                                   {% if template %}readonly{% endif %}
+                                   required>
+                            <small class="text-muted">Apenas letras minusculas, numeros e underscore. Nao pode mudar depois de criado.</small>
+                        </div>
+
+                        <div class="row">
+                            <!-- Categoria -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Categoria *</label>
+                                <select name="category" class="form-control" required>
+                                    {% for cat in categories %}
+                                    <option value="{{ cat.name }}"
+                                            {% if template and template.category.name == cat.name %}selected{% endif %}>
+                                        {{ cat.value.title() }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Trigger -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Quando Enviar *</label>
+                                <select name="trigger" class="form-control" required>
+                                    {% for trig in triggers %}
+                                    <option value="{{ trig.name }}"
+                                            {% if template and template.trigger.name == trig.name %}selected{% endif %}>
+                                        {{ trig.value.replace('_', ' ').title() }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Conteudo -->
+                        <div class="mb-3">
+                            <label class="form-label">Conteudo da Mensagem *</label>
+                            <textarea name="content" id="content" class="form-control font-monospace"
+                                      rows="10" required
+                                      placeholder="Ola {% raw %}{{1}}{% endraw %}!&#10;&#10;Sua compra foi confirmada:&#10;Pacote: {% raw %}{{2}}{% endraw %}&#10;Valor: R$ {% raw %}{{3}}{% endraw %}&#10;&#10;Academia {% raw %}{{4}}{% endraw %}">{{ template.content if template else '' }}</textarea>
+                            <small class="text-muted">
+                                Use {% raw %}{{1}}{% endraw %}, {% raw %}{{2}}{% endraw %}, etc. para variaveis. Maximo 1024 caracteres.
+                            </small>
+                            <div class="mt-2">
+                                <span class="badge bg-secondary" id="char-count">0 / 1024</span>
+                                <span class="badge bg-info" id="var-count">0 variaveis</span>
+                            </div>
+                        </div>
+
+                        <!-- Guia de Variaveis -->
+                        <div class="mb-3">
+                            <label class="form-label">Guia de Variaveis Comuns</label>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Variavel</th>
+                                            <th>Descricao</th>
+                                            <th>Exemplo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td><code>{% raw %}{{1}}{% endraw %}</code></td><td>Nome do cliente</td><td>Joao</td></tr>
+                                        <tr><td><code>{% raw %}{{2}}{% endraw %}</code></td><td>Nome do pacote/aula</td><td>Plano Mensal</td></tr>
+                                        <tr><td><code>{% raw %}{{3}}{% endraw %}</code></td><td>Valor</td><td>300,00</td></tr>
+                                        <tr><td><code>{% raw %}{{4}}{% endraw %}</code></td><td>Nome da academia</td><td>Academia Fitness</td></tr>
+                                        <tr><td><code>{% raw %}{{5}}{% endraw %}</code></td><td>Data/Horario</td><td>31/01/2026 08:00</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('admin_whatsapp.list_templates') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Voltar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Salvar Template
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Preview -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fab fa-whatsapp me-2"></i>Preview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="border rounded p-3 bg-light" style="max-width: 350px; font-family: sans-serif;">
+                        <div class="bg-success text-white rounded p-2 mb-2" style="display: inline-block;">
+                            <small><strong>Academia System</strong></small>
+                        </div>
+                        <div class="bg-white rounded p-3 shadow-sm" id="preview-content">
+                            Digite o conteudo acima...
+                        </div>
+                        <small class="text-muted">{{ now().strftime('%H:%M') }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const contentArea = document.getElementById('content');
+const previewArea = document.getElementById('preview-content');
+const charCount = document.getElementById('char-count');
+const varCount = document.getElementById('var-count');
+
+contentArea.addEventListener('input', updatePreview);
+
+function updatePreview() {
+    let content = contentArea.value;
+    const chars = content.length;
+    const vars = (content.match(/\{\{\d+\}\}/g) || []).length;
+
+    // Atualizar contadores
+    charCount.textContent = `${chars} / 1024`;
+    charCount.className = `badge ${chars > 1024 ? 'bg-danger' : 'bg-secondary'}`;
+    varCount.textContent = `${vars} variavel(is)`;
+
+    // Preview com variaveis substituidas
+    let preview = content
+        .replace(/\{\{1\}\}/g, '<strong>Joao</strong>')
+        .replace(/\{\{2\}\}/g, '<strong>Plano Mensal</strong>')
+        .replace(/\{\{3\}\}/g, '<strong>300,00</strong>')
+        .replace(/\{\{4\}\}/g, '<strong>Academia Fitness</strong>')
+        .replace(/\{\{5\}\}/g, '<strong>31/01/2026</strong>')
+        .replace(/\n/g, '<br>');
+
+    previewArea.innerHTML = preview || 'Digite o conteudo acima...';
+}
+
+// Inicializar
+updatePreview();
+</script>
+{% endblock %}

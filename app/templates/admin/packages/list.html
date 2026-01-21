@@ -1,0 +1,108 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Pacotes{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">Gerenciar Pacotes</h4>
+    <a href="{{ url_for('admin_packages.create_package') }}" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>Novo Pacote
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if packages %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">Ordem</th>
+                        <th>Pacote</th>
+                        <th>Creditos</th>
+                        <th>Preco</th>
+                        <th>Parcelas</th>
+                        <th>Validade</th>
+                        <th>Status</th>
+                        <th style="width: 150px;">Acoes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for package in packages %}
+                    <tr class="{{ 'table-secondary' if not package.is_active }}">
+                        <td>
+                            <span class="badge bg-secondary">{{ package.display_order }}</span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if package.photo_url %}
+                                <img src="{{ url_for('static', filename='uploads/packages/' + package.photo_url) }}"
+                                     class="rounded me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                                {% else %}
+                                <div class="rounded me-3 d-flex align-items-center justify-content-center"
+                                     style="width: 50px; height: 50px; background-color: {{ package.color }};">
+                                    <i class="fas fa-box text-white"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <strong>{{ package.name }}</strong>
+                                    {% if package.is_featured %}
+                                    <span class="badge bg-warning text-dark ms-2">Destaque</span>
+                                    {% endif %}
+                                    <br>
+                                    <small class="text-muted">{{ package.description[:50] }}...</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="fw-bold" style="color: {{ package.color }};">{{ package.credits }}</span> aulas
+                        </td>
+                        <td>
+                            <strong>R$ {{ "%.2f"|format(package.price) }}</strong>
+                            <br>
+                            <small class="text-muted">R$ {{ "%.2f"|format(package.price_per_credit) }}/aula</small>
+                        </td>
+                        <td>
+                            {{ package.installments }}x de R$ {{ "%.2f"|format(package.installment_price) }}
+                        </td>
+                        <td>{{ package.validity_days }} dias</td>
+                        <td>
+                            {% if package.is_active %}
+                            <span class="badge bg-success">Ativo</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inativo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{{ url_for('admin_packages.edit_package', id=package.id) }}"
+                                   class="btn btn-sm btn-outline-primary" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form action="{{ url_for('admin_packages.toggle_package', id=package.id) }}"
+                                      method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-{{ 'warning' if package.is_active else 'success' }}"
+                                            title="{{ 'Desativar' if package.is_active else 'Ativar' }}">
+                                        <i class="fas fa-{{ 'pause' if package.is_active else 'play' }}"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-box-open fa-4x text-muted mb-3"></i>
+            <h5>Nenhum pacote cadastrado</h5>
+            <p class="text-muted">Crie seu primeiro pacote de creditos.</p>
+            <a href="{{ url_for('admin_packages.create_package') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Criar Pacote
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

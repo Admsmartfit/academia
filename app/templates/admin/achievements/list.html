@@ -1,0 +1,201 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Conquistas{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">Gerenciar Conquistas</h4>
+    <div>
+        <button type="button" class="btn btn-outline-primary me-2" onclick="checkAllAchievements()">
+            <i class="fas fa-sync me-2"></i>Verificar Todos
+        </button>
+        <a href="{{ url_for('admin_achievements.create_achievement') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Nova Conquista
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if achievements %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">Icone</th>
+                        <th>Conquista</th>
+                        <th>Criterio</th>
+                        <th>Valor</th>
+                        <th>Recompensa XP</th>
+                        <th>Desbloqueios</th>
+                        <th>Status</th>
+                        <th style="width: 150px;">Acoes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for achievement in achievements %}
+                    <tr class="{{ 'table-secondary' if not achievement.is_active }}">
+                        <td>
+                            {% if achievement.icon_url and achievement.icon_url.startswith('/') %}
+                            <img src="{{ achievement.icon_url }}" class="rounded"
+                                 style="width: 40px; height: 40px; object-fit: cover;">
+                            {% elif achievement.icon_url %}
+                            <span style="font-size: 24px;">{{ achievement.icon_url }}</span>
+                            {% else %}
+                            <div class="rounded d-flex align-items-center justify-content-center"
+                                 style="width: 40px; height: 40px; background-color: {{ achievement.color }};">
+                                <i class="fas fa-trophy text-white"></i>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>{{ achievement.name }}</strong>
+                            <br>
+                            <small class="text-muted">{{ achievement.description }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">
+                                {{ achievement.criteria_type.value.replace('_', ' ').title() }}
+                            </span>
+                        </td>
+                        <td>
+                            <strong>{{ achievement.criteria_value }}</strong>
+                            {% if achievement.criteria_extra and achievement.criteria_extra.get('modality_id') %}
+                            <br><small class="text-muted">Modalidade ID: {{ achievement.criteria_extra.modality_id }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="text-success fw-bold">+{{ achievement.xp_reward }} XP</span>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                    onclick="showUnlocks({{ achievement.id }}, '{{ achievement.name }}')">
+                                <i class="fas fa-users me-1"></i>
+                                {{ achievement.unlocks|length }}
+                            </button>
+                        </td>
+                        <td>
+                            {% if achievement.is_active %}
+                            <span class="badge bg-success">Ativa</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inativa</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{{ url_for('admin_achievements.edit_achievement', id=achievement.id) }}"
+                                   class="btn btn-sm btn-outline-primary" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% if achievement.is_active %}
+                                <form action="{{ url_for('admin_achievements.delete_achievement', id=achievement.id) }}"
+                                      method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Desativar"
+                                            onclick="return confirm('Desativar esta conquista?')">
+                                        <i class="fas fa-pause"></i>
+                                    </button>
+                                </form>
+                                {% else %}
+                                <form action="{{ url_for('admin_achievements.activate_achievement', id=achievement.id) }}"
+                                      method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Reativar">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-trophy fa-4x text-muted mb-3"></i>
+            <h5>Nenhuma conquista cadastrada</h5>
+            <p class="text-muted">Crie conquistas para engajar seus alunos!</p>
+            <a href="{{ url_for('admin_achievements.create_achievement') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Criar Conquista
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal de Desbloqueios -->
+<div class="modal fade" id="unlocksModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Desbloqueios: <span id="achievementName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="unlocksList"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function checkAllAchievements() {
+    if (!confirm('Verificar conquistas de todos os usuarios? Isso pode demorar.')) {
+        return;
+    }
+
+    fetch('{{ url_for("admin_achievements.check_all_achievements") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(`Verificacao concluida! ${data.unlocked} conquistas desbloqueadas.`);
+        location.reload();
+    })
+    .catch(error => {
+        alert('Erro ao verificar conquistas: ' + error);
+    });
+}
+
+function showUnlocks(achievementId, achievementName) {
+    document.getElementById('achievementName').textContent = achievementName;
+
+    fetch(`/admin/achievements/${achievementId}/unlocks`)
+    .then(response => response.json())
+    .then(data => {
+        const list = document.getElementById('unlocksList');
+
+        if (data.unlocks.length === 0) {
+            list.innerHTML = '<p class="text-muted text-center">Nenhum aluno desbloqueou esta conquista ainda.</p>';
+        } else {
+            let html = '<ul class="list-group">';
+            data.unlocks.forEach(unlock => {
+                html += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${unlock.user_name}</strong>
+                            <br>
+                            <small class="text-muted">${unlock.user_email}</small>
+                        </div>
+                        <div class="text-end">
+                            <small class="text-muted">${unlock.unlocked_at}</small>
+                            ${unlock.notified ? '<br><span class="badge bg-success">Notificado</span>' : '<br><span class="badge bg-warning">Pendente</span>'}
+                        </div>
+                    </li>
+                `;
+            });
+            html += '</ul>';
+            list.innerHTML = html;
+        }
+
+        new bootstrap.Modal(document.getElementById('unlocksModal')).show();
+    })
+    .catch(error => {
+        alert('Erro ao carregar desbloqueios: ' + error);
+    });
+}
+</script>
+{% endblock %}

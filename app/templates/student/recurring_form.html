@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Criar Agendamento Recorrente{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4"><i class="fas fa-sync-alt text-primary"></i> Criar Agendamento Recorrente</h2>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> Como Funciona</h6>
+                        <p class="mb-0">
+                            Agende suas aulas automaticamente! Escolha um horario fixo e suas aulas
+                            serao agendadas toda semana ate o fim da sua assinatura.
+                        </p>
+                    </div>
+
+                    {% if not subscriptions %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Voce precisa de pelo menos <strong>4 creditos</strong> disponiveis para criar um agendamento recorrente.
+                        <br>
+                        <a href="{{ url_for('shop.packages') }}" class="btn btn-sm btn-primary mt-2">Adquirir Pacote</a>
+                    </div>
+                    {% else %}
+
+                    <form method="POST" id="recurringForm">
+                        <!-- Assinatura -->
+                        <div class="mb-3">
+                            <label class="form-label">Usar Creditos de: *</label>
+                            <select name="subscription_id" id="subscription_id" class="form-select" required>
+                                <option value="">Selecione...</option>
+                                {% for sub in subscriptions %}
+                                <option value="{{ sub.id }}"
+                                        data-credits="{{ sub.credits_remaining }}"
+                                        data-end-date="{{ sub.end_date.strftime('%Y-%m-%d') }}">
+                                    {{ sub.package.name }} - {{ sub.credits_remaining }} credito(s) disponivel(is) (ate {{ sub.end_date.strftime('%d/%m/%Y') }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Selecione qual pacote usar</small>
+                        </div>
+
+                        <!-- Horario -->
+                        <div class="mb-3">
+                            <label class="form-label">Horario Fixo: *</label>
+                            <select name="schedule_id" class="form-select" required>
+                                <option value="">Selecione...</option>
+                                {% set weekdays = ['Domingo', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado'] %}
+                                {% for weekday in range(7) %}
+                                    {% set day_schedules = schedules|selectattr('weekday', 'equalto', weekday)|list %}
+                                    {% if day_schedules %}
+                                    <optgroup label="{{ weekdays[weekday] }}">
+                                        {% for sched in day_schedules %}
+                                        <option value="{{ sched.id }}" data-weekday="{{ sched.weekday }}">
+                                            {{ sched.start_time.strftime('%H:%M') }} - {{ sched.modality.name }} ({{ sched.instructor.name }})
+                                        </option>
+                                        {% endfor %}
+                                    </optgroup>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Frequencia -->
+                        <div class="mb-3">
+                            <label class="form-label">Frequencia: *</label>
+                            <select name="frequency" class="form-select" required>
+                                <option value="WEEKLY">Toda Semana (mesmo dia/horario)</option>
+                                <option value="BIWEEKLY">A Cada 2 Semanas</option>
+                            </select>
+                        </div>
+
+                        <!-- Data Inicio -->
+                        <div class="mb-3">
+                            <label class="form-label">Comecar a partir de: *</label>
+                            <input type="date" name="start_date" id="start_date"
+                                   class="form-control"
+                                   min="{{ now().date().strftime('%Y-%m-%d') }}"
+                                   required>
+                            <small class="text-muted">Selecione a data da primeira aula</small>
+                        </div>
+
+                        <!-- Preview -->
+                        <div id="preview" class="alert alert-secondary d-none">
+                            <h6><i class="fas fa-calendar"></i> Estimativa de Agendamentos</h6>
+                            <p class="mb-1">
+                                <strong>Total de aulas:</strong> <span id="total-classes">0</span>
+                            </p>
+                            <p class="mb-1">
+                                <strong>Ultima aula:</strong> <span id="last-class">-</span>
+                            </p>
+                            <p class="mb-0 small text-muted">
+                                *Baseado nos creditos disponiveis e validade da assinatura
+                            </p>
+                        </div>
+
+                        <hr>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-check"></i> Criar Agendamento Recorrente
+                            </button>
+                            <a href="{{ url_for('student.schedule') }}" class="btn btn-outline-secondary">
+                                Cancelar
+                            </a>
+                        </div>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-lightbulb"></i> Dicas</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="small mb-0">
+                        <li class="mb-2">Voce pode ter multiplos agendamentos recorrentes</li>
+                        <li class="mb-2">Cancelar a recorrencia nao cancela aulas ja agendadas</li>
+                        <li class="mb-2">Voce pode cancelar aulas individuais normalmente</li>
+                        <li class="mb-2">A recorrencia para quando seus creditos acabam</li>
+                        <li>Voce recebera lembretes normalmente</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-list"></i> Minhas Recorrencias</h6>
+                </div>
+                <div class="card-body">
+                    <a href="{{ url_for('student.my_recurring') }}" class="btn btn-outline-primary w-100">
+                        Ver Agendamentos Recorrentes
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const subscriptionSelect = document.getElementById('subscription_id');
+const startDateInput = document.getElementById('start_date');
+const preview = document.getElementById('preview');
+const frequencySelect = document.querySelector('select[name="frequency"]');
+
+function updatePreview() {
+    if (!subscriptionSelect || !startDateInput) return;
+
+    const selectedSub = subscriptionSelect.options[subscriptionSelect.selectedIndex];
+
+    if (!selectedSub.value || !startDateInput.value) {
+        preview.classList.add('d-none');
+        return;
+    }
+
+    const credits = parseInt(selectedSub.dataset.credits);
+    const endDate = new Date(selectedSub.dataset.endDate);
+    const startDate = new Date(startDateInput.value);
+    const frequency = frequencySelect.value;
+
+    // Calcular intervalo entre aulas
+    const interval = frequency === 'BIWEEKLY' ? 14 : 7;
+
+    // Calcular quantas semanas ate o fim
+    const diffTime = Math.abs(endDate - startDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const totalPossible = Math.floor(diffDays / interval) + 1;
+
+    // Total de aulas = menor entre creditos e semanas
+    const totalClasses = Math.min(credits, totalPossible);
+
+    // Ultima aula
+    const lastClassDate = new Date(startDate);
+    lastClassDate.setDate(lastClassDate.getDate() + (totalClasses - 1) * interval);
+
+    document.getElementById('total-classes').textContent = totalClasses;
+    document.getElementById('last-class').textContent = lastClassDate.toLocaleDateString('pt-BR');
+
+    preview.classList.remove('d-none');
+}
+
+if (subscriptionSelect) {
+    subscriptionSelect.addEventListener('change', updatePreview);
+}
+if (startDateInput) {
+    startDateInput.addEventListener('change', updatePreview);
+}
+if (frequencySelect) {
+    frequencySelect.addEventListener('change', updatePreview);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,103 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Modalidades{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">Gerenciar Modalidades</h4>
+    <a href="{{ url_for('admin_modalities.create_modality') }}" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>Nova Modalidade
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if modalities %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Modalidade</th>
+                        <th>Descricao</th>
+                        <th>Creditos</th>
+                        <th>Horarios</th>
+                        <th>Status</th>
+                        <th style="width: 150px;">Acoes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for modality in modalities %}
+                    <tr class="{{ 'table-secondary' if not modality.is_active }}">
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle me-3 d-flex align-items-center justify-content-center"
+                                    style="width: 40px; height: 40px; background-color: {{ modality.color }};">
+                                    {% if modality.icon %}
+                                    <span class="text-white">{{ modality.icon }}</span>
+                                    {% else %}
+                                    <i class="fas fa-running text-white"></i>
+                                    {% endif %}
+                                </div>
+                                <strong>{{ modality.name }}</strong>
+                            </div>
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ modality.description[:60] if modality.description else '-' }}{{
+                                '...' if modality.description and modality.description|length > 60 }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-warning text-dark">{{ modality.credits_cost }} cr</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">{{ modality.schedules|length }} horarios</span>
+                        </td>
+                        <td>
+                            {% if modality.is_active %}
+                            <span class="badge bg-success">Ativa</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inativa</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{{ url_for('admin_modalities.edit_modality', id=modality.id) }}"
+                                    class="btn btn-sm btn-outline-primary" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form action="{{ url_for('admin_modalities.toggle_modality', id=modality.id) }}"
+                                    method="POST" class="d-inline">
+                                    <button type="submit"
+                                        class="btn btn-sm btn-outline-{{ 'warning' if modality.is_active else 'success' }}"
+                                        title="{{ 'Desativar' if modality.is_active else 'Ativar' }}">
+                                        <i class="fas fa-{{ 'pause' if modality.is_active else 'play' }}"></i>
+                                    </button>
+                                </form>
+                                {% if not modality.schedules %}
+                                <form action="{{ url_for('admin_modalities.delete_modality', id=modality.id) }}"
+                                    method="POST" class="d-inline"
+                                    onsubmit="return confirm('Tem certeza que deseja excluir esta modalidade?')">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-running fa-4x text-muted mb-3"></i>
+            <h5>Nenhuma modalidade cadastrada</h5>
+            <p class="text-muted">Crie sua primeira modalidade de aulas.</p>
+            <a href="{{ url_for('admin_modalities.create_modality') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Criar Modalidade
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

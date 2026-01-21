@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Minhas Aulas{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-calendar-check text-primary"></i> Minhas Aulas</h2>
+            <p class="text-muted mb-0">Gerencie seus agendamentos</p>
+        </div>
+        <a href="{{ url_for('student.schedule') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Agendar Nova Aula
+        </a>
+    </div>
+
+    <!-- Proximas Aulas -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-clock"></i> Proximas Aulas ({{ upcoming|length }})
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if upcoming %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Data</th>
+                            <th>Horario</th>
+                            <th>Modalidade</th>
+                            <th>Instrutor</th>
+                            <th class="text-center">Acao</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for booking in upcoming %}
+                        <tr>
+                            <td>
+                                <strong>{{ booking.date.strftime('%d/%m/%Y') }}</strong>
+                                <br>
+                                <small class="text-muted">
+                                    {{ ['Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado', 'Domingo'][booking.date.weekday()] }}
+                                </small>
+                            </td>
+                            <td>
+                                <strong>{{ booking.schedule.start_time.strftime('%H:%M') }}</strong>
+                                <span class="text-muted">- {{ booking.schedule.end_time.strftime('%H:%M') }}</span>
+                            </td>
+                            <td>
+                                {% if booking.schedule.modality.icon_url %}
+                                <span class="me-1">{{ booking.schedule.modality.icon_url }}</span>
+                                {% endif %}
+                                {{ booking.schedule.modality.name }}
+                                {% if booking.is_recurring %}
+                                <span class="badge bg-info">Recorrente</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ booking.schedule.instructor.name }}</td>
+                            <td class="text-center">
+                                {% if booking.can_cancel %}
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        data-bs-toggle="modal" data-bs-target="#cancelModal{{ booking.id }}">
+                                    <i class="fas fa-times"></i> Cancelar
+                                </button>
+
+                                <!-- Modal de Cancelamento -->
+                                <div class="modal fade" id="cancelModal{{ booking.id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <form action="{{ url_for('student.cancel_booking', booking_id=booking.id) }}" method="POST">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Cancelar Aula</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <p>Deseja cancelar esta aula?</p>
+                                                    <ul class="list-unstyled">
+                                                        <li><strong>Data:</strong> {{ booking.date.strftime('%d/%m/%Y') }}</li>
+                                                        <li><strong>Horario:</strong> {{ booking.schedule.start_time.strftime('%H:%M') }}</li>
+                                                        <li><strong>Modalidade:</strong> {{ booking.schedule.modality.name }}</li>
+                                                    </ul>
+                                                    <div class="alert alert-info">
+                                                        <i class="fas fa-info-circle"></i>
+                                                        Seu credito sera estornado.
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Motivo (opcional):</label>
+                                                        <select name="reason" class="form-select">
+                                                            <option value="Cancelamento pelo aluno">Nao especificado</option>
+                                                            <option value="Compromisso pessoal">Compromisso pessoal</option>
+                                                            <option value="Motivo de saude">Motivo de saude</option>
+                                                            <option value="Trabalho">Trabalho</option>
+                                                            <option value="Outro">Outro</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Voltar</button>
+                                                    <button type="submit" class="btn btn-danger">Confirmar Cancelamento</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <span class="badge bg-secondary" title="Menos de 2h para a aula">
+                                    <i class="fas fa-lock"></i> Bloqueado
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-calendar-plus fa-3x text-muted mb-3"></i>
+                <h5>Nenhuma aula agendada</h5>
+                <p class="text-muted">Voce nao possui aulas futuras agendadas.</p>
+                <a href="{{ url_for('student.schedule') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Agendar Aula
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Historico -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-history"></i> Historico
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if past %}
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Data</th>
+                            <th>Modalidade</th>
+                            <th>Status</th>
+                            <th>XP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for booking in past %}
+                        <tr>
+                            <td>{{ booking.date.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ booking.schedule.modality.name }}</td>
+                            <td>
+                                {% if booking.status.value == 'completed' %}
+                                <span class="badge bg-success">Concluida</span>
+                                {% elif booking.status.value == 'cancelled' %}
+                                <span class="badge bg-warning text-dark">Cancelada</span>
+                                {% elif booking.status.value == 'no_show' %}
+                                <span class="badge bg-danger">Falta</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ booking.status.value }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if booking.xp_earned > 0 %}
+                                <span class="text-success">+{{ booking.xp_earned }} XP</span>
+                                {% elif booking.status.value == 'no_show' %}
+                                <span class="text-danger">-50 XP</span>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center mb-0">Nenhum historico disponivel.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

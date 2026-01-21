@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Minha Area - Academia{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h3 class="mb-4">Bem-vindo(a), {{ current_user.name }}!</h3>
+
+    <div class="row g-4 mb-4">
+        <!-- Creditos Disponiveis -->
+        <div class="col-md-4">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body text-center">
+                    <h1 class="display-3">{{ current_user.total_credits }}</h1>
+                    <p class="mb-0">Creditos Disponiveis</p>
+                </div>
+                <div class="card-footer bg-transparent border-0 text-center">
+                    <a href="{{ url_for('shop.packages') }}" class="btn btn-light btn-sm">Comprar mais</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- XP e Nivel -->
+        <div class="col-md-4">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body text-center">
+                    <h1 class="display-3">{{ current_user.xp }}</h1>
+                    <p class="mb-0">XP (Nivel {{ current_user.level }})</p>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-light xp-progress-bar"
+                            data-width="{{ (current_user.xp % 100)|int }}" style="width: 0%;"></div>
+                    </div>
+                    <small>{{ 100 - (current_user.xp % 100) }} XP para o proximo nivel</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aulas Completadas -->
+        <div class="col-md-4">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body text-center">
+                    <h1 class="display-3">{{ current_user.completed_bookings_count }}</h1>
+                    <p class="mb-0">Aulas Completadas</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertas de Pagamento -->
+    {% if pending_payments %}
+    <div class="alert alert-warning mb-4">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Pagamentos pendentes!</strong> Voce tem {{ pending_payments|length }} parcela(s) aguardando pagamento.
+        <a href="{{ url_for('student.my_subscriptions') }}" class="alert-link">Ver detalhes</a>
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- Proximas Aulas -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-calendar me-2"></i>Proximas Aulas</span>
+                    <a href="{{ url_for('student.schedule') }}" class="btn btn-primary btn-sm">Agendar</a>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_bookings %}
+                    <ul class="list-group list-group-flush">
+                        {% for booking in upcoming_bookings %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ booking.schedule.modality.name }}</strong>
+                                <br>
+                                <small class="text-muted">
+                                    {{ booking.date.strftime('%d/%m') }} -
+                                    {{ booking.schedule.start_time.strftime('%H:%M') }}
+                                </small>
+                            </div>
+                            <span class="badge bg-primary">
+                                {{ booking.schedule.instructor.name.split()[0] }}
+                            </span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">Nenhuma aula agendada</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Assinaturas Ativas -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-ticket-alt me-2"></i>Minhas Assinaturas</span>
+                    <a href="{{ url_for('student.my_subscriptions') }}" class="btn btn-outline-primary btn-sm">Ver
+                        todas</a>
+                </div>
+                <div class="card-body">
+                    {% if active_subscriptions %}
+                    {% for sub in active_subscriptions %}
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                        <div>
+                            <strong>{{ sub.package.name }}</strong>
+                            <br>
+                            <small class="text-muted">
+                                {{ sub.credits_remaining }} creditos restantes
+                            </small>
+                        </div>
+                        <div class="text-end">
+                            {% if sub.days_until_expiry > 7 %}
+                            <span class="badge bg-success">{{ sub.days_until_expiry }} dias</span>
+                            {% elif sub.days_until_expiry > 0 %}
+                            <span class="badge bg-warning text-dark">{{ sub.days_until_expiry }} dias</span>
+                            {% else %}
+                            <span class="badge bg-danger">Expirada</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                        <p class="text-muted mb-3">Nenhuma assinatura ativa</p>
+                        <a href="{{ url_for('shop.packages') }}" class="btn btn-primary">
+                            Adquirir Pacote
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conquistas -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-trophy me-2"></i>Minhas Conquistas
+                </div>
+                <div class="card-body">
+                    {% if current_user.unlocked_achievements %}
+                    <div class="d-flex flex-wrap gap-3">
+                        {% for ua in current_user.unlocked_achievements %}
+                        <div class="text-center" style="width: 80px;" title="{{ ua.achievement.description }}">
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-2 achievement-circle"
+                                data-color="{{ ua.achievement.color|default('#ccc', true) }}"
+                                style="width: 60px; height: 60px;">
+                                {% if ua.achievement.icon_url and ua.achievement.icon_url.startswith('/') %}
+                                <img src="{{ ua.achievement.icon_url }}" style="width: 40px;">
+                                {% elif ua.achievement.icon_url %}
+                                <span style="font-size: 28px;">{{ ua.achievement.icon_url }}</span>
+                                {% else %}
+                                <i class="fas fa-medal fa-2x text-white"></i>
+                                {% endif %}
+                            </div>
+                            <small class="d-block">{{ ua.achievement.name }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-medal fa-3x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">Complete aulas para desbloquear conquistas!</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.achievement-circle').forEach(function (el) {
+            el.style.backgroundColor = el.dataset.color;
+        });
+        document.querySelectorAll('.xp-progress-bar').forEach(function (el) {
+            el.style.width = el.dataset.width + '%';
+        });
+    });
+</script>
+{% endblock %}

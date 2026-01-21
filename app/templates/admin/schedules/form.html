@@ -1,0 +1,100 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}{{ 'Editar' if schedule else 'Criar' }} Horario{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 offset-md-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">{{ 'Editar' if schedule else 'Criar' }} Horario</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <!-- Modalidade -->
+                    <div class="mb-3">
+                        <label class="form-label">Modalidade *</label>
+                        <select name="modality_id" class="form-select" required>
+                            <option value="">Selecione...</option>
+                            {% for modality in modalities %}
+                            <option value="{{ modality.id }}"
+                                    {% if schedule and schedule.modality_id == modality.id %}selected{% endif %}>
+                                {{ modality.icon or '' }} {{ modality.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if not modalities %}
+                        <small class="text-danger">Nenhuma modalidade cadastrada.
+                            <a href="{{ url_for('admin_modalities.create_modality') }}">Criar modalidade</a>
+                        </small>
+                        {% endif %}
+                    </div>
+
+                    <!-- Instrutor -->
+                    <div class="mb-3">
+                        <label class="form-label">Instrutor *</label>
+                        <select name="instructor_id" class="form-select" required>
+                            <option value="">Selecione...</option>
+                            {% for instructor in instructors %}
+                            <option value="{{ instructor.id }}"
+                                    {% if schedule and schedule.instructor_id == instructor.id %}selected{% endif %}>
+                                {{ instructor.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Dia da Semana -->
+                    <div class="mb-3">
+                        <label class="form-label">Dia da Semana *</label>
+                        <select name="weekday" class="form-select" required>
+                            {% for day_num, day_name in weekdays %}
+                            <option value="{{ day_num }}"
+                                    {% if schedule and schedule.weekday == day_num %}selected{% endif %}>
+                                {{ day_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="row">
+                        <!-- Horario Inicio -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Horario Inicio *</label>
+                            <input type="time" name="start_time" class="form-control"
+                                   value="{{ schedule.start_time.strftime('%H:%M') if schedule else '08:00' }}" required>
+                        </div>
+
+                        <!-- Horario Fim -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Horario Fim *</label>
+                            <input type="time" name="end_time" class="form-control"
+                                   value="{{ schedule.end_time.strftime('%H:%M') if schedule else '09:00' }}" required>
+                        </div>
+                    </div>
+
+                    <!-- Capacidade -->
+                    <div class="mb-3">
+                        <label class="form-label">Capacidade (vagas) *</label>
+                        <input type="number" name="capacity" class="form-control"
+                               value="{{ schedule.capacity if schedule else 10 }}"
+                               min="1" max="100" required>
+                        <small class="text-muted">Numero maximo de alunos por aula</small>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin_schedules.list_schedules') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Salvar Horario
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

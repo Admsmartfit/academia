@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Checkout - {{ package.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row align-items-center mb-4">
+        <div class="col">
+            <h2 class="h3 mb-0">Finalizar Compra</h2>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('shop.packages') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Voltar à Loja
+            </a>
+        </div>
+    </div>
+
+    <!-- Dados do Usuario -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-user me-2"></i>Seus Dados</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label text-muted">Nome</label>
+                    <p class="fw-bold mb-0">{{ current_user.name }}</p>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label text-muted">E-mail</label>
+                    <p class="fw-bold mb-0">{{ current_user.email }}</p>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted">Telefone</label>
+                    <p class="fw-bold mb-0">{{ current_user.phone }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forma de Pagamento -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-credit-card me-2"></i>Forma de Pagamento</h5>
+        </div>
+        <div class="card-body">
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="radio" name="payment_method" id="pix" checked>
+                <label class="form-check-label d-flex align-items-center" for="pix">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Logo%E2%80%94pix_powered_by_Banco_Central_%28Brazil%2C_2020%29.svg/120px-Logo%E2%80%94pix_powered_by_Banco_Central_%28Brazil%2C_2020%29.svg.png"
+                        alt="PIX" style="height: 24px;" class="me-2">
+                    <strong>PIX</strong>
+                </label>
+            </div>
+
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Como funciona:</strong><br>
+                <ol class="mb-0 mt-2">
+                    <li>Apos confirmar, acesse "Minhas Assinaturas"</li>
+                    <li>Faca o PIX e envie o comprovante</li>
+                    <li>Aguarde a aprovacao (ate 24h)</li>
+                    <li>Seus creditos serao liberados automaticamente!</li>
+                </ol>
+            </div>
+
+            {% if package.installments > 1 %}
+            <div class="alert alert-warning">
+                <i class="fas fa-calendar-alt me-2"></i>
+                <strong>Parcelamento:</strong><br>
+                Voce tera {{ package.installments }} parcelas de R$ {{ "%.2f"|format(package.installment_price) }}.
+                A primeira vence hoje, as proximas a cada 30 dias.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Termos -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="terms" required>
+                <label class="form-check-label" for="terms">
+                    Li e concordo com os <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">termos e
+                        condicoes</a>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botao Confirmar -->
+    <form method="POST" id="checkoutForm">
+        <button type="submit" class="btn btn-success btn-lg w-100" id="confirmBtn">
+            <i class="fas fa-check me-2"></i>Confirmar Compra
+        </button>
+    </form>
+
+    <p class="text-center text-muted mt-3">
+        <i class="fas fa-lock me-1"></i>Pagamento 100% seguro
+    </p>
+</div>
+</div>
+</div>
+
+<!-- Modal Termos -->
+<div class="modal fade" id="termsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Termos e Condicoes</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>1. Creditos</h6>
+                <p>Os creditos adquiridos tem validade de {{ package.validity_days }} dias a partir da data da compra.
+                </p>
+
+                <h6>2. Pagamento</h6>
+                <p>O pagamento deve ser realizado via PIX. Apos o envio do comprovante, a liberacao ocorre em ate 24
+                    horas uteis.</p>
+
+                <h6>3. Cancelamento de Aulas</h6>
+                <p>Aulas podem ser canceladas ate 2 horas antes do horario agendado, com estorno do credito.</p>
+
+                <h6>4. Inadimplencia</h6>
+                <p>Com 15 dias de atraso no pagamento, a conta sera bloqueada. Com 90 dias, os creditos serao
+                    cancelados.</p>
+
+                <h6>5. Reembolso</h6>
+                <p>Nao ha reembolso de creditos nao utilizados apos o vencimento.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Entendi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('checkoutForm').addEventListener('submit', function (e) {
+        if (!document.getElementById('terms').checked) {
+            e.preventDefault();
+            alert('Voce deve aceitar os termos e condicoes.');
+            return;
+        }
+
+        document.getElementById('confirmBtn').disabled = true;
+        document.getElementById('confirmBtn').innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processando...';
+    });
+</script>
+{% endblock %}

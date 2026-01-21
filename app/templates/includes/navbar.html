@@ -1,0 +1,82 @@
+<!-- app/templates/includes/navbar.html -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center" href="{{ url_for('index') }}">
+            <i class="fas fa-dumbbell me-2 text-primary"></i>
+            <span class="fw-bold">Academia</span>
+            {% if current_user.is_authenticated %}
+            {% if current_user.is_admin %}
+            <span class="badge bg-danger ms-2" style="font-size: 0.6rem;">ADMIN</span>
+            {% elif current_user.is_instructor %}
+            <span class="badge bg-primary ms-2" style="font-size: 0.6rem;">INSTRUTOR</span>
+            {% endif %}
+            {% endif %}
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="mainNavbar">
+            <ul class="navbar-nav me-auto">
+                {% if current_user.is_authenticated %}
+                {% if current_user.is_admin %}
+                <li class="nav-item">
+                    <a class="nav-link {% if 'admin.dashboard' in request.endpoint %}active{% endif %}"
+                        href="{{ url_for('admin.dashboard') }}">Painel Admin</a>
+                </li>
+                {% elif current_user.is_instructor %}
+                <li class="nav-item">
+                    <a class="nav-link {% if 'instructor.dashboard' in request.endpoint %}active{% endif %}"
+                        href="{{ url_for('instructor.dashboard') }}">Minhas Aulas</a>
+                </li>
+                {% else %}
+                <li class="nav-item">
+                    <a class="nav-link {% if 'student.dashboard' in request.endpoint %}active{% endif %}"
+                        href="{{ url_for('student.dashboard') }}">Meu Painel</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'shop' in request.endpoint %}active{% endif %}"
+                        href="{{ url_for('shop.packages') }}">Comprar Créditos</a>
+                </li>
+                {% endif %}
+                {% else %}
+                <li class="nav-item">
+                    <a class="nav-link {% if 'shop' in request.endpoint %}active{% endif %}"
+                        href="{{ url_for('shop.packages') }}">Planos e Preços</a>
+                </li>
+                {% endif %}
+            </ul>
+
+            <div class="navbar-nav align-items-center">
+                {% if current_user.is_authenticated %}
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown"
+                        role="button" data-bs-toggle="dropdown">
+                        <div class="avatar-xs me-2 bg-primary rounded-circle d-flex align-items-center justify-content-center text-white"
+                            style="width: 30px; height: 30px;">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <span>{{ current_user.name.split()[0] }}</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                        {% if current_user.is_student %}
+                        <li><a class="dropdown-item" href="{{ url_for('student.my_subscriptions') }}"><i
+                                    class="fas fa-wallet me-2"></i>Meus Créditos</a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        {% endif %}
+                        <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i
+                                    class="fas fa-sign-out-alt me-2"></i>Sair</a></li>
+                    </ul>
+                </div>
+                {% else %}
+                <a class="nav-link me-2" href="{{ url_for('auth.login') }}">Entrar</a>
+                <a class="btn btn-primary btn-sm px-3 rounded-pill" href="{{ url_for('auth.register') }}">Começar
+                    Agora</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</nav>
