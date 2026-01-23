@@ -51,18 +51,24 @@
                     </div>
 
                     <div class="row">
-                        <!-- Creditos -->
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">Quantidade de Aulas *</label>
-                            <input type="number" name="credits" class="form-control"
-                                value="{{ package.credits if package else 10 }}" min="1" required>
-                        </div>
-
                         <!-- Preco Total -->
                         <div class="col-md-4 mb-3">
                             <label class="form-label">Preco Total (R$) *</label>
-                            <input type="number" name="price" class="form-control"
+                            <input type="number" name="price" class="form-control" id="price-input"
                                 value="{{ package.price if package else 400 }}" step="0.01" min="0.01" required>
+                        </div>
+
+                        <!-- Creditos (calculado automaticamente) -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Creditos <span class="badge bg-info">automatico</span></label>
+                            <input type="text" id="credits-display" class="form-control bg-light"
+                                value="{{ package.credits if package else '' }}" readonly>
+                            <small class="text-muted">
+                                Taxa: {{ credits_per_real }} credito(s) por R$1
+                                <a href="{{ url_for('admin_settings.index') }}" class="ms-1">
+                                    <i class="fas fa-cog"></i>
+                                </a>
+                            </small>
                         </div>
 
                         <!-- Parcelas -->
@@ -153,23 +159,35 @@
 </div>
 
 <script>
+    // Taxa de conversao de creditos
+    const CREDITS_PER_REAL = {{ credits_per_real }};
+
+    // Calcular creditos baseado no preco
+    function calculateCredits() {
+        const price = parseFloat(document.getElementById('price-input').value) || 0;
+        const credits = Math.floor(price * CREDITS_PER_REAL);
+        document.getElementById('credits-display').value = credits;
+        return credits;
+    }
+
     // Preview em tempo real
     document.querySelectorAll('input, textarea, select').forEach(element => {
         element.addEventListener('input', updatePreview);
     });
 
+    // Atualizar creditos quando preco mudar
+    document.getElementById('price-input').addEventListener('input', calculateCredits);
+
     function updatePreview() {
         const name = document.querySelector('[name="name"]').value || 'Nome do Pacote';
-        const credits = document.querySelector('[name="credits"]').value || 0;
-        const price = parseFloat(document.querySelector('[name="price"]').value) || 0;
+        const credits = calculateCredits();
+        const price = parseFloat(document.getElementById('price-input').value) || 0;
         const installments = parseInt(document.querySelector('[name="installments"]').value) || 1;
         const color = document.querySelector('[name="color"]').value;
         const isFeatured = document.querySelector('[name="is_featured"]').checked;
 
         const installmentPrice = (price / installments).toFixed(2);
-        const pricePerClass = credits > 0 ? (price / credits).toFixed(2) : 0;
-        const basePrice = 50;
-        const discount = Math.max(0, Math.round(((basePrice - pricePerClass) / basePrice) * 100));
+        const pricePerCredit = credits > 0 ? (price / credits).toFixed(2) : 0;
 
         const preview = `
         <div class="card ${isFeatured ? 'border-warning border-3' : ''} shadow-sm">
@@ -177,13 +195,11 @@
             <div class="card-body text-center">
                 <h5 class="card-title">${name}</h5>
                 <div class="display-4 my-3" style="color: ${color}">${credits}</div>
-                <p class="text-muted">aula(s)</p>
+                <p class="text-muted">creditos</p>
                 <div class="my-3">
                     <h4 class="text-success">R$ ${price.toFixed(2)}</h4>
                     ${installments > 1 ? `<small class="text-muted">${installments}x de R$ ${installmentPrice}</small>` : ''}
-                    <br><small class="text-muted">R$ ${pricePerClass}/aula</small>
                 </div>
-                ${discount > 0 ? `<div class="alert alert-success py-2">Economize ${discount}%</div>` : ''}
                 <button class="btn btn-primary w-100" disabled>Comprar Agora</button>
             </div>
         </div>
@@ -192,7 +208,8 @@
         document.getElementById('package-preview').innerHTML = preview;
     }
 
-    // Inicializar preview
+    // Inicializar
+    calculateCredits();
     updatePreview();
 </script>
 {% endblock %}

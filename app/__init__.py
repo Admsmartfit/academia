@@ -52,6 +52,8 @@ def create_app(config_name='default'):
     from app.routes.admin.achievements import achievements_bp
     from app.routes.admin.whatsapp import whatsapp_bp
     from app.routes.admin.users import users_bp
+    from app.routes.admin.megaapi_config import megaapi_config_bp
+    from app.routes.admin.settings import settings_bp
     from app.routes.instructor import instructor_bp
     from app.routes.webhooks import webhooks_bp
 
@@ -66,6 +68,8 @@ def create_app(config_name='default'):
     app.register_blueprint(achievements_bp)
     app.register_blueprint(whatsapp_bp)
     app.register_blueprint(users_bp)
+    app.register_blueprint(megaapi_config_bp)
+    app.register_blueprint(settings_bp)
     app.register_blueprint(instructor_bp)
     app.register_blueprint(webhooks_bp)
 

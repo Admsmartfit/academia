@@ -150,8 +150,22 @@
 
             <li class="nav-item">
                 <a href="{{ url_for('admin_whatsapp.list_templates') }}"
-                    class="nav-link {% if 'whatsapp' in request.endpoint %}active{% endif %}">
+                    class="nav-link {% if 'whatsapp' in request.endpoint and 'megaapi' not in request.endpoint %}active{% endif %}">
                     <i class="fab fa-whatsapp"></i> WhatsApp
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="{{ url_for('admin_megaapi.settings') }}"
+                    class="nav-link {% if 'megaapi' in request.endpoint %}active{% endif %}">
+                    <i class="fab fa-whatsapp"></i> Config WhatsApp
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="{{ url_for('admin_settings.index') }}"
+                    class="nav-link {% if 'settings' in request.endpoint and 'megaapi' not in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-cogs"></i> Configuracoes
                 </a>
             </li>
         </ul>

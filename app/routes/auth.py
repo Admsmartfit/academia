@@ -1,5 +1,6 @@
 # app/routes/auth.py
 
+import re
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
 from app.models import User
@@ -7,6 +8,38 @@ from app import db
 from datetime import datetime
 
 auth_bp = Blueprint('auth', __name__)
+
+
+def validate_phone(phone: str) -> str:
+    """
+    Valida e formata telefone para padrao 5511999999999
+
+    Args:
+        phone: Numero de telefone em qualquer formato
+
+    Returns:
+        Telefone formatado (5511999999999)
+
+    Raises:
+        ValueError: Se o telefone for invalido
+    """
+    # Remover tudo que nao e numero
+    clean = re.sub(r'\D', '', phone)
+
+    # Adicionar codigo do pais se nao tiver
+    if not clean.startswith('55'):
+        clean = '55' + clean
+
+    # Validar tamanho (55 + DDD + 9 digitos = 13)
+    if len(clean) != 13:
+        raise ValueError('Telefone invalido. Use: (11) 99999-9999')
+
+    # Validar DDD (11-99)
+    ddd = int(clean[2:4])
+    if ddd < 11 or ddd > 99:
+        raise ValueError('DDD invalido.')
+
+    return clean
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
@@ -75,8 +108,12 @@ def register():
         if User.query.filter_by(email=email).first():
             errors.append('Este e-mail ja esta cadastrado.')
 
-        if not phone or len(phone) < 10:
-            errors.append('Telefone invalido.')
+        # Validar e formatar telefone
+        phone_formatted = None
+        try:
+            phone_formatted = validate_phone(phone)
+        except ValueError as e:
+            errors.append(str(e))
 
         if len(password) < 6:
             errors.append('Senha deve ter pelo menos 6 caracteres.')
@@ -93,7 +130,7 @@ def register():
         user = User(
             name=name,
             email=email,
-            phone=phone,
+            phone=phone_formatted,
             role='student',
             is_active=True
         )

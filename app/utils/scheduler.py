@@ -57,20 +57,40 @@ def init_scheduler(app):
                     try:
                         from app.services.megaapi import megaapi
 
-                        cancel_url = f"https://academia.com/cancel/{booking.id}"
+                        # Preparar menu interativo
+                        sections = [
+                            {
+                                "title": "Gerenciar Aula",
+                                "rows": [
+                                    {
+                                        "title": "Confirmar Presenca",
+                                        "rowId": f"confirm_{booking.id}",
+                                        "description": "Garante sua vaga"
+                                    },
+                                    {
+                                        "title": "Cancelar Aula",
+                                        "rowId": f"cancel_{booking.id}",
+                                        "description": "Libera vaga p/ outro"
+                                    }
+                                ]
+                            }
+                        ]
 
-                        megaapi.send_template_message(
+                        instructor_name = booking.schedule.instructor.name if booking.schedule.instructor else 'Instrutor'
+
+                        text = f"""Ola {booking.user.name.split()[0]}!
+
+Lembrete: Sua aula de *{booking.schedule.modality.name}* e daqui a 2 horas!
+
+Data: {booking.date.strftime('%d/%m/%Y')}
+Horario: {booking.schedule.start_time.strftime('%H:%M')}
+Instrutor: {instructor_name}"""
+
+                        megaapi.send_list_message(
                             phone=booking.user.phone,
-                            template_name='lembrete_aula_2h',
-                            variables=[
-                                booking.user.name.split()[0],
-                                booking.date.strftime('%d/%m'),
-                                booking.schedule.start_time.strftime('%H:%M'),
-                                booking.schedule.modality.name,
-                                booking.schedule.instructor.name if booking.schedule.instructor else 'Instrutor',
-                                'Rua da Academia, 123',
-                                cancel_url
-                            ],
+                            text=text,
+                            button_text="Opcoes",
+                            sections=sections,
                             user_id=booking.user_id
                         )
 
@@ -163,6 +183,14 @@ def init_scheduler(app):
             print(f"[SCHEDULER] Processando recorrencias futuras...")
             from app.models import RecurringBooking
             RecurringBooking.process_all_recurring()
+
+    # Backup diario do banco de dados (as 3h da manha)
+    @scheduler.scheduled_job(CronTrigger(hour=3, minute=0))
+    def daily_backup():
+        with app.app_context():
+            print("[SCHEDULER] Iniciando backup do banco de dados...")
+            from app.utils.backup import backup_database
+            backup_database()
 
     # Iniciar scheduler
     scheduler.start()

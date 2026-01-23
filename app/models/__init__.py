@@ -11,6 +11,7 @@ from app.models.modality import Modality
 from app.models.achievement import Achievement, UserAchievement, CriteriaType
 from app.models.whatsapp_template import WhatsAppTemplate, TemplateCategory, TemplateTrigger
 from app.models.whatsapp_log import WhatsAppLog
+from app.models.system_config import SystemConfig
 
 __all__ = [
     'User',
@@ -33,4 +34,5 @@ __all__ = [
     'TemplateCategory',
     'TemplateTrigger',
     'WhatsAppLog',
+    'SystemConfig',
 ]

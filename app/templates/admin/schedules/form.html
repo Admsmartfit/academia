@@ -46,15 +46,50 @@
 
                     <!-- Dia da Semana -->
                     <div class="mb-3">
-                        <label class="form-label">Dia da Semana *</label>
+                        <label class="form-label">Dia(s) da Semana *</label>
+                        {% if schedule %}
+                        <!-- Modo edicao: dropdown simples -->
                         <select name="weekday" class="form-select" required>
                             {% for day_num, day_name in weekdays %}
                             <option value="{{ day_num }}"
-                                    {% if schedule and schedule.weekday == day_num %}selected{% endif %}>
+                                    {% if schedule.weekday == day_num %}selected{% endif %}>
                                 {{ day_name }}
                             </option>
                             {% endfor %}
                         </select>
+                        {% else %}
+                        <!-- Modo criacao: checkboxes para multiplos dias -->
+                        <div class="row">
+                            {% for day_num, day_name in weekdays %}
+                            <div class="col-6 col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input weekday-checkbox" type="checkbox"
+                                           name="weekdays" value="{{ day_num }}"
+                                           id="weekday_{{ day_num }}"
+                                           {% if day_num in [1, 2, 3, 4, 5] %}checked{% endif %}>
+                                    <label class="form-check-label" for="weekday_{{ day_num }}">
+                                        {{ day_name }}
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <small class="text-muted">
+                            Selecione os dias para criar este horario.
+                            Sera criado um registro para cada dia selecionado.
+                        </small>
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectWeekdays()">
+                                Seg-Sex
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAll()">
+                                Todos
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectNone()">
+                                Nenhum
+                            </button>
+                        </div>
+                        {% endif %}
                     </div>
 
                     <div class="row">
@@ -97,4 +132,36 @@
         </div>
     </div>
 </div>
+
+{% if not schedule %}
+<script>
+function selectWeekdays() {
+    document.querySelectorAll('.weekday-checkbox').forEach((cb, idx) => {
+        // Dias 1-5 (Segunda a Sexta)
+        cb.checked = [1, 2, 3, 4, 5].includes(parseInt(cb.value));
+    });
+}
+
+function selectAll() {
+    document.querySelectorAll('.weekday-checkbox').forEach(cb => {
+        cb.checked = true;
+    });
+}
+
+function selectNone() {
+    document.querySelectorAll('.weekday-checkbox').forEach(cb => {
+        cb.checked = false;
+    });
+}
+
+// Validar que pelo menos um dia foi selecionado
+document.querySelector('form').addEventListener('submit', function(e) {
+    const checked = document.querySelectorAll('.weekday-checkbox:checked');
+    if (checked.length === 0) {
+        e.preventDefault();
+        alert('Selecione pelo menos um dia da semana.');
+    }
+});
+</script>
+{% endif %}
 {% endblock %}

@@ -73,6 +73,7 @@ def megaapi_webhook():
 def megaapi_incoming():
     """
     Recebe mensagens de entrada (respostas dos clientes)
+    Inclui processamento de List Messages (botoes interativos)
     """
     try:
         data = request.get_json()
@@ -84,10 +85,71 @@ def megaapi_incoming():
         message = data.get('message', {})
         message_text = message.get('text', '')
 
-        # Aqui pode implementar logica para processar respostas
-        # Por exemplo: confirmacoes, cancelamentos por mensagem, etc.
+        # Verificar se e resposta de lista (List Message)
+        if 'listResponseMessage' in message:
+            response = message['listResponseMessage']
+            row_id = response.get('singleSelectReply', {}).get('selectedRowId')
 
-        print(f"[WEBHOOK] Mensagem recebida de {phone}: {message_text[:50]}...")
+            if row_id:
+                try:
+                    # Parsear "confirm_123" ou "cancel_123"
+                    parts = row_id.split('_')
+                    if len(parts) >= 2:
+                        action = parts[0]
+                        booking_id = int(parts[1])
+
+                        from app.models import Booking, BookingStatus
+                        from app.services.megaapi import megaapi
+
+                        booking = Booking.query.get(booking_id)
+
+                        if booking:
+                            if action == 'cancel':
+                                if booking.can_cancel:
+                                    booking.cancel(reason="Cancelado via WhatsApp")
+                                    print(f"[WEBHOOK] Booking {booking_id} cancelado via WhatsApp")
+
+                                    # Enviar confirmacao
+                                    try:
+                                        megaapi.send_custom_message(
+                                            phone=booking.user.phone,
+                                            message="Aula cancelada com sucesso! Seu credito foi estornado.",
+                                            user_id=booking.user_id
+                                        )
+                                    except Exception as msg_error:
+                                        print(f"[WEBHOOK] Erro ao enviar confirmacao: {msg_error}")
+                                else:
+                                    # Nao pode cancelar (menos de 2h)
+                                    try:
+                                        megaapi.send_custom_message(
+                                            phone=booking.user.phone,
+                                            message="Nao e possivel cancelar com menos de 2 horas de antecedencia.",
+                                            user_id=booking.user_id
+                                        )
+                                    except Exception as msg_error:
+                                        print(f"[WEBHOOK] Erro ao enviar aviso: {msg_error}")
+
+                            elif action == 'confirm':
+                                print(f"[WEBHOOK] Booking {booking_id} confirmado via WhatsApp")
+
+                                # Enviar confirmacao
+                                try:
+                                    megaapi.send_custom_message(
+                                        phone=booking.user.phone,
+                                        message=f"Presenca confirmada! Te esperamos as {booking.schedule.start_time.strftime('%H:%M')}.",
+                                        user_id=booking.user_id
+                                    )
+                                except Exception as msg_error:
+                                    print(f"[WEBHOOK] Erro ao enviar confirmacao: {msg_error}")
+                        else:
+                            print(f"[WEBHOOK] Booking {booking_id} nao encontrado")
+
+                except (ValueError, IndexError) as parse_error:
+                    print(f"[WEBHOOK] Erro ao parsear row_id '{row_id}': {parse_error}")
+
+        else:
+            # Mensagem de texto normal
+            print(f"[WEBHOOK] Mensagem recebida de {phone}: {message_text[:50]}...")
 
         # Log da mensagem recebida
         log = WhatsAppLog(

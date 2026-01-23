@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from app.models import Package
+from app.models import Package, SystemConfig
 from app import db
 from app.services.image_handler import save_package_image
 from app.routes.admin.dashboard import admin_required
@@ -42,6 +42,9 @@ def create_package():
         installments = int(request.form['installments'])
         installment_price = price / installments
 
+        # Calcular creditos automaticamente baseado no preco
+        credits = SystemConfig.calculate_credits(float(price))
+
         # Processar beneficios extras
         benefits_raw = request.form.get('extra_benefits', '')
         extra_benefits = [b.strip() for b in benefits_raw.split('\n') if b.strip()]
@@ -49,7 +52,7 @@ def create_package():
         package = Package(
             name=request.form['name'],
             description=request.form.get('description'),
-            credits=int(request.form['credits']),
+            credits=credits,
             price=price,
             installments=installments,
             installment_price=installment_price,
@@ -68,7 +71,8 @@ def create_package():
         flash(f'Pacote "{package.name}" criado com sucesso!', 'success')
         return redirect(url_for('admin_packages.list_packages'))
 
-    return render_template('admin/packages/form.html', package=None)
+    credits_per_real = SystemConfig.get_float('credits_per_real', 1.0)
+    return render_template('admin/packages/form.html', package=None, credits_per_real=credits_per_real)
 
 
 @packages_bp.route('/edit/<int:id>', methods=['GET', 'POST'])
@@ -92,9 +96,12 @@ def edit_package(id):
         price = Decimal(request.form['price'])
         installments = int(request.form['installments'])
 
+        # Calcular creditos automaticamente baseado no preco
+        credits = SystemConfig.calculate_credits(float(price))
+
         package.name = request.form['name']
         package.description = request.form.get('description')
-        package.credits = int(request.form['credits'])
+        package.credits = credits
         package.price = price
         package.installments = installments
         package.installment_price = price / installments
@@ -113,7 +120,8 @@ def edit_package(id):
         flash(f'Pacote "{package.name}" atualizado!', 'success')
         return redirect(url_for('admin_packages.list_packages'))
 
-    return render_template('admin/packages/form.html', package=package)
+    credits_per_real = SystemConfig.get_float('credits_per_real', 1.0)
+    return render_template('admin/packages/form.html', package=package, credits_per_real=credits_per_real)
 
 
 @packages_bp.route('/delete/<int:id>', methods=['POST'])

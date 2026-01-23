@@ -44,26 +44,45 @@ def list_schedules():
 @login_required
 @admin_required
 def create_schedule():
-    """Criar novo horario"""
+    """Criar novo horario (permite multiplos dias)"""
     if request.method == 'POST':
         # Converter horarios
         start_time = time.fromisoformat(request.form['start_time'])
         end_time = time.fromisoformat(request.form['end_time'])
 
-        schedule = ClassSchedule(
-            modality_id=int(request.form['modality_id']),
-            instructor_id=int(request.form['instructor_id']),
-            weekday=int(request.form['weekday']),
-            start_time=start_time,
-            end_time=end_time,
-            capacity=int(request.form['capacity']),
-            is_active=True
-        )
+        # Pegar multiplos dias selecionados
+        weekdays_selected = request.form.getlist('weekdays')
 
-        db.session.add(schedule)
+        if not weekdays_selected:
+            flash('Selecione pelo menos um dia da semana.', 'danger')
+            return redirect(url_for('admin_schedules.create_schedule'))
+
+        modality_id = int(request.form['modality_id'])
+        instructor_id = int(request.form['instructor_id'])
+        capacity = int(request.form['capacity'])
+
+        # Criar um registro para cada dia selecionado
+        created_count = 0
+        for weekday in weekdays_selected:
+            schedule = ClassSchedule(
+                modality_id=modality_id,
+                instructor_id=instructor_id,
+                weekday=int(weekday),
+                start_time=start_time,
+                end_time=end_time,
+                capacity=capacity,
+                is_active=True
+            )
+            db.session.add(schedule)
+            created_count += 1
+
         db.session.commit()
 
-        flash('Horario criado com sucesso!', 'success')
+        if created_count == 1:
+            flash('Horario criado com sucesso!', 'success')
+        else:
+            flash(f'{created_count} horarios criados com sucesso!', 'success')
+
         return redirect(url_for('admin_schedules.list_schedules'))
 
     modalities = Modality.query.filter_by(is_active=True).order_by(Modality.name).all()

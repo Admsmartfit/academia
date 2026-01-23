@@ -15,6 +15,7 @@ class MegapiService:
     def __init__(self):
         self.base_url = os.getenv('MEGAAPI_BASE_URL', 'https://api.megaapi.com.br/v1')
         self.token = os.getenv('MEGAAPI_TOKEN')
+        self.instance_key = os.getenv('MEGAAPI_INSTANCE_KEY', '')
         self.headers = {
             'Authorization': f'Bearer {self.token}',
             'Content-Type': 'application/json'
@@ -160,6 +161,91 @@ class MegapiService:
             )
 
             raise Exception(f"Erro ao enviar mensagem: {str(e)}")
+
+    def send_list_message(
+        self,
+        phone: str,
+        text: str,
+        button_text: str,
+        sections: List[dict],
+        user_id: Optional[int] = None
+    ) -> Dict:
+        """
+        Envia mensagem com menu interativo (List Message).
+
+        Args:
+            phone: Numero do destinatario
+            text: Texto principal da mensagem
+            button_text: Texto do botao que abre a lista
+            sections: Lista de secoes com opcoes
+            user_id: ID do usuario (para log)
+
+        Formato sections:
+        [
+            {
+                "title": "Acoes",
+                "rows": [
+                    {
+                        "title": "Confirmar",
+                        "rowId": "confirm_123",
+                        "description": "Garantir vaga"
+                    }
+                ]
+            }
+        ]
+
+        Returns:
+            Resposta da API
+        """
+        phone = self._format_phone(phone)
+
+        payload = {
+            "messageData": {
+                "to": phone,
+                "text": text,
+                "buttonText": button_text,
+                "title": "Acao Necessaria",
+                "description": "Selecione uma opcao",
+                "sections": sections,
+                "listType": 0
+            }
+        }
+
+        try:
+            # Endpoint para List Message
+            url = f"{self.base_url}/sendMessage/{self.instance_key}/listMessage"
+
+            response = requests.post(
+                url,
+                headers=self.headers,
+                json=payload,
+                timeout=30
+            )
+            response.raise_for_status()
+
+            result = response.json()
+
+            self._log_message(
+                phone=phone,
+                template_name='list_message',
+                user_id=user_id,
+                status='sent',
+                message_id=result.get('id'),
+                response_json=result
+            )
+
+            return result
+
+        except requests.exceptions.RequestException as e:
+            self._log_message(
+                phone=phone,
+                template_name='list_message',
+                user_id=user_id,
+                status='failed',
+                error_message=str(e)
+            )
+
+            raise Exception(f"Erro ao enviar list message: {str(e)}")
 
     def send_bulk_messages(
         self,
