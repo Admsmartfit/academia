@@ -41,6 +41,14 @@ class Payment(db.Model):
     # Atraso
     overdue_days = db.Column(db.Integer, default=0)
 
+    # NuPay Integration
+    nupay_reference_id = db.Column(db.String(100), nullable=True)  # merchantReferenceId
+    nupay_psp_reference_id = db.Column(db.String(100), nullable=True)  # pspReferenceId da NuPay
+    nupay_payment_url = db.Column(db.String(500), nullable=True)  # URL para pagamento
+    nupay_qr_code = db.Column(db.Text, nullable=True)  # QR Code base64
+    nupay_pix_copy_paste = db.Column(db.Text, nullable=True)  # Código PIX copia e cola
+    payment_method = db.Column(db.String(20), default='manual')  # manual, nupay_pix, nupay_recurring
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

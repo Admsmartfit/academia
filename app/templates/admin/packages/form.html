@@ -130,6 +130,52 @@
 
                     <hr>
 
+                    <!-- Tipo de Cobranca (Recorrencia) -->
+                    <div class="card bg-light mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title h6 mb-3"><i class="fas fa-sync-alt me-2"></i>Tipo de Cobrança</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-check form-switch mt-2">
+                                        <input type="checkbox" name="is_recurring" id="is_recurring"
+                                            class="form-check-input" {% if package and package.is_recurring %}checked{%
+                                            endif %}>
+                                        <label class="form-check-label" for="is_recurring">Habilitar Cobrança
+                                            Recorrente</label>
+                                    </div>
+                                    <small class="text-muted">O cliente sera cobrado automaticamente a cada
+                                        periodo.</small>
+                                </div>
+                                <div class="col-md-6 mb-3" id="recurring-options" style="display: none;">
+                                    <label class="form-label">Intervalo de Cobrança (dias)</label>
+                                    <input type="number" name="recurring_interval_days" class="form-control"
+                                        value="{{ package.recurring_interval_days if package and package.recurring_interval_days else 30 }}"
+                                        min="7" max="365">
+                                    <small class="text-muted">Padrao: 30 dias</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gamificacao -->
+                    <div class="card bg-light mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title h6 mb-3"><i class="fas fa-gamepad me-2"></i>Gamificação</h5>
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">Bônus XP de Boas-vindas</label>
+                                    <input type="number" name="welcome_xp_bonus" class="form-control"
+                                        value="{{ package.welcome_xp_bonus if package and package.welcome_xp_bonus else 0 }}"
+                                        min="0" max="1000">
+                                    <small class="text-muted">XP concedido apenas na primeira compra deste
+                                        pacote.</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
                     <div class="d-flex justify-content-between">
                         <a href="{{ url_for('admin_packages.list_packages') }}" class="btn btn-secondary">
                             <i class="fas fa-arrow-left me-2"></i>Cancelar
@@ -208,8 +254,23 @@
         document.getElementById('package-preview').innerHTML = preview;
     }
 
+    // Toggle recorrencia
+    const isRecurringCheckbox = document.getElementById('is_recurring');
+    const recurringOptions = document.getElementById('recurring-options');
+
+    function toggleRecurring() {
+        if (isRecurringCheckbox.checked) {
+            recurringOptions.style.display = 'block';
+        } else {
+            recurringOptions.style.display = 'none';
+        }
+    }
+
+    isRecurringCheckbox.addEventListener('change', toggleRecurring);
+
     // Inicializar
     calculateCredits();
     updatePreview();
+    toggleRecurring();
 </script>
 {% endblock %}

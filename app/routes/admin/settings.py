@@ -21,6 +21,7 @@ def index():
         credits_per_real = request.form.get('credits_per_real', '1')
         academy_name = request.form.get('academy_name', 'Academia Fitness')
         academy_address = request.form.get('academy_address', '')
+        cancellation_hours = request.form.get('cancellation_hours', '2')
 
         # Validar credits_per_real
         try:
@@ -31,10 +32,20 @@ def index():
             flash('Creditos por Real deve ser um numero positivo.', 'danger')
             return redirect(url_for('admin_settings.index'))
 
+        # Validar cancellation_hours
+        try:
+            cancel_hours = int(cancellation_hours)
+            if cancel_hours < 0 or cancel_hours > 48:
+                raise ValueError("Valor deve estar entre 0 e 48")
+        except ValueError:
+            flash('Horas de cancelamento deve ser um numero entre 0 e 48.', 'danger')
+            return redirect(url_for('admin_settings.index'))
+
         # Salvar configuracoes
         SystemConfig.set('credits_per_real', credits_per_real, 'Quantidade de creditos por cada R$1,00')
         SystemConfig.set('academy_name', academy_name, 'Nome da academia')
         SystemConfig.set('academy_address', academy_address, 'Endereco da academia')
+        SystemConfig.set('cancellation_hours', cancellation_hours, 'Horas minimas de antecedencia para cancelar aula')
 
         flash('Configuracoes salvas com sucesso!', 'success')
         return redirect(url_for('admin_settings.index'))

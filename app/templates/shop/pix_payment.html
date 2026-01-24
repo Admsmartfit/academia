@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}Pagamento PIX{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <!-- Status Card -->
+            <div class="card mb-4" id="payment-status-card">
+                <div class="card-body text-center py-4">
+                    <div id="status-pending">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Aguardando...</span>
+                        </div>
+                        <h4 class="text-primary">Aguardando Pagamento</h4>
+                        <p class="text-muted mb-0">O QR Code expira em <span id="countdown">15:00</span></p>
+                    </div>
+                    <div id="status-paid" class="d-none">
+                        <i class="fas fa-check-circle text-success fa-4x mb-3"></i>
+                        <h4 class="text-success">Pagamento Confirmado!</h4>
+                        <p class="text-muted mb-0">Seus creditos ja estao disponiveis</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PIX Card -->
+            <div class="card mb-4" id="pix-card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Logo%E2%80%94pix_powered_by_Banco_Central_%28Brazil%2C_2020%29.svg/120px-Logo%E2%80%94pix_powered_by_Banco_Central_%28Brazil%2C_2020%29.svg.png"
+                            alt="PIX" style="height: 20px; filter: brightness(0) invert(1);" class="me-2">
+                        Pague com PIX
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <!-- Valor -->
+                    <div class="mb-4">
+                        <span class="text-muted">Valor:</span>
+                        <h2 class="text-primary mb-0">R$ {{ "%.2f"|format(payment.amount) }}</h2>
+                        {% if payment.installment_total > 1 %}
+                        <small class="text-muted">Parcela {{ payment.installment_number }} de {{ payment.installment_total }}</small>
+                        {% endif %}
+                    </div>
+
+                    <!-- QR Code -->
+                    {% if payment.nupay_qr_code %}
+                    <div class="mb-4">
+                        <img src="data:image/png;base64,{{ payment.nupay_qr_code }}"
+                             alt="QR Code PIX"
+                             class="img-fluid border rounded p-2"
+                             style="max-width: 200px;">
+                    </div>
+                    {% endif %}
+
+                    <!-- PIX Copia e Cola -->
+                    {% if payment.nupay_pix_copy_paste %}
+                    <div class="mb-4">
+                        <label class="form-label text-muted small">PIX Copia e Cola:</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control form-control-sm"
+                                   value="{{ payment.nupay_pix_copy_paste }}"
+                                   id="pixCode" readonly>
+                            <button class="btn btn-outline-primary" type="button" id="copyBtn" onclick="copyPixCode()">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted">Clique para copiar e cole no app do seu banco</small>
+                    </div>
+                    {% endif %}
+
+                    <!-- Link NuPay (se houver) -->
+                    {% if payment.nupay_payment_url %}
+                    <div class="d-grid gap-2 mb-3">
+                        <a href="{{ payment.nupay_payment_url }}" target="_blank" class="btn btn-primary btn-lg">
+                            <i class="fas fa-external-link-alt me-2"></i>Pagar no App Nubank
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    <hr>
+
+                    <div class="text-start">
+                        <h6><i class="fas fa-info-circle me-2"></i>Como pagar:</h6>
+                        <ol class="small text-muted mb-0">
+                            <li>Abra o app do seu banco</li>
+                            <li>Escolha pagar com PIX</li>
+                            <li>Escaneie o QR Code ou copie o codigo</li>
+                            <li>Confirme o pagamento</li>
+                            <li>Pronto! O sistema confirmara automaticamente</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detalhes da Compra -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>Detalhes da Compra</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Pacote:</span>
+                        <strong>{{ payment.subscription.package.name }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Creditos:</span>
+                        <strong>{{ payment.subscription.package.credits }} aulas</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Validade:</span>
+                        <strong>{{ payment.subscription.package.validity_days }} dias</strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Referencia:</span>
+                        <code>{{ payment.nupay_reference_id or 'PAYMENT_' ~ payment.id }}</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botoes -->
+            <div class="d-grid gap-2">
+                <a href="{{ url_for('student.my_subscriptions') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Voltar para Minhas Assinaturas
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const paymentId = {{ payment.id }};
+    let countdownSeconds = 15 * 60; // 15 minutos
+    let checkInterval;
+
+    // Countdown timer
+    function updateCountdown() {
+        const minutes = Math.floor(countdownSeconds / 60);
+        const seconds = countdownSeconds % 60;
+        document.getElementById('countdown').textContent =
+            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+        if (countdownSeconds <= 0) {
+            clearInterval(countdownInterval);
+            document.getElementById('status-pending').innerHTML = `
+                <i class="fas fa-clock text-warning fa-4x mb-3"></i>
+                <h4 class="text-warning">QR Code Expirado</h4>
+                <p class="text-muted mb-0">Gere um novo PIX para continuar</p>
+            `;
+        }
+        countdownSeconds--;
+    }
+
+    const countdownInterval = setInterval(updateCountdown, 1000);
+
+    // Copiar codigo PIX
+    function copyPixCode() {
+        const pixCode = document.getElementById('pixCode');
+        pixCode.select();
+        document.execCommand('copy');
+
+        const copyBtn = document.getElementById('copyBtn');
+        copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+        copyBtn.classList.remove('btn-outline-primary');
+        copyBtn.classList.add('btn-success');
+
+        setTimeout(() => {
+            copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
+            copyBtn.classList.remove('btn-success');
+            copyBtn.classList.add('btn-outline-primary');
+        }, 2000);
+    }
+
+    // Verificar status do pagamento (polling)
+    function checkPaymentStatus() {
+        fetch(`/shop/payment-status/${paymentId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.is_paid) {
+                    // Pagamento confirmado!
+                    clearInterval(checkInterval);
+                    clearInterval(countdownInterval);
+
+                    document.getElementById('status-pending').classList.add('d-none');
+                    document.getElementById('status-paid').classList.remove('d-none');
+                    document.getElementById('pix-card').classList.add('d-none');
+                    document.getElementById('payment-status-card').classList.remove('mb-4');
+                    document.getElementById('payment-status-card').classList.add('border-success');
+
+                    // Redirecionar apos 3 segundos
+                    setTimeout(() => {
+                        window.location.href = '{{ url_for("shop.checkout_success") }}';
+                    }, 3000);
+                }
+            })
+            .catch(error => console.log('Erro ao verificar status:', error));
+    }
+
+    // Verificar a cada 5 segundos
+    checkInterval = setInterval(checkPaymentStatus, 5000);
+
+    // Verificar imediatamente
+    checkPaymentStatus();
+</script>
+{% endblock %}

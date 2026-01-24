@@ -20,10 +20,19 @@
     <div class="card mb-4 {{ 'border-warning' if subscription.is_blocked else '' }}">
         <div class="card-header d-flex justify-content-between align-items-center">
             <div>
-                <h5 class="mb-0">{{ subscription.package.name }}</h5>
+                <h5 class="mb-0">
+                    <a href="{{ url_for('student.subscription_detail', id=subscription.id) }}"
+                        class="text-decoration-none">
+                        {{ subscription.package.name }}
+                    </a>
+                </h5>
                 <small class="text-muted">Adquirido em {{ subscription.created_at.strftime('%d/%m/%Y') }}</small>
             </div>
-            <div>
+            <div class="d-flex align-items-center gap-2">
+                {% if subscription.is_recurring %}
+                <span class="badge bg-primary"><i class="fas fa-sync-alt me-1"></i>Recorrente</span>
+                {% endif %}
+
                 {% if subscription.status.value == 'active' %}
                 <span class="badge bg-success">Ativa</span>
                 {% elif subscription.status.value == 'suspended' %}
@@ -33,6 +42,11 @@
                 {% else %}
                 <span class="badge bg-secondary">Expirada</span>
                 {% endif %}
+
+                <a href="{{ url_for('student.subscription_detail', id=subscription.id) }}"
+                    class="btn btn-sm btn-outline-primary ms-2">
+                    <i class="fas fa-eye"></i> Detalhes
+                </a>
             </div>
         </div>
 

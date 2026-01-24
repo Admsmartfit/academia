@@ -62,6 +62,9 @@ def create_package():
             is_featured=bool(request.form.get('is_featured')),
             display_order=int(request.form.get('display_order', 0)),
             extra_benefits=extra_benefits if extra_benefits else None,
+            is_recurring='is_recurring' in request.form,
+            recurring_interval_days=request.form.get('recurring_interval_days', 30, type=int),
+            welcome_xp_bonus=request.form.get('welcome_xp_bonus', 0, type=int),
             is_active=True
         )
 
@@ -109,6 +112,9 @@ def edit_package(id):
         package.color = request.form.get('color', '#FF6B35')
         package.is_featured = bool(request.form.get('is_featured'))
         package.display_order = int(request.form.get('display_order', 0))
+        package.is_recurring = 'is_recurring' in request.form
+        package.recurring_interval_days = request.form.get('recurring_interval_days', 30, type=int)
+        package.welcome_xp_bonus = request.form.get('welcome_xp_bonus', 0, type=int)
 
         # Beneficios
         benefits_raw = request.form.get('extra_benefits', '')

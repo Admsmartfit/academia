@@ -13,6 +13,15 @@ class Config:
     MEGAAPI_TOKEN = os.environ.get('MEGAAPI_TOKEN')
     MEGAAPI_BASE_URL = os.environ.get('MEGAAPI_BASE_URL', 'https://api.megaapi.com.br/v1')
 
+    # NuPay Configuration (Pagamentos PIX)
+    NUPAY_BASE_URL = os.environ.get('NUPAY_BASE_URL', 'https://api.spinpay.com.br')
+    NUPAY_MERCHANT_KEY = os.environ.get('NUPAY_MERCHANT_KEY')
+    NUPAY_MERCHANT_TOKEN = os.environ.get('NUPAY_MERCHANT_TOKEN')
+    NUPAY_WEBHOOK_SECRET = os.environ.get('NUPAY_WEBHOOK_SECRET')
+
+    # Base URL for callbacks (usado em webhooks e redirecionamentos)
+    BASE_URL = os.environ.get('BASE_URL', 'http://localhost:5000')
+
 class DevelopmentConfig(Config):
     DEBUG = True
 

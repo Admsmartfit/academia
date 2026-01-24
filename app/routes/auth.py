@@ -93,6 +93,7 @@ def register():
         name = request.form.get('name', '').strip()
         email = request.form.get('email', '').strip().lower()
         phone = request.form.get('phone', '').strip()
+        cpf = request.form.get('cpf', '').strip()
         password = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
 
@@ -107,6 +108,12 @@ def register():
 
         if User.query.filter_by(email=email).first():
             errors.append('Este e-mail ja esta cadastrado.')
+
+        # Validar CPF
+        if not cpf:
+            errors.append('O CPF é obrigatório.')
+        elif not User.validate_cpf(cpf):
+            errors.append('CPF inválido.')
 
         # Validar e formatar telefone
         phone_formatted = None
@@ -131,6 +138,7 @@ def register():
             name=name,
             email=email,
             phone=phone_formatted,
+            cpf=User.format_cpf(cpf),
             role='student',
             is_active=True
         )

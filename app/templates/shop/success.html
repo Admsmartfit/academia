@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Pagamento Confirmado{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 text-center">
+            <!-- Success Animation -->
+            <div class="mb-4">
+                <div class="success-checkmark">
+                    <i class="fas fa-check-circle text-success" style="font-size: 80px;"></i>
+                </div>
+            </div>
+
+            <h1 class="h2 text-success mb-3">Pagamento Confirmado!</h1>
+            <p class="lead text-muted mb-4">
+                Seu pagamento foi processado com sucesso.
+                {% if subscription %}
+                Seus creditos ja estao disponiveis!
+                {% endif %}
+            </p>
+
+            {% if subscription %}
+            <!-- Resumo da Compra -->
+            <div class="card mb-4 text-start">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-receipt me-2"></i>Resumo da Compra</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <small class="text-muted d-block">Pacote</small>
+                            <strong>{{ subscription.package.name }}</strong>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <small class="text-muted d-block">Valor</small>
+                            <strong>R$ {{ "%.2f"|format(subscription.package.price) }}</strong>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <small class="text-muted d-block">Creditos</small>
+                            <strong class="text-success">
+                                <i class="fas fa-ticket-alt me-1"></i>
+                                {{ subscription.credits_remaining }} aulas
+                            </strong>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <small class="text-muted d-block">Validade</small>
+                            <strong>{{ subscription.end_date.strftime('%d/%m/%Y') }}</strong>
+                        </div>
+                    </div>
+
+                    {% if subscription.package.welcome_xp_bonus and subscription.package.welcome_xp_bonus > 0 %}
+                    <hr>
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-star me-2"></i>
+                        <strong>Bonus de Boas-vindas:</strong>
+                        Voce ganhou {{ subscription.package.welcome_xp_bonus }} XP!
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Proximos Passos -->
+            <div class="card mb-4 text-start">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-route me-2"></i>Proximos Passos</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex mb-3">
+                        <div class="flex-shrink-0">
+                            <span class="badge bg-primary rounded-circle p-2">1</span>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <strong>Agende sua primeira aula</strong>
+                            <p class="text-muted small mb-0">Escolha a modalidade e horario que preferir</p>
+                        </div>
+                    </div>
+                    <div class="d-flex mb-3">
+                        <div class="flex-shrink-0">
+                            <span class="badge bg-primary rounded-circle p-2">2</span>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <strong>Receba a confirmacao via WhatsApp</strong>
+                            <p class="text-muted small mb-0">Enviaremos lembretes automaticos</p>
+                        </div>
+                    </div>
+                    <div class="d-flex">
+                        <div class="flex-shrink-0">
+                            <span class="badge bg-primary rounded-circle p-2">3</span>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <strong>Venha treinar!</strong>
+                            <p class="text-muted small mb-0">Chegue 10 minutos antes da sua aula</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Botoes de Acao -->
+            <div class="d-grid gap-2">
+                <a href="{{ url_for('student.book_class') }}" class="btn btn-success btn-lg">
+                    <i class="fas fa-calendar-plus me-2"></i>Agendar Aula Agora
+                </a>
+                <a href="{{ url_for('student.my_subscriptions') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-ticket-alt me-2"></i>Ver Minhas Assinaturas
+                </a>
+                <a href="{{ url_for('student.dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-home me-2"></i>Ir para o Painel
+                </a>
+            </div>
+
+            <!-- Suporte -->
+            <div class="mt-4">
+                <p class="text-muted small">
+                    <i class="fas fa-question-circle me-1"></i>
+                    Duvidas? Entre em contato pelo WhatsApp ou email
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .success-checkmark {
+        animation: checkmark 0.5s ease-in-out;
+    }
+
+    @keyframes checkmark {
+        0% {
+            transform: scale(0);
+            opacity: 0;
+        }
+        50% {
+            transform: scale(1.2);
+        }
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+</style>
+{% endblock %}

@@ -46,6 +46,13 @@ class Subscription(db.Model):
     blocked_at = db.Column(db.DateTime)
     block_reason = db.Column(db.String(255))
 
+    # Recorrência NuPay
+    is_recurring = db.Column(db.Boolean, default=False)  # Se é assinatura recorrente
+    nupay_subscription_id = db.Column(db.String(100), nullable=True)  # ID da assinatura na NuPay
+    recurring_status = db.Column(db.String(20), default='ACTIVE')  # ACTIVE, PAUSED, CANCELLED
+    next_billing_date = db.Column(db.Date, nullable=True)  # Próxima cobrança
+    last_billing_date = db.Column(db.Date, nullable=True)  # Última cobrança
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

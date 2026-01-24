@@ -44,24 +44,73 @@
             <h5 class="mb-0"><i class="fas fa-credit-card me-2"></i>Forma de Pagamento</h5>
         </div>
         <div class="card-body">
-            <div class="form-check mb-3">
-                <input class="form-check-input" type="radio" name="payment_method" id="pix" checked>
-                <label class="form-check-label d-flex align-items-center" for="pix">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Logo%E2%80%94pix_powered_by_Banco_Central_%28Brazil%2C_2020%29.svg/120px-Logo%E2%80%94pix_powered_by_Banco_Central_%28Brazil%2C_2020%29.svg.png"
-                        alt="PIX" style="height: 24px;" class="me-2">
-                    <strong>PIX</strong>
+            <!-- Opcao 1: NuPay PIX Instantaneo -->
+            <div
+                class="form-check mb-3 p-3 border rounded {% if current_user.cpf %}border-primary bg-light{% else %}border-secondary{% endif %}">
+                <input class="form-check-input" type="radio" name="payment_method" id="nupay_pix" value="nupay_pix" {%
+                    if current_user.cpf %}checked{% else %}disabled{% endif %}>
+                <label class="form-check-label w-100" for="nupay_pix">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Logo%E2%80%94pix_powered_by_Banco_Central_%28Brazil%2C_2020%29.svg/120px-Logo%E2%80%94pix_powered_by_Banco_Central_%28Brazil%2C_2020%29.svg.png"
+                                alt="PIX" style="height: 24px;" class="me-2">
+                            <div>
+                                <strong>PIX Instantaneo</strong>
+                                <small class="text-success d-block">Confirmacao automatica em segundos</small>
+                            </div>
+                        </div>
+                        <span class="badge bg-success">Recomendado</span>
+                    </div>
+                </label>
+                {% if not current_user.cpf %}
+                <div class="alert alert-warning mt-2 mb-0 small">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    <strong>CPF necessario:</strong>
+                    <a href="{{ url_for('student.profile_edit') }}">Cadastre seu CPF</a> para usar esta opcao.
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Opcao 2: PIX Manual -->
+            <div class="form-check mb-3 p-3 border rounded">
+                <input class="form-check-input" type="radio" name="payment_method" id="pix_manual" value="pix_manual" {%
+                    if not current_user.cpf %}checked{% endif %}>
+                <label class="form-check-label w-100" for="pix_manual">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-qrcode fa-2x text-muted me-3"></i>
+                        <div>
+                            <strong>PIX Manual</strong>
+                            <small class="text-muted d-block">Envie comprovante para aprovacao (ate 24h)</small>
+                        </div>
+                    </div>
                 </label>
             </div>
 
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i>
-                <strong>Como funciona:</strong><br>
-                <ol class="mb-0 mt-2">
-                    <li>Apos confirmar, acesse "Minhas Assinaturas"</li>
-                    <li>Faca o PIX e envie o comprovante</li>
-                    <li>Aguarde a aprovacao (ate 24h)</li>
-                    <li>Seus creditos serao liberados automaticamente!</li>
-                </ol>
+            <!-- Info boxes -->
+            <div id="nupay-info" class="{% if not current_user.cpf %}d-none{% endif %}">
+                <div class="alert alert-success">
+                    <i class="fas fa-bolt me-2"></i>
+                    <strong>PIX Instantaneo:</strong><br>
+                    <ol class="mb-0 mt-2 small">
+                        <li>Escaneie o QR Code ou copie o codigo PIX</li>
+                        <li>Pague pelo app do seu banco</li>
+                        <li>Confirmacao automatica em segundos!</li>
+                        <li>Creditos liberados imediatamente</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div id="manual-info" class="{% if current_user.cpf %}d-none{% endif %}">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>PIX Manual:</strong><br>
+                    <ol class="mb-0 mt-2 small">
+                        <li>Apos confirmar, acesse "Minhas Assinaturas"</li>
+                        <li>Faca o PIX e envie o comprovante</li>
+                        <li>Aguarde a aprovacao (ate 24h)</li>
+                        <li>Seus creditos serao liberados apos aprovacao</li>
+                    </ol>
+                </div>
             </div>
 
             {% if package.installments > 1 %}
@@ -136,13 +185,123 @@
     </div>
 </div>
 
+<!-- Modal CPF para NuPay -->
+{% if not current_user.cpf %}
+<div class="modal fade" id="cpfModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-id-card me-2"></i>Informe seu CPF</h5>
+            </div>
+            <div class="modal-body">
+                <p>Para gerar o PIX NuPay Instantâneo, precisamos do seu CPF para registrar a transação.</p>
+                <form id="cpfForm">
+                    <div class="mb-3">
+                        <label class="form-label">CPF *</label>
+                        <input type="text" id="modal-cpf" class="form-control" placeholder="000.000.000-00" required
+                            maxlength="14">
+                        <div id="cpf-error" class="text-danger small mt-1 d-none">CPF inválido.</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="window.history.back()">Voltar</button>
+                <button type="submit" form="cpfForm" id="btnSaveCpf" class="btn btn-primary">Salvar e Continuar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <script>
+    // Toggle info boxes based on payment method selection
+    document.querySelectorAll('input[name="payment_method"]').forEach(function (radio) {
+        radio.addEventListener('change', function () {
+            const nupayInfo = document.getElementById('nupay-info');
+            const manualInfo = document.getElementById('manual-info');
+
+            if (this.value === 'nupay_pix') {
+                nupayInfo.classList.remove('d-none');
+                manualInfo.classList.add('d-none');
+            } else {
+                nupayInfo.classList.add('d-none');
+                manualInfo.classList.remove('d-none');
+            }
+        });
+    });
+
+    // Modal CPF logic
+    {% if not current_user.cpf %}
+    const cpfModal = new bootstrap.Modal(document.getElementById('cpfModal'));
+
+    document.getElementById('nupay_pix').addEventListener('click', function (e) {
+        if (!{{ (current_user.cpf is not none) | tojson }}) {
+        e.preventDefault();
+        this.checked = false;
+        cpfModal.show();
+    }
+    });
+
+    const modalCpfInput = document.getElementById('modal-cpf');
+    modalCpfInput.addEventListener('input', function (e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 11) value = value.slice(0, 11);
+        if (value.length > 9) value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+        else if (value.length > 6) value = value.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
+        else if (value.length > 3) value = value.replace(/(\d{3})(\d{1,3})/, "$1.$2");
+        e.target.value = value;
+    });
+
+    document.getElementById('cpfForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const cpfValue = modalCpfInput.value;
+        const btn = document.getElementById('btnSaveCpf');
+        const errorEl = document.getElementById('cpf-error');
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Salvando...';
+        errorEl.classList.add('d-none');
+
+        fetch("{{ url_for('student.update_cpf') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cpf: cpfValue })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload(); // Recarrega para habilitar o PIX NuPay
+                } else {
+                    errorEl.textContent = data.error || 'Erro ao validar CPF.';
+                    errorEl.classList.remove('d-none');
+                    btn.disabled = false;
+                    btn.textContent = 'Salvar e Continuar';
+                }
+            })
+            .catch(error => {
+                errorEl.textContent = 'Erro de conexão.';
+                errorEl.classList.remove('d-none');
+                btn.disabled = false;
+                btn.textContent = 'Salvar e Continuar';
+            });
+    });
+    {% endif %}
+
     document.getElementById('checkoutForm').addEventListener('submit', function (e) {
         if (!document.getElementById('terms').checked) {
             e.preventDefault();
             alert('Voce deve aceitar os termos e condicoes.');
             return;
         }
+
+        const method = document.querySelector('input[name="payment_method"]:checked').value;
+
+        // Injetar o metodo de pagamento selecionado no form antes de enviar
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = 'payment_method';
+        hiddenInput.value = method;
+        this.appendChild(hiddenInput);
 
         document.getElementById('confirmBtn').disabled = true;
         document.getElementById('confirmBtn').innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processando...';

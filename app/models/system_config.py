@@ -30,6 +30,10 @@ class SystemConfig(db.Model):
         'academy_address': {
             'value': 'Rua da Academia, 123',
             'description': 'Endereco da academia'
+        },
+        'cancellation_hours': {
+            'value': '2',
+            'description': 'Horas minimas de antecedencia para cancelar aula'
         }
     }
 

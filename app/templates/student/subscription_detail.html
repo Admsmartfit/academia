@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block title %}Detalhes da Assinatura - Academia{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row align-items-center mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{{ url_for('student.my_subscriptions') }}">Minhas
+                            Assinaturas</a></li>
+                    <li class="breadcrumb-item active">Detalhes</li>
+                </ol>
+            </nav>
+            <h2 class="h4 mb-0">Detalhes da Assinatura</h2>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('student.my_subscriptions') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Voltar
+            </a>
+        </div>
+    </div>
+
+    <div class="card mb-4 {{ 'border-warning' if subscription.is_blocked else '' }}">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0">{{ subscription.package.name }}</h5>
+                <small class="text-muted">Adquirida em {{ subscription.created_at.strftime('%d/%m/%Y') }}</small>
+            </div>
+            <div>
+                {% if subscription.status.value == 'active' %}
+                <span class="badge bg-success">Ativa</span>
+                {% elif subscription.status.value == 'suspended' %}
+                <span class="badge bg-warning text-dark">Bloqueada</span>
+                {% elif subscription.status.value == 'cancelled' %}
+                <span class="badge bg-danger">Cancelada</span>
+                {% else %}
+                <span class="badge bg-secondary">Expirada</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card-body">
+            {% if subscription.is_blocked %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Assinatura bloqueada!</strong> {{ subscription.block_reason or 'Pagamento em atraso.' }}
+                Regularize para voltar a agendar aulas.
+            </div>
+            {% endif %}
+
+            <div class="row mb-4">
+                <!-- Creditos -->
+                <div class="col-md-4 text-center">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h2 class="text-primary mb-0">{{ subscription.credits_remaining }}</h2>
+                            <small class="text-muted">Créditos restantes</small>
+                            <div class="progress mt-2" style="height: 8px;">
+                                <div class="progress-bar subscription-progress-bar"
+                                    data-width="{{ subscription.progress_percent }}" style="width: 0%;"></div>
+                            </div>
+                            <small class="text-muted">{{ subscription.credits_used }}/{{ subscription.credits_total }}
+                                usados</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Validade -->
+                <div class="col-md-4 text-center">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            {% if subscription.days_until_expiry > 0 %}
+                            <h2 class="text-success mb-0">{{ subscription.days_until_expiry }}</h2>
+                            <small class="text-muted">Dias restantes</small>
+                            {% elif subscription.days_until_expiry == 0 %}
+                            <h2 class="text-warning mb-0">Hoje</h2>
+                            <small class="text-muted">Expira hoje!</small>
+                            {% else %}
+                            <h2 class="text-danger mb-0">Expirada</h2>
+                            <small class="text-muted">Há {{ subscription.days_until_expiry|abs }} dias</small>
+                            {% endif %}
+                            <p class="mb-0 mt-2">
+                                <small>Válido até {{ subscription.end_date.strftime('%d/%m/%Y') }}</small>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recorrência -->
+                <div class="col-md-4 text-center">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            {% if subscription.is_recurring %}
+                            <div class="mb-2">
+                                <span class="badge bg-primary">Recorrência Ativa</span>
+                            </div>
+                            <p class="mb-1 small">
+                                <i class="fas fa-calendar-check me-1"></i>
+                                Próxima cobrança: {{ subscription.next_billing_date.strftime('%d/%m/%Y') if
+                                subscription.next_billing_date else 'Pendente' }}
+                            </p>
+                            <p class="mb-2 small text-muted">
+                                Última cobrança: {{ subscription.last_billing_date.strftime('%d/%m/%Y') if
+                                subscription.last_billing_date else '-' }}
+                            </p>
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
+                                data-bs-target="#cancelRecurringModal">
+                                <i class="fas fa-times me-1"></i> Cancelar Recorrência
+                            </button>
+                            {% else %}
+                            <div class="mb-2">
+                                <span class="badge bg-secondary">Recorrência Inativa</span>
+                            </div>
+                            <p class="text-muted small">Este pacote não possui renovação automática ativa ou ela foi
+                                cancelada.</p>
+                            {% if subscription.recurring_status == 'CANCELLED' %}
+                            <small class="text-danger">Cancelada em {{ subscription.updated_at.strftime('%d/%m/%Y')
+                                }}</small>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Listagem de Pagamentos -->
+            <h6 class="mb-3"><i class="fas fa-receipt me-2"></i>Histórico de Pagamentos</h6>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Parcela/Ref</th>
+                            <th>Valor</th>
+                            <th>Vencimento</th>
+                            <th>Status</th>
+                            <th>Método</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in subscription.payments|sort(attribute='due_date', reverse=True) %}
+                        <tr
+                            class="{{ 'table-success' if payment.status.value == 'paid' else ('table-danger' if payment.status.value == 'overdue' else '') }}">
+                            <td>{{ payment.installment_number }}/{{ payment.installment_total }}</td>
+                            <td>R$ {{ "%.2f"|format(payment.amount) }}</td>
+                            <td>{{ payment.due_date.strftime('%d/%m/%Y') }}</td>
+                            <td>
+                                {% if payment.status.value == 'paid' %}
+                                <span class="badge bg-success">Pago</span>
+                                {% elif payment.status.value == 'overdue' %}
+                                <span class="badge bg-danger">Atrasado</span>
+                                {% elif payment.proof_url %}
+                                <span class="badge bg-info">Em análise</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">Pendente</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    {% if payment.payment_method == 'nupay_pix' %}PIX NuPay
+                                    {% elif payment.payment_method == 'nupay_recurring' %}Recorrência
+                                    {% else %}Manual{% endif %}
+                                </small>
+                            </td>
+                            <td>
+                                {% if payment.status.value != 'paid' and not payment.proof_url %}
+                                {% if payment.payment_method == 'nupay_pix' and payment.status.value != 'paid' %}
+                                <form action="{{ url_for('shop.generate_pix', payment_id=payment.id) }}" method="POST"
+                                    style="display:inline;">
+                                    <button type="submit" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-qrcode me-1"></i>Pagar Agora
+                                    </button>
+                                </form>
+                                {% else %}
+                                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                                    data-bs-target="#uploadModal{{ payment.id }}">
+                                    <i class="fas fa-upload me-1"></i>Enviar Comprovante
+                                </button>
+                                {% endif %}
+                                {% elif payment.status.value == 'paid' %}
+                                <small class="text-muted">{{ payment.paid_date.strftime('%d/%m/%Y') }}</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cancelar Recorrência -->
+{% if subscription.is_recurring %}
+<div class="modal fade" id="cancelRecurringModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cancelar Recorrência</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja cancelar a cobrança automática deste pacote?</p>
+                <ul>
+                    <li>Você poderá usar seus <strong>{{ subscription.credits_remaining }} créditos</strong> atuais até
+                        <strong>{{ subscription.end_date.strftime('%d/%m/%Y') }}</strong>.</li>
+                    <li>Nenhuma nova cobrança será feita automaticamente.</li>
+                    <li>Para renovar no futuro, você precisará adquirir um novo pacote manualmente.</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Manter Recorrência</button>
+                <form action="{{ url_for('student.cancel_recurring_subscription', id=subscription.id) }}" method="POST">
+                    <button type="submit" class="btn btn-danger">Confirmar Cancelamento</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.subscription-progress-bar').forEach(function (el) {
+            el.style.width = el.dataset.width + '%';
+        });
+    });
+</script>
+{% endblock %}

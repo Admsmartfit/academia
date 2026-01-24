@@ -32,6 +32,13 @@ class Package(db.Model):
     # Beneficios extras
     extra_benefits = db.Column(db.JSON)  # Ex: ["Toalha gratis", "Garrafinha"]
 
+    # Recorrência NuPay
+    is_recurring = db.Column(db.Boolean, default=False)  # Se é pacote recorrente
+    recurring_interval_days = db.Column(db.Integer, default=30)  # Intervalo entre cobranças
+
+    # Gamificação
+    welcome_xp_bonus = db.Column(db.Integer, default=0)  # Bônus XP na primeira compra
+
     # Status
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

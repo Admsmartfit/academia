@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="min-vh-100 d-flex align-items-center justify-content-center"
-     style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
+    style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-md-6">
@@ -22,8 +22,8 @@
                                 <label class="form-label">Nome Completo</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-user"></i></span>
-                                    <input type="text" name="name" class="form-control"
-                                           placeholder="Seu nome completo" required autofocus>
+                                    <input type="text" name="name" class="form-control" placeholder="Seu nome completo"
+                                        required autofocus>
                                 </div>
                             </div>
 
@@ -31,8 +31,8 @@
                                 <label class="form-label">E-mail</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-envelope"></i></span>
-                                    <input type="email" name="email" class="form-control"
-                                           placeholder="seu@email.com" required>
+                                    <input type="email" name="email" class="form-control" placeholder="seu@email.com"
+                                        required>
                                 </div>
                             </div>
 
@@ -40,10 +40,20 @@
                                 <label class="form-label">Telefone (WhatsApp)</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fab fa-whatsapp"></i></span>
-                                    <input type="tel" name="phone" class="form-control"
-                                           placeholder="11999999999" required>
+                                    <input type="tel" name="phone" id="phone" class="form-control"
+                                        placeholder="11999999999" required>
                                 </div>
-                                <small class="text-muted">Apenas numeros com DDD</small>
+                                <small class="text-muted">Apenas números com DDD</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">CPF *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-id-card"></i></span>
+                                    <input type="text" name="cpf" id="cpf" class="form-control"
+                                        placeholder="000.000.000-00" required maxlength="14">
+                                </div>
+                                <small class="text-muted">Necessário para pagamentos via PIX NuPay</small>
                             </div>
 
                             <div class="row">
@@ -52,7 +62,7 @@
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fas fa-lock"></i></span>
                                         <input type="password" name="password" class="form-control"
-                                               placeholder="Min. 6 caracteres" required minlength="6">
+                                            placeholder="Min. 6 caracteres" required minlength="6">
                                     </div>
                                 </div>
 
@@ -61,7 +71,7 @@
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fas fa-lock"></i></span>
                                         <input type="password" name="confirm_password" class="form-control"
-                                               placeholder="Repita a senha" required minlength="6">
+                                            placeholder="Repita a senha" required minlength="6">
                                     </div>
                                 </div>
                             </div>
@@ -83,7 +93,7 @@
                         <hr>
 
                         <p class="text-center mb-0">
-                            Ja tem conta?
+                            Já tem conta?
                             <a href="{{ url_for('auth.login') }}" class="text-decoration-none">Fazer login</a>
                         </p>
                     </div>
@@ -92,4 +102,29 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const cpfInput = document.getElementById('cpf');
+
+        cpfInput.addEventListener('input', function (e) {
+            let value = e.target.value.replace(/\D/g, ''); // Remove não números
+
+            if (value.length > 11) value = value.slice(0, 11);
+
+            // Aplica a máscara: 000.000.000-00
+            if (value.length > 9) {
+                value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+            } else if (value.length > 6) {
+                value = value.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
+            } else if (value.length > 3) {
+                value = value.replace(/(\d{3})(\d{1,3})/, "$1.$2");
+            }
+
+            e.target.value = value;
+        });
+    });
+</script>
 {% endblock %}

@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Academia | Transforme seu corpo com flexibilidade total</title>
+    <meta name="description"
+        content="Pague apenas pelas aulas que frequentar. Sem mensalidade fixa. Sem multa de cancelamento.">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Outfit:wght@400;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --accent: #ff6b35;
+            --accent-glow: rgba(255, 107, 53, 0.4);
+            --text-main: #f8f9fa;
+            --text-secondary: #94a3b8;
+            --glass: rgba(30, 41, 59, 0.7);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 1.5rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            transition: var(--transition);
+        }
+
+        nav.scrolled {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            padding: 1rem 5%;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--text-main);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2.5rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--text-main);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: var(--transition);
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        .btn-login {
+            background: var(--accent);
+            padding: 0.75rem 1.75rem;
+            border-radius: 50px;
+            color: white !important;
+            box-shadow: 0 4px 15px var(--accent-glow);
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--accent-glow);
+        }
+
+        /* Hero Section */
+        #hero {
+            height: 100vh;
+            position: relative;
+            display: flex;
+            align-items: center;
+            padding: 0 5%;
+            background: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.4)), url('/static/img/hero.png');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .hero-content {
+            max-width: 800px;
+            z-index: 1;
+        }
+
+        .hero-content h1 {
+            font-size: clamp(3rem, 8vw, 5rem);
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(to right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .modality-card {
+            background: var(--bg-card);
+            padding: 2.5rem;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            border-top: 4px solid var(--modality-color, var(--accent));
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 10px;
+            transition: width 1s ease-out;
+            width: var(--progress-width, 0%);
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .section-header h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-header p {
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .modalities-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            padding: 0 5%;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .modality-icon {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 1rem;
+        }
+
+        .modality-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .modality-card p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .modality-badge {
+            background: rgba(255, 107, 53, 0.1);
+            color: var(--accent);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        section {
+            padding: 5rem 0;
+        }
+
+        .ranking-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 5%;
+        }
+
+        .ranking-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .ranking-item {
+            display: grid;
+            grid-template-columns: 60px 1fr auto auto;
+            align-items: center;
+            gap: 1.5rem;
+            background: var(--bg-card);
+            padding: 1.25rem 1.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .ranking-pos {
+            font-size: 1.5rem;
+            font-weight: 800;
+            text-align: center;
+        }
+
+        .ranking-name {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-container {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .ranking-xp {
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .ranking-lvl {
+            background: rgba(255, 107, 53, 0.1);
+            color: var(--accent);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            padding: 0 5%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .plan-card {
+            background: var(--bg-card);
+            padding: 2.5rem;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+            text-align: center;
+        }
+
+        .plan-card.featured {
+            border: 2px solid var(--accent);
+            transform: scale(1.05);
+        }
+
+        .featured-badge {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent);
+            color: white;
+            padding: 0.5rem 1.5rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .plan-name {
+            display: block;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .plan-price {
+            margin-bottom: 2rem;
+        }
+
+        .price-currency {
+            font-size: 1.25rem;
+            vertical-align: top;
+        }
+
+        .price-value {
+            font-size: 3.5rem;
+            font-weight: 800;
+        }
+
+        .price-period {
+            color: var(--text-secondary);
+        }
+
+        .plan-features {
+            list-style: none;
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        .plan-features li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+        }
+
+        .plan-features li strong {
+            color: var(--text-main);
+        }
+
+        .btn-plan {
+            display: block;
+            background: var(--accent);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            transition: var(--transition);
+        }
+
+        .btn-plan:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--accent-glow);
+        }
+
+        .btn-primary {
+            display: inline-block;
+            background: var(--accent);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            transition: var(--transition);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--accent-glow);
+        }
+
+        footer {
+            background: var(--bg-card);
+            padding: 3rem 5%;
+            text-align: center;
+        }
+
+        .footer-logo {
+            margin-bottom: 1.5rem;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .footer-links a:hover {
+            color: var(--accent);
+        }
+
+        .copyright {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+
+<body>
+    <nav id="navbar">
+        <a href="/" class="logo">ACADEMIA<span>.</span></a>
+        <div class="nav-links">
+            <a href="#hero">Inicio</a>
+            <a href="#modalidades">Modalidades</a>
+            <a href="#simulador">Simulador</a>
+            <a href="#planos">Planos</a>
+            <a href="#ranking">Ranking</a>
+            <a href="{{ url_for('auth.login') }}" class="btn-login">Entrar</a>
+        </div>
+    </nav>
+
+    <section id="hero">
+        <div class="hero-content">
+            <h1>Transforme seu corpo com flexibilidade total</h1>
+            <p>Pague apenas pelas aulas que frequentar. Sem mensalidade fixa. Sem multa de cancelamento.</p>
+            <a href="{{ url_for('auth.register') }}" class="btn-primary">COMECE AGORA</a>
+        </div>
+    </section>
+
+    <section id="modalidades">
+        <div class="section-header">
+            <h2>Modalidades</h2>
+            <p>Escolha as atividades que mais combinam com seu estilo de vida.</p>
+        </div>
+        <div class="modalities-grid">
+            {% for modality in modalities %}
+            <div class="modality-card" style="--modality-color: {{ modality.color }};">
+                <span class="modality-icon">
+                    {% if modality.icon %}
+                        {{ modality.icon }}
+                    {% else %}
+                        {% if modality.name == 'Musculacao' %}
+                            🏋️‍♂️
+                        {% elif modality.name == 'Yoga' %}
+                            🧘‍♀️
+                        {% elif modality.name == 'Spinning' %}
+                            🚴‍♂️
+                        {% elif modality.name == 'Boxe' %}
+                            🥊
+                        {% elif modality.name == 'Crossfit' %}
+                            🔥
+                        {% elif modality.name == 'Pilates' %}
+                            🤸
+                        {% else %}
+                            💪
+                        {% endif %}
+                    {% endif %}
+                </span>
+                <h3>{{ modality.name }}</h3>
+                <p>{{ modality.description }}</p>
+                <span class="modality-badge">{{ modality.credits_cost }} credito(s)/aula</span>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section id="simulador">
+        <div class="section-header">
+            <h2>Simule seu Treino</h2>
+            <p>Descubra quantos creditos voce precisa por mes e qual o melhor plano para voce.</p>
+        </div>
+        <div class="ranking-container" style="max-width: 800px;">
+            <div class="simulator-controls" style="display: grid; gap: 1.5rem; margin-bottom: 3rem;">
+                {% for modality in modalities %}
+                <div class="simulator-row" data-modality-id="{{ modality.id }}" data-cost="{{ modality.credits_cost }}"
+                    style="display: grid; grid-template-columns: 1fr 200px 100px; align-items: center; gap: 1rem; padding: 1rem; background: rgba(255,255,255,0.02); border-radius: 12px;">
+                    <label style="font-weight: 600;">
+                        {{ modality.name }}
+                        <span style="font-weight: normal; font-size: 0.8rem; color: var(--text-secondary);">({{ modality.credits_cost }} cred/aula)</span>
+                    </label>
+                    <input type="range" min="0" max="7" value="0" class="modality-slider" style="accent-color: var(--accent); cursor: pointer;">
+                    <span class="frequency-display" style="text-align: right; font-weight: 700; color: var(--accent);">0x/semana</span>
+                </div>
+                {% endfor %}
+            </div>
+            <div id="simulator-result" style="text-align: center; padding: 2.5rem; background: rgba(255, 107, 53, 0.05); border: 2px dashed var(--accent); border-radius: 24px;">
+                <p style="font-size: 1.25rem; margin-bottom: 1.5rem;">Voce precisa de: <strong id="total-credits" style="font-size: 2.5rem; color: var(--accent);">0</strong> creditos/mes</p>
+                <div id="recommendation-content">
+                    <p style="color: var(--text-secondary);">Mova os controles acima para ver uma recomendacao automatica.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Data container for Packages to avoid JS Syntax Errors in IDE -->
+    <script type="application/json" id="packages-data">{{ packages_json|tojson|safe }}</script>
+
+    <script>
+        // Parse the JSON from the script tag instead of injecting directly into JS code
+        const packagesDataElement = document.getElementById('packages-data');
+        const packagesData = packagesDataElement ? JSON.parse(packagesDataElement.textContent) : [];
+    </script>
+
+    <section id="planos">
+        <div class="section-header">
+            <h2>Escolha seu Plano</h2>
+            <p>Pacotes flexiveis que cabem no seu bolso e na sua rotina.</p>
+        </div>
+        <div class="plans-grid">
+            {% for package in packages %}
+            <div class="plan-card {{ 'featured' if package.is_featured }}">
+                {% if package.is_featured %}
+                <div class="featured-badge">RECOMENDADO</div>
+                {% endif %}
+                <span class="plan-name">{{ package.name }}</span>
+                <div class="plan-price">
+                    <span class="price-currency">R$</span>
+                    <span class="price-value">{{ package.price|int }}</span>
+                    <span class="price-period">/pacote</span>
+                </div>
+                <ul class="plan-features">
+                    <li><strong>{{ package.credits }}</strong> creditos inclusos</li>
+                    <li>Valido por <strong>{{ package.validity_days }}</strong> dias</li>
+                    {% if package.installments > 1 %}
+                    <li>Parcelado em ate <strong>{{ package.installments }}x</strong></li>
+                    {% endif %}
+                    {% if (package.welcome_xp_bonus or 0) > 0 %}
+                    <li><strong>+{{ package.welcome_xp_bonus }} XP</strong> de boas-vindas</li>
+                    {% endif %}
+                    {% if package.extra_benefits %}
+                        {% for benefit in package.extra_benefits %}
+                        <li>{{ benefit }}</li>
+                        {% endfor %}
+                    {% endif %}
+                </ul>
+                <a href="{{ url_for('shop.checkout', package_id=package.id) }}" class="btn-plan">ASSINAR AGORA</a>
+                {% if package.discount_percent > 0 %}
+                <p style="text-align: center; font-size: 0.8rem; color: var(--accent); margin-top: 1rem;">{{ package.discount_percent }}% de economia vs avulso</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section id="ranking">
+        <div class="section-header">
+            <h2>Hall da Fama</h2>
+            <p>Nossos alunos mais dedicados. A jornada e recompensada.</p>
+        </div>
+        <div class="ranking-container">
+            <div class="ranking-list">
+                {% for user in top_users %}
+                <div class="ranking-item">
+                    <span class="ranking-pos {% if loop.index <= 3 %}pos-{{ loop.index }}{% endif %}">
+                        {% if loop.index == 1 %}
+                            🥇
+                        {% elif loop.index == 2 %}
+                            🥈
+                        {% elif loop.index == 3 %}
+                            🥉
+                        {% else %}
+                            {{ loop.index }}o
+                        {% endif %}
+                    </span>
+                    <div>
+                        <span class="ranking-name">{{ anonymize_name(user.name) }}</span>
+                        <div class="progress-container">
+                            {% set max_xp = top_users[0].xp if top_users else 100 %}
+                            <div class="progress-bar" style="--w: {{ (user.xp / max_xp * 100)|round }}%; width: var(--w)"></div>
+                        </div>
+                    </div>
+                    <span class="ranking-xp">{{ "{:,.0f}".format(user.xp) }} XP</span>
+                    <span class="ranking-lvl">Nivel {{ user.level }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            <div style="text-align: center; margin-top: 3rem;">
+                <p style="margin-bottom: 2rem; color: var(--text-secondary);">Desafie seus limites e apareca aqui!</p>
+                <a href="{{ url_for('auth.register') }}" class="btn-primary">QUERO ENTRAR NO RANKING</a>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <a href="/" class="logo footer-logo">ACADEMIA<span>.</span></a>
+        <div class="footer-links">
+            <a href="#hero">Inicio</a>
+            <a href="#modalidades">Modalidades</a>
+            <a href="#planos">Planos</a>
+            <a href="{{ url_for('auth.login') }}">Login</a>
+        </div>
+        <p class="copyright">&copy; {{ now().year }} Academia Gestao. Todos os direitos reservados. Design by NuPay Upgrade.</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/simulator.js') }}"></script>
+    <script>
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                nav.classList.add('scrolled');
+            } else {
+                nav.classList.remove('scrolled');
+            }
+        });
+
+        // Smooth scroll for anchors
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>

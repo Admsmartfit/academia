@@ -234,9 +234,13 @@ def cancel_booking(booking_id):
         status=BookingStatus.CONFIRMED
     ).first_or_404()
 
-    # Verificar se pode cancelar (2h de antecedencia)
+    # Buscar horas de cancelamento configuradas
+    from app.models.system_config import SystemConfig
+    cancellation_hours = SystemConfig.get_int('cancellation_hours', 2)
+
+    # Verificar se pode cancelar
     if not booking.can_cancel:
-        flash('Nao e possivel cancelar com menos de 2 horas de antecedencia.', 'danger')
+        flash(f'Nao e possivel cancelar com menos de {cancellation_hours} horas de antecedencia.', 'danger')
         return redirect(url_for('student.my_bookings'))
 
     # Calcular penalidade de XP
@@ -244,8 +248,9 @@ def cancel_booking(booking_id):
     time_until = class_datetime - datetime.now()
     xp_penalty = 0
 
-    if time_until < timedelta(hours=3):
-        # Cancelou entre 2-3h antes = -5 XP
+    # Penalidade se cancelar muito proximo do limite
+    penalty_threshold = timedelta(hours=cancellation_hours + 1)
+    if time_until < penalty_threshold:
         xp_penalty = 5
         current_user.xp = max(0, current_user.xp - xp_penalty)
 
@@ -274,6 +279,7 @@ def cancel_booking(booking_id):
 @login_required
 def my_bookings():
     """Minhas aulas agendadas"""
+    from app.models.system_config import SystemConfig
 
     today = datetime.now().date()
 
@@ -290,9 +296,13 @@ def my_bookings():
         Booking.status.in_([BookingStatus.COMPLETED, BookingStatus.CANCELLED, BookingStatus.NO_SHOW])
     ).order_by(Booking.date.desc()).limit(20).all()
 
+    # Horas de cancelamento configuradas
+    cancellation_hours = SystemConfig.get_int('cancellation_hours', 2)
+
     return render_template('student/my_bookings.html',
         upcoming=upcoming,
-        past=past
+        past=past,
+        cancellation_hours=cancellation_hours
     )
 
 
@@ -441,11 +451,18 @@ def create_recurring():
 @login_required
 def my_recurring():
     """Listar agendamentos recorrentes"""
+    from app.models.system_config import SystemConfig
+
     recurring_bookings = RecurringBooking.query.filter_by(
         user_id=current_user.id
     ).order_by(RecurringBooking.is_active.desc(), RecurringBooking.created_at.desc()).all()
 
-    return render_template('student/recurring_list.html', recurring_bookings=recurring_bookings)
+    cancellation_hours = SystemConfig.get_int('cancellation_hours', 2)
+
+    return render_template('student/recurring_list.html',
+        recurring_bookings=recurring_bookings,
+        cancellation_hours=cancellation_hours
+    )
 
 
 @student_bp.route('/recurring/<int:id>/cancel', methods=['POST'])
@@ -462,3 +479,57 @@ def cancel_recurring(id):
 
     flash('Agendamento recorrente cancelado. Aulas ja agendadas nao foram afetadas.', 'info')
     return redirect(url_for('student.my_recurring'))
+
+
+@student_bp.route('/subscription/<int:id>/cancel-recurring', methods=['POST'])
+@login_required
+def cancel_recurring_subscription(id):
+    """Cancelar cobranca recorrente NuPay"""
+    subscription = Subscription.query.get_or_404(id)
+
+    if subscription.user_id != current_user.id:
+        abort(403)
+
+    if not subscription.is_recurring:
+        flash('Esta assinatura não possui cobrança recorrente ativa.', 'warning')
+        return redirect(url_for('student.subscription_detail', id=id))
+
+    try:
+        from app.services.nupay import NuPayService
+        nupay = NuPayService()
+        
+        # Cancelar na NuPay
+        if subscription.nupay_subscription_id:
+            nupay.cancel_subscription(subscription.nupay_subscription_id)
+        
+        # Atualizar no banco
+        subscription.recurring_status = 'CANCELLED'
+        subscription.is_recurring = False
+        db.session.commit()
+        
+        flash('Cobrança recorrente cancelada com sucesso. Seus créditos atuais permanecem válidos até o vencimento.', 'success')
+    except Exception as e:
+        flash(f'Erro ao cancelar recorrência na NuPay: {str(e)}', 'danger')
+
+    return redirect(url_for('student.subscription_detail', id=id))
+
+
+@student_bp.route('/update-cpf', methods=['POST'])
+@login_required
+def update_cpf():
+    """Atualizar CPF via AJAX"""
+    data = request.get_json()
+    if not data or 'cpf' not in data:
+        return {'success': False, 'error': 'CPF não informado.'}, 400
+    
+    cpf = data.get('cpf')
+    
+    if not User.validate_cpf(cpf):
+        return {'success': False, 'error': 'CPF inválido.'}, 400
+    
+    try:
+        current_user.cpf = User.format_cpf(cpf)
+        db.session.commit()
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'error': 'Erro ao salvar CPF.'}, 500

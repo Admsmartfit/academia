@@ -49,15 +49,27 @@ class Booking(db.Model):
 
     @property
     def can_cancel(self):
-        """Verifica se pode cancelar (2h antes)"""
+        """Verifica se pode cancelar (horas configuradas pelo admin)"""
+        from app.models.system_config import SystemConfig
+        cancellation_hours = SystemConfig.get_int('cancellation_hours', 2)
         class_datetime = datetime.combine(self.date, self.schedule.start_time)
         now = datetime.now()
-        return (class_datetime - now) > timedelta(hours=2)
+        return (class_datetime - now) > timedelta(hours=cancellation_hours)
+
+    @property
+    def cancellation_deadline(self):
+        """Retorna o horario limite para cancelamento"""
+        from app.models.system_config import SystemConfig
+        cancellation_hours = SystemConfig.get_int('cancellation_hours', 2)
+        class_datetime = datetime.combine(self.date, self.schedule.start_time)
+        return class_datetime - timedelta(hours=cancellation_hours)
 
     def cancel(self, reason=None):
         """Cancela agendamento"""
+        from app.models.system_config import SystemConfig
+        cancellation_hours = SystemConfig.get_int('cancellation_hours', 2)
         if not self.can_cancel:
-            raise ValueError("Nao e possivel cancelar com menos de 2h de antecedencia")
+            raise ValueError(f"Nao e possivel cancelar com menos de {cancellation_hours}h de antecedencia")
 
         self.status = BookingStatus.CANCELLED
         self.cancelled_at = datetime.utcnow()

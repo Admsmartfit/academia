@@ -10,9 +10,14 @@
             <h2><i class="fas fa-calendar-alt text-primary"></i> Agendar Aula</h2>
             <p class="text-muted mb-0">Selecione uma data e horario para agendar sua aula</p>
         </div>
-        <a href="{{ url_for('student.my_bookings') }}" class="btn btn-outline-primary">
-            <i class="fas fa-list"></i> Minhas Aulas
-        </a>
+        <div>
+            <a href="{{ url_for('student.create_recurring') }}" class="btn btn-outline-success me-2">
+                <i class="fas fa-sync"></i> Agendar Recorrente
+            </a>
+            <a href="{{ url_for('student.my_bookings') }}" class="btn btn-outline-primary">
+                <i class="fas fa-list"></i> Minhas Aulas
+            </a>
+        </div>
     </div>
 
     <!-- Navegacao de Datas -->

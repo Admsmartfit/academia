@@ -41,6 +41,7 @@ def create_app(config_name='default'):
         }
 
     # Registrar blueprints
+    from app.routes.marketing import marketing_bp
     from app.routes.auth import auth_bp
     from app.routes.student import student_bp
     from app.routes.shop import shop_bp
@@ -57,6 +58,7 @@ def create_app(config_name='default'):
     from app.routes.instructor import instructor_bp
     from app.routes.webhooks import webhooks_bp
 
+    app.register_blueprint(marketing_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(student_bp)
     app.register_blueprint(shop_bp)
@@ -72,19 +74,6 @@ def create_app(config_name='default'):
     app.register_blueprint(settings_bp)
     app.register_blueprint(instructor_bp)
     app.register_blueprint(webhooks_bp)
-
-    # Rota raiz - redireciona para login
-    @app.route('/')
-    def index():
-        from flask import redirect, url_for
-        from flask_login import current_user
-        if current_user.is_authenticated:
-            if current_user.is_admin:
-                return redirect(url_for('admin.dashboard'))
-            if current_user.is_instructor:
-                return redirect(url_for('instructor.dashboard'))
-            return redirect(url_for('student.dashboard'))
-        return redirect(url_for('auth.login'))
 
     # Iniciar scheduler
     if not app.debug or os.getenv('WERKZEUG_RUN_MAIN') == 'true':
