@@ -379,6 +379,26 @@ class CreditService:
                     # Atualiza XP disponivel para proxima iteracao
                     xp_available = XPLedger.get_user_available_xp(user_id)
 
+                    # Envia notificacao de conversao automatica
+                    try:
+                        from app.services.notification_service import NotificationService
+                        NotificationService.notify_xp_conversion(
+                            user_id=user_id,
+                            conversion=result['conversion'],
+                            is_automatic=True
+                        )
+                    except Exception as e:
+                        # Log error but don't fail the conversion
+                        print(f"Erro ao enviar notificacao de conversao: {e}")
+
+        # Verifica se usuario esta proximo de alguma meta (se nao houve conversao)
+        if not conversions and xp_available > 0:
+            try:
+                from app.services.notification_service import NotificationService
+                NotificationService.check_and_notify_goal_proximity(user_id, xp_available)
+            except Exception:
+                pass
+
         return conversions
 
     # =========================================

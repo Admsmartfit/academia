@@ -3,6 +3,7 @@
 from app.services.xp_manager import XPManager, xp_manager
 from app.services.credit_service import CreditService, credit_service
 from app.services.achievement_checker import AchievementChecker
+from app.services.notification_service import NotificationService, notification_service
 
 __all__ = [
     'XPManager',
@@ -10,4 +11,6 @@ __all__ = [
     'CreditService',
     'credit_service',
     'AchievementChecker',
+    'NotificationService',
+    'notification_service',
 ]

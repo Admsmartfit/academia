@@ -3,6 +3,7 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
+from datetime import datetime, timedelta
 import atexit
 
 scheduler = BackgroundScheduler()
@@ -191,6 +192,139 @@ Instrutor: {instructor_name}"""
             print("[SCHEDULER] Iniciando backup do banco de dados...")
             from app.utils.backup import backup_database
             backup_database()
+
+    # Expirar creditos (diario as 0h30)
+    @scheduler.scheduled_job(CronTrigger(hour=0, minute=30))
+    def expire_credit_wallets():
+        with app.app_context():
+            print("[SCHEDULER] Expirando carteiras de credito...")
+            from app.services.credit_service import CreditService
+            from app.services.notification_service import NotificationService
+            from app.models.credit_wallet import CreditWallet
+            from app.models import User
+            from app import db
+
+            # Coleta informacoes antes de expirar para notificar
+            now = datetime.now()
+            expiring_today = CreditWallet.query.filter(
+                CreditWallet.is_expired == False,
+                CreditWallet.expires_at <= now,
+                CreditWallet.credits_remaining > 0
+            ).all()
+
+            # Agrupa por usuario para notificar
+            user_expired = {}
+            for wallet in expiring_today:
+                if wallet.user_id not in user_expired:
+                    user_expired[wallet.user_id] = 0
+                user_expired[wallet.user_id] += wallet.credits_remaining
+
+            # Expira as carteiras
+            count = CreditService.expire_wallets()
+
+            # Notifica usuarios sobre creditos expirados
+            for user_id, credits in user_expired.items():
+                try:
+                    NotificationService.notify_credits_expired(user_id, credits)
+                except Exception as e:
+                    print(f"[SCHEDULER] Erro ao notificar expiracao usuario {user_id}: {e}")
+
+            print(f"[SCHEDULER] {count} carteiras expiradas")
+
+    # Alerta de creditos expirando em 7 dias (diario as 11h)
+    @scheduler.scheduled_job(CronTrigger(hour=11, minute=0))
+    def notify_credits_expiring_7d():
+        with app.app_context():
+            print("[SCHEDULER] Enviando alertas de creditos expirando (7 dias)...")
+            from app.models.credit_wallet import CreditWallet
+            from app.services.notification_service import NotificationService
+            from datetime import timedelta
+
+            # Busca usuarios com creditos expirando em 7 dias
+            seven_days = datetime.now() + timedelta(days=7)
+
+            # Agrupa por usuario
+            wallets = CreditWallet.query.filter(
+                CreditWallet.is_expired == False,
+                CreditWallet.credits_remaining > 0,
+                CreditWallet.expires_at <= seven_days,
+                CreditWallet.expires_at > datetime.now()
+            ).all()
+
+            user_expiring = {}
+            for wallet in wallets:
+                if wallet.user_id not in user_expiring:
+                    user_expiring[wallet.user_id] = {
+                        'credits': 0,
+                        'earliest_expiry': wallet.expires_at,
+                        'days': wallet.days_until_expiry
+                    }
+                user_expiring[wallet.user_id]['credits'] += wallet.credits_remaining
+                if wallet.expires_at < user_expiring[wallet.user_id]['earliest_expiry']:
+                    user_expiring[wallet.user_id]['earliest_expiry'] = wallet.expires_at
+                    user_expiring[wallet.user_id]['days'] = wallet.days_until_expiry
+
+            count = 0
+            for user_id, info in user_expiring.items():
+                # Notifica apenas se tem quantidade significativa (>= 1 credito)
+                if info['credits'] >= 1:
+                    try:
+                        NotificationService.notify_credits_expiring(
+                            user_id=user_id,
+                            credits_amount=info['credits'],
+                            days_remaining=info['days'],
+                            expires_at=info['earliest_expiry']
+                        )
+                        count += 1
+                    except Exception as e:
+                        print(f"[SCHEDULER] Erro ao notificar usuario {user_id}: {e}")
+
+            print(f"[SCHEDULER] {count} alertas de creditos expirando enviados")
+
+    # Alerta de creditos expirando AMANHA (diario as 20h)
+    @scheduler.scheduled_job(CronTrigger(hour=20, minute=0))
+    def notify_credits_expiring_1d():
+        with app.app_context():
+            print("[SCHEDULER] Enviando alertas URGENTES de creditos expirando amanha...")
+            from app.models.credit_wallet import CreditWallet
+            from app.services.notification_service import NotificationService
+            from datetime import timedelta
+
+            # Creditos que expiram amanha
+            tomorrow_start = (datetime.now() + timedelta(days=1)).replace(hour=0, minute=0, second=0)
+            tomorrow_end = tomorrow_start + timedelta(days=1)
+
+            wallets = CreditWallet.query.filter(
+                CreditWallet.is_expired == False,
+                CreditWallet.credits_remaining > 0,
+                CreditWallet.expires_at >= tomorrow_start,
+                CreditWallet.expires_at < tomorrow_end
+            ).all()
+
+            user_expiring = {}
+            for wallet in wallets:
+                if wallet.user_id not in user_expiring:
+                    user_expiring[wallet.user_id] = {
+                        'credits': 0,
+                        'expires_at': wallet.expires_at
+                    }
+                user_expiring[wallet.user_id]['credits'] += wallet.credits_remaining
+
+            count = 0
+            for user_id, info in user_expiring.items():
+                if info['credits'] >= 1:
+                    try:
+                        NotificationService.notify_credits_expiring(
+                            user_id=user_id,
+                            credits_amount=info['credits'],
+                            days_remaining=1,
+                            expires_at=info['expires_at']
+                        )
+                        count += 1
+                    except Exception as e:
+                        print(f"[SCHEDULER] Erro ao notificar usuario {user_id}: {e}")
+
+            print(f"[SCHEDULER] {count} alertas urgentes enviados")
 
     # Iniciar scheduler
     scheduler.start()

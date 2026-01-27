@@ -8,6 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app import create_app, db
 from app.models import Modality, Package, User, SystemConfig, ConversionRule
+from app.models.whatsapp_template import WhatsAppTemplate, TemplateCategory, TemplateTrigger
 from decimal import Decimal
 from datetime import datetime
 
@@ -254,6 +255,76 @@ def seed():
                 rule = ConversionRule(**rule_data)
                 db.session.add(rule)
                 print(f"Regra de conversao '{rule.name}' criada: {rule.xp_required} XP -> {rule.credits_granted} creditos")
+
+        # 5. Criar Templates WhatsApp para XP/Creditos
+        whatsapp_templates_data = [
+            {
+                "name": "Conversao Automatica XP",
+                "template_code": "xp_conversion_auto",
+                "category": TemplateCategory.TRANSACTIONAL,
+                "trigger": TemplateTrigger.XP_CONVERSION_AUTO,
+                "content": "Parabens {{1}}! Seus {{2}} XP foram convertidos automaticamente em {{3}} creditos! Validos ate {{4}}. Use-os para agendar mais aulas!",
+                "variables": ["nome", "xp_gasto", "creditos_ganhos", "data_validade"],
+                "megaapi_status": "approved",
+                "is_active": True
+            },
+            {
+                "name": "Conversao Manual XP",
+                "template_code": "xp_conversion_manual",
+                "category": TemplateCategory.TRANSACTIONAL,
+                "trigger": TemplateTrigger.XP_CONVERSION_MANUAL,
+                "content": "Ola {{1}}! Voce converteu {{2}} XP em {{3}} creditos com sucesso! Validos ate {{4}}. Bons treinos!",
+                "variables": ["nome", "xp_gasto", "creditos_ganhos", "data_validade"],
+                "megaapi_status": "approved",
+                "is_active": True
+            },
+            {
+                "name": "Creditos Expirando (7 dias)",
+                "template_code": "credits_expiring_7d",
+                "category": TemplateCategory.TRANSACTIONAL,
+                "trigger": TemplateTrigger.CREDITS_EXPIRING,
+                "content": "Ola {{1}}! Voce tem {{2}} creditos que expiram em {{3}} dias ({{4}}). Agende suas aulas para nao perder!",
+                "variables": ["nome", "quantidade_creditos", "dias_restantes", "data_expiracao"],
+                "megaapi_status": "approved",
+                "is_active": True
+            },
+            {
+                "name": "Creditos Expiram Amanha",
+                "template_code": "credits_expiring_1d",
+                "category": TemplateCategory.TRANSACTIONAL,
+                "trigger": TemplateTrigger.CREDITS_EXPIRING_1D,
+                "content": "URGENTE {{1}}! Seus {{2}} creditos expiram AMANHA ({{4}})! Agende agora para nao perder.",
+                "variables": ["nome", "quantidade_creditos", "dias_restantes", "data_expiracao"],
+                "megaapi_status": "approved",
+                "is_active": True
+            },
+            {
+                "name": "Creditos Expiraram",
+                "template_code": "credits_expired",
+                "category": TemplateCategory.TRANSACTIONAL,
+                "trigger": TemplateTrigger.CREDITS_EXPIRED,
+                "content": "Ola {{1}}. Infelizmente {{2}} creditos seus expiraram. Continue treinando para ganhar mais creditos atraves do XP!",
+                "variables": ["nome", "quantidade_creditos"],
+                "megaapi_status": "approved",
+                "is_active": True
+            },
+            {
+                "name": "XP Proximo de Meta",
+                "template_code": "xp_goal_near",
+                "category": TemplateCategory.MARKETING,
+                "trigger": TemplateTrigger.XP_GOAL_NEAR,
+                "content": "Ola {{1}}! Faltam apenas {{2}} XP para voce ganhar {{3}} creditos na regra '{{4}}'! Continue treinando!",
+                "variables": ["nome", "xp_faltando", "creditos_ganhos", "nome_regra"],
+                "megaapi_status": "approved",
+                "is_active": True
+            }
+        ]
+
+        for template_data in whatsapp_templates_data:
+            if not WhatsAppTemplate.query.filter_by(template_code=template_data["template_code"]).first():
+                template = WhatsAppTemplate(**template_data)
+                db.session.add(template)
+                print(f"Template WhatsApp '{template.name}' criado.")
 
         db.session.commit()
         print("\nSeed finalizado com sucesso!")

@@ -84,4 +84,8 @@ def create_app(config_name='default'):
         from app.utils.scheduler import init_scheduler
         init_scheduler(app)
 
+    # Registrar comandos CLI
+    from app.cli import register_cli_commands
+    register_cli_commands(app)
+
     return app
