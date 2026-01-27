@@ -1,0 +1,239 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}{{ 'Editar' if rule else 'Nova' }} Regra de Conversao{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="fas fa-{{ 'edit' if rule else 'plus' }} me-2"></i>
+        {{ 'Editar' if rule else 'Nova' }} Regra de Conversao
+    </h4>
+    <a href="{{ url_for('admin_conversion_rules.list_rules') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Voltar
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" id="ruleForm">
+                    <!-- Informacoes Basicas -->
+                    <h6 class="text-muted mb-3">
+                        <i class="fas fa-info-circle me-2"></i>Informacoes Basicas
+                    </h6>
+
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label for="name" class="form-label">Nome da Regra *</label>
+                            <input type="text" class="form-control" id="name" name="name"
+                                   value="{{ rule.name if rule else '' }}" required
+                                   placeholder="Ex: Recompensa Bronze">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="priority" class="form-label">Prioridade</label>
+                            <input type="number" class="form-control" id="priority" name="priority"
+                                   value="{{ rule.priority if rule else 0 }}" min="0">
+                            <small class="text-muted">Maior = mais prioritario</small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descricao</label>
+                        <textarea class="form-control" id="description" name="description" rows="2"
+                                  placeholder="Descricao que aparecera para o aluno">{{ rule.description if rule else '' }}</textarea>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Valores de Conversao -->
+                    <h6 class="text-muted mb-3">
+                        <i class="fas fa-exchange-alt me-2"></i>Valores de Conversao
+                    </h6>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="xp_required" class="form-label">XP Necessario *</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="xp_required" name="xp_required"
+                                       value="{{ rule.xp_required if rule else '' }}" required min="1">
+                                <span class="input-group-text">XP</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="credits_granted" class="form-label">Creditos Concedidos *</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="credits_granted" name="credits_granted"
+                                       value="{{ rule.credits_granted if rule else '' }}" required min="1">
+                                <span class="input-group-text">cred</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="credit_validity_days" class="form-label">Validade *</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="credit_validity_days" name="credit_validity_days"
+                                       value="{{ rule.credit_validity_days if rule else 30 }}" required min="1">
+                                <span class="input-group-text">dias</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preview da Taxa -->
+                    <div class="alert alert-info mb-4" id="ratePreview">
+                        <i class="fas fa-calculator me-2"></i>
+                        Taxa: <strong id="rateValue">-</strong> XP por credito
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Comportamento -->
+                    <h6 class="text-muted mb-3">
+                        <i class="fas fa-cog me-2"></i>Comportamento
+                    </h6>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="is_automatic" name="is_automatic"
+                                       {{ 'checked' if rule and rule.is_automatic }}>
+                                <label class="form-check-label" for="is_automatic">
+                                    <i class="fas fa-robot me-1"></i> Conversao Automatica
+                                </label>
+                            </div>
+                            <small class="text-muted">Se ativado, converte automaticamente quando o aluno atinge o XP necessario.</small>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="is_active" name="is_active"
+                                       {{ 'checked' if not rule or rule.is_active }}>
+                                <label class="form-check-label" for="is_active">
+                                    <i class="fas fa-power-off me-1"></i> Regra Ativa
+                                </label>
+                            </div>
+                            <small class="text-muted">Desative para pausar temporariamente sem excluir.</small>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Limites -->
+                    <h6 class="text-muted mb-3">
+                        <i class="fas fa-shield-alt me-2"></i>Limites (Opcional)
+                    </h6>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="max_uses_per_user" class="form-label">Maximo de Usos por Usuario</label>
+                            <input type="number" class="form-control" id="max_uses_per_user" name="max_uses_per_user"
+                                   value="{{ rule.max_uses_per_user if rule and rule.max_uses_per_user else '' }}"
+                                   min="1" placeholder="Deixe vazio para ilimitado">
+                            <small class="text-muted">Quantas vezes cada usuario pode usar esta regra.</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cooldown_days" class="form-label">Cooldown entre Usos</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="cooldown_days" name="cooldown_days"
+                                       value="{{ rule.cooldown_days if rule and rule.cooldown_days else '' }}"
+                                       min="1" placeholder="Deixe vazio para sem cooldown">
+                                <span class="input-group-text">dias</span>
+                            </div>
+                            <small class="text-muted">Tempo minimo entre conversoes com esta regra.</small>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Botoes -->
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('admin_conversion_rules.list_rules') }}" class="btn btn-outline-secondary">
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>{{ 'Salvar Alteracoes' if rule else 'Criar Regra' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar de Ajuda -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-light">
+                <i class="fas fa-lightbulb me-2"></i>Dicas
+            </div>
+            <div class="card-body">
+                <h6>Sobre XP</h6>
+                <p class="text-muted small">
+                    O XP disponivel para conversao e calculado dos ultimos 3 meses.
+                    XP mais antigo nao pode ser convertido, mas ainda conta para o ranking.
+                </p>
+
+                <h6>Conversao Automatica</h6>
+                <p class="text-muted small">
+                    Quando ativada, o sistema converte automaticamente assim que o aluno
+                    atinge o XP necessario (apos check-in, compra, etc).
+                </p>
+
+                <h6>Cooldown</h6>
+                <p class="text-muted small">
+                    Define quantos dias o usuario precisa esperar apos usar esta regra
+                    antes de poder usa-la novamente.
+                </p>
+
+                <h6>Prioridade</h6>
+                <p class="text-muted small">
+                    Quando multiplas regras automaticas sao elegíveis, a de maior
+                    prioridade e executada primeiro.
+                </p>
+            </div>
+        </div>
+
+        {% if rule %}
+        <div class="card mt-3">
+            <div class="card-header bg-light">
+                <i class="fas fa-chart-bar me-2"></i>Estatisticas
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Total de usos:</span>
+                    <strong>{{ rule.usage_count }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>XP total convertido:</span>
+                    <strong>{{ "{:,}".format(rule.usage_count * rule.xp_required) }}</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Creditos gerados:</span>
+                    <strong>{{ "{:,}".format(rule.usage_count * rule.credits_granted) }}</strong>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Calcular taxa de conversao em tempo real
+    function updateRate() {
+        const xp = parseInt(document.getElementById('xp_required').value) || 0;
+        const credits = parseInt(document.getElementById('credits_granted').value) || 0;
+
+        if (xp > 0 && credits > 0) {
+            const rate = (xp / credits).toFixed(1);
+            document.getElementById('rateValue').textContent = rate;
+        } else {
+            document.getElementById('rateValue').textContent = '-';
+        }
+    }
+
+    document.getElementById('xp_required').addEventListener('input', updateRate);
+    document.getElementById('credits_granted').addEventListener('input', updateRate);
+
+    // Calcular na carga inicial
+    updateRate();
+</script>
+{% endblock %}

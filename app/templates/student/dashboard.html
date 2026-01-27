@@ -57,6 +57,24 @@
     </div>
     {% endif %}
 
+    <!-- Alerta de Creditos Expirando -->
+    {% if expiring_credits and expiring_credits > 0 %}
+    <div class="alert alert-info mb-4">
+        <i class="fas fa-clock me-2"></i>
+        <strong>Creditos expirando!</strong> Voce tem <strong>{{ expiring_credits }}</strong> creditos que vao expirar nos proximos 7 dias.
+        <a href="{{ url_for('student.xp_credits') }}" class="alert-link">Ver detalhes</a>
+    </div>
+    {% endif %}
+
+    <!-- Alerta de XP Disponivel para Conversao -->
+    {% if xp_available and xp_available >= 500 %}
+    <div class="alert alert-success mb-4">
+        <i class="fas fa-gift me-2"></i>
+        <strong>XP disponivel!</strong> Voce tem <strong>{{ "{:,}".format(xp_available) }}</strong> XP disponiveis para converter em creditos.
+        <a href="{{ url_for('student.xp_credits') }}" class="alert-link">Converter agora</a>
+    </div>
+    {% endif %}
+
     <div class="row g-4">
         <!-- Proximas Aulas -->
         <div class="col-md-6">

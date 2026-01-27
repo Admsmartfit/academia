@@ -1,0 +1,248 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Relatorio de Conversoes{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="fas fa-chart-bar me-2"></i>Relatorio de Conversoes XP
+    </h4>
+    <div class="d-flex gap-2">
+        <!-- Filtro de Periodo -->
+        <select class="form-select" id="periodFilter" onchange="changePeriod(this.value)" style="width: auto;">
+            <option value="7" {{ 'selected' if period == '7' }}>Ultimos 7 dias</option>
+            <option value="30" {{ 'selected' if period == '30' }}>Ultimos 30 dias</option>
+            <option value="90" {{ 'selected' if period == '90' }}>Ultimos 90 dias</option>
+            <option value="365" {{ 'selected' if period == '365' }}>Ultimo ano</option>
+        </select>
+        <a href="{{ url_for('admin_conversion_rules.list_rules') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Voltar
+        </a>
+    </div>
+</div>
+
+<!-- Resumo Geral -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body text-center">
+                <h2 class="mb-0">{{ total_conversions }}</h2>
+                <small class="text-muted">Conversoes</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card info">
+            <div class="card-body text-center">
+                <h2 class="mb-0">{{ "{:,}".format(total_xp) }}</h2>
+                <small class="text-muted">XP Convertido</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card success">
+            <div class="card-body text-center">
+                <h2 class="mb-0">{{ "{:,}".format(total_credits) }}</h2>
+                <small class="text-muted">Creditos Gerados</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card warning">
+            <div class="card-body text-center">
+                <h2 class="mb-0">{{ unique_users }}</h2>
+                <small class="text-muted">Usuarios Unicos</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Por Regra -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="fas fa-chart-pie me-2"></i>Conversoes por Regra
+            </div>
+            <div class="card-body">
+                {% if rule_stats %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Regra</th>
+                                <th class="text-center">Usos</th>
+                                <th class="text-center">XP</th>
+                                <th class="text-center">Creditos</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in rule_stats %}
+                            <tr>
+                                <td>{{ stat.name }}</td>
+                                <td class="text-center">
+                                    <span class="badge bg-secondary">{{ stat.count }}</span>
+                                </td>
+                                <td class="text-center">{{ "{:,}".format(stat.xp_spent|int) }}</td>
+                                <td class="text-center">
+                                    <span class="text-success fw-bold">{{ stat.credits_granted|int }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Barra de Distribuicao -->
+                <div class="mt-3">
+                    {% set total = rule_stats|sum(attribute='count') %}
+                    {% if total > 0 %}
+                    <div class="progress" style="height: 25px;">
+                        {% set colors = ['bg-primary', 'bg-success', 'bg-info', 'bg-warning', 'bg-danger'] %}
+                        {% for stat in rule_stats %}
+                        {% set pct = (stat.count / total * 100)|round(1) %}
+                        {% if pct > 0 %}
+                        <div class="progress-bar {{ colors[loop.index0 % colors|length] }}"
+                             style="width: {{ pct }}%"
+                             title="{{ stat.name }}: {{ stat.count }} ({{ pct }}%)">
+                            {% if pct > 10 %}{{ stat.name[:10] }}{% endif %}
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-chart-pie fa-3x mb-2"></i>
+                    <p>Nenhuma conversao no periodo</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Usuarios -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="fas fa-trophy me-2"></i>Top Usuarios
+            </div>
+            <div class="card-body">
+                {% if top_users %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Usuario</th>
+                                <th class="text-center">Conversoes</th>
+                                <th class="text-center">Creditos</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in top_users %}
+                            <tr>
+                                <td>
+                                    {% if loop.index == 1 %}
+                                    <span class="text-warning"><i class="fas fa-trophy"></i></span>
+                                    {% elif loop.index == 2 %}
+                                    <span class="text-secondary"><i class="fas fa-medal"></i></span>
+                                    {% elif loop.index == 3 %}
+                                    <span style="color: #cd7f32;"><i class="fas fa-medal"></i></span>
+                                    {% else %}
+                                    {{ loop.index }}
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.name }}</td>
+                                <td class="text-center">{{ user.conversion_count }}</td>
+                                <td class="text-center">
+                                    <span class="badge bg-success">{{ user.total_credits|int }} cred</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-users fa-3x mb-2"></i>
+                    <p>Nenhum usuario converteu no periodo</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ultimas Conversoes -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-history me-2"></i>Ultimas Conversoes</span>
+        <small class="text-muted">Mostrando ate 50 mais recentes</small>
+    </div>
+    <div class="card-body">
+        {% if conversions %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Usuario</th>
+                        <th>Regra</th>
+                        <th class="text-center">XP Gasto</th>
+                        <th class="text-center">Creditos</th>
+                        <th class="text-center">Tipo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for conv in conversions %}
+                    <tr>
+                        <td>
+                            <small>{{ conv.converted_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                        </td>
+                        <td>
+                            <strong>{{ conv.user.name }}</strong>
+                            <br><small class="text-muted">{{ conv.user.email }}</small>
+                        </td>
+                        <td>{{ conv.rule.name if conv.rule else 'N/A' }}</td>
+                        <td class="text-center">
+                            <span class="badge bg-info text-dark">{{ "{:,}".format(conv.xp_spent) }} XP</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-success">{{ conv.credits_granted }} cred</span>
+                        </td>
+                        <td class="text-center">
+                            {% if conv.is_automatic %}
+                            <span class="badge bg-primary" title="Conversao automatica">
+                                <i class="fas fa-robot"></i>
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary" title="Conversao manual">
+                                <i class="fas fa-hand-pointer"></i>
+                            </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+            <h5>Nenhuma conversao encontrada</h5>
+            <p class="text-muted">Nao ha conversoes no periodo selecionado.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function changePeriod(value) {
+        window.location.href = '{{ url_for("admin_conversion_rules.conversion_report") }}?period=' + value;
+    }
+</script>
+{% endblock %}

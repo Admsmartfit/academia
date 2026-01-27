@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block title %}XP e Creditos - Academia{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0">
+            <i class="fas fa-exchange-alt me-2"></i>XP e Creditos
+        </h3>
+        <a href="{{ url_for('student.dashboard') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Voltar
+        </a>
+    </div>
+
+    <!-- Alertas de Creditos Expirando -->
+    {% if expiring_wallets %}
+    <div class="alert alert-warning mb-4">
+        <i class="fas fa-clock me-2"></i>
+        <strong>Atencao!</strong> Voce tem
+        <strong>{{ expiring_wallets|sum(attribute='credits_remaining') }} creditos</strong>
+        que vao expirar nos proximos 7 dias.
+        <a href="#wallets-section" class="alert-link">Ver detalhes</a>
+    </div>
+    {% endif %}
+
+    <!-- Cards de Resumo -->
+    <div class="row g-4 mb-4">
+        <!-- XP Total (Ranking) -->
+        <div class="col-md-3">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-trophy fa-2x mb-2"></i>
+                    <h2 class="mb-0">{{ "{:,}".format(summary.xp.total) }}</h2>
+                    <small>XP Total (Ranking)</small>
+                    <p class="mb-0 mt-2">
+                        <span class="badge bg-light text-success">Nivel {{ summary.xp.level }}</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- XP Disponivel para Conversao -->
+        <div class="col-md-3">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-star fa-2x mb-2"></i>
+                    <h2 class="mb-0">{{ "{:,}".format(summary.xp.available) }}</h2>
+                    <small>XP Disponivel</small>
+                    <p class="mb-0 mt-2">
+                        <span class="badge bg-light text-info">Ultimos 3 meses</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Creditos Ativos -->
+        <div class="col-md-3">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-coins fa-2x mb-2"></i>
+                    <h2 class="mb-0">{{ summary.credits.total }}</h2>
+                    <small>Creditos Ativos</small>
+                    {% if summary.credits.expiring_soon > 0 %}
+                    <p class="mb-0 mt-2">
+                        <span class="badge bg-warning text-dark">{{ summary.credits.expiring_soon }} expirando</span>
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- XP Convertido -->
+        <div class="col-md-3">
+            <div class="card bg-secondary text-white h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                    <h2 class="mb-0">{{ "{:,}".format(summary.xp.converted) }}</h2>
+                    <small>XP Ja Convertido</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Conversao de XP -->
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <i class="fas fa-exchange-alt me-2"></i>Converter XP em Creditos
+                </div>
+                <div class="card-body">
+                    {% if available_rules %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Recompensa</th>
+                                    <th class="text-center">XP</th>
+                                    <th class="text-center">Creditos</th>
+                                    <th class="text-center">Validade</th>
+                                    <th class="text-center">Acao</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rule in available_rules %}
+                                <tr class="{{ 'table-light' if not rule.is_available }}">
+                                    <td>
+                                        <strong>{{ rule.name }}</strong>
+                                        {% if rule.is_automatic %}
+                                        <span class="badge bg-primary ms-1" title="Converte automaticamente">
+                                            <i class="fas fa-robot"></i>
+                                        </span>
+                                        {% endif %}
+                                        {% if rule.description %}
+                                        <br><small class="text-muted">{{ rule.description }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-info text-dark">{{ "{:,}".format(rule.xp_required) }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-success fs-6">{{ rule.credits_granted }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <small>{{ rule.validity_days }} dias</small>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if rule.is_available %}
+                                        <form action="{{ url_for('student.convert_xp', rule_id=rule.rule_id) }}" method="POST"
+                                              onsubmit="return confirm('Converter {{ rule.xp_required }} XP em {{ rule.credits_granted }} creditos?')">
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-exchange-alt me-1"></i>Converter
+                                            </button>
+                                        </form>
+                                        {% else %}
+                                        <span class="text-muted small">{{ rule.reason }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-gift fa-3x text-muted mb-3"></i>
+                        <h5>Nenhuma regra de conversao disponivel</h5>
+                        <p class="text-muted">Continue treinando para acumular XP!</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Como Funciona -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <i class="fas fa-info-circle me-2"></i>Como Funciona
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center mb-3">
+                            <div class="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center mb-2"
+                                 style="width: 50px; height: 50px;">
+                                <i class="fas fa-dumbbell"></i>
+                            </div>
+                            <h6>1. Treine</h6>
+                            <small class="text-muted">Ganhe XP a cada aula, conquista ou compra</small>
+                        </div>
+                        <div class="col-md-4 text-center mb-3">
+                            <div class="rounded-circle bg-info text-white d-inline-flex align-items-center justify-content-center mb-2"
+                                 style="width: 50px; height: 50px;">
+                                <i class="fas fa-exchange-alt"></i>
+                            </div>
+                            <h6>2. Converta</h6>
+                            <small class="text-muted">Troque seu XP por creditos extras</small>
+                        </div>
+                        <div class="col-md-4 text-center mb-3">
+                            <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-2"
+                                 style="width: 50px; height: 50px;">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                            <h6>3. Agende</h6>
+                            <small class="text-muted">Use os creditos para mais aulas</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <p class="text-muted small mb-0">
+                        <i class="fas fa-lightbulb text-warning me-1"></i>
+                        <strong>Dica:</strong> O XP disponivel para conversao e calculado dos ultimos 3 meses.
+                        XP mais antigo continua valendo para seu ranking, mas nao pode mais ser convertido.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Carteiras de Credito -->
+        <div class="col-lg-5" id="wallets-section">
+            <div class="card">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-wallet me-2"></i>Minhas Carteiras</span>
+                    <span class="badge bg-primary">{{ wallets|length }} ativas</span>
+                </div>
+                <div class="card-body">
+                    {% if wallets %}
+                    <ul class="list-group list-group-flush">
+                        {% for wallet in wallets %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center
+                                   {{ 'list-group-item-warning' if wallet.days_until_expiry <= 7 }}">
+                            <div>
+                                <strong>{{ wallet.credits_remaining }}</strong> creditos
+                                <br>
+                                <small class="text-muted">
+                                    {{ wallet.source_description }}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                {% if wallet.days_until_expiry <= 7 %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    {% if wallet.days_until_expiry == 0 %}
+                                    Expira hoje!
+                                    {% elif wallet.days_until_expiry == 1 %}
+                                    Expira amanha
+                                    {% else %}
+                                    {{ wallet.days_until_expiry }} dias
+                                    {% endif %}
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary">
+                                    {{ wallet.days_until_expiry }} dias
+                                </span>
+                                {% endif %}
+                                <br>
+                                <small class="text-muted">{{ wallet.expires_at.strftime('%d/%m/%Y') }}</small>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+
+                    <div class="alert alert-info mt-3 mb-0 small">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Os creditos sao usados automaticamente na ordem: primeiro os que vao vencer antes.
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-wallet fa-3x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">Nenhuma carteira ativa</p>
+                        <small class="text-muted">Compre um pacote ou converta XP!</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Historico de Conversoes -->
+            {% if summary.recent_conversions %}
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <i class="fas fa-history me-2"></i>Ultimas Conversoes
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for conv in summary.recent_conversions %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <small class="text-muted">{{ conv.date }}</small>
+                                <br>
+                                {{ conv.rule_name }}
+                            </div>
+                            <div class="text-end">
+                                <span class="text-danger">-{{ "{:,}".format(conv.xp_spent) }} XP</span>
+                                <br>
+                                <span class="text-success">+{{ conv.credits_granted }} cred</span>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

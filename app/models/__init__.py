@@ -13,6 +13,12 @@ from app.models.whatsapp_template import WhatsAppTemplate, TemplateCategory, Tem
 from app.models.whatsapp_log import WhatsAppLog
 from app.models.system_config import SystemConfig
 
+# XP to Credits Conversion System
+from app.models.conversion_rule import ConversionRule
+from app.models.credit_wallet import CreditWallet, CreditSourceType
+from app.models.xp_conversion import XPConversion
+from app.models.xp_ledger import XPLedger, XPSourceType
+
 __all__ = [
     'User',
     'Package',
@@ -35,4 +41,11 @@ __all__ = [
     'TemplateTrigger',
     'WhatsAppLog',
     'SystemConfig',
+    # XP to Credits Conversion
+    'ConversionRule',
+    'CreditWallet',
+    'CreditSourceType',
+    'XPConversion',
+    'XPLedger',
+    'XPSourceType',
 ]

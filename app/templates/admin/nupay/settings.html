@@ -1,0 +1,98 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Configuração NuPay (Nubank){% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 text-primary">
+                        <i class="fas fa-credit-card me-2"></i>Credenciais NuPay / SpinPay
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning mb-4">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Atenção:</strong> Estas credenciais são necessárias para processar pagamentos PIX e
+                        assinaturas recorrentes automaticamente.
+                    </div>
+
+                    <form method="POST">
+                        <input type="hidden" name="action" value="save_config">
+
+                        <!-- Host API -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Ambiente (Base URL)</label>
+                            <select name="host" class="form-select">
+                                <option value="https://api.spinpay.com.br" {% if
+                                    configs.host=='https://api.spinpay.com.br' %}selected{% endif %}>Produção
+                                    (https://api.spinpay.com.br)</option>
+                                <option value="https://api.sandbox.spinpay.com.br" {% if
+                                    configs.host=='https://api.sandbox.spinpay.com.br' or 'sandbox' in configs.host
+                                    %}selected{% endif %}>Sandbox / Testes (https://api.sandbox.spinpay.com.br)</option>
+                            </select>
+                            <div class="form-text text-muted">Use o Sandbox apenas para testes simulados.</div>
+                        </div>
+
+                        <!-- Merchant Key -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Merchant Key (X-Merchant-Key)</label>
+                            <input type="text" name="merchant_key" class="form-control"
+                                value="{{ configs.merchant_key }}" placeholder="sk_live_..." required>
+                            <div class="form-text">Obtenha no painel NuPay Business > API Settings.</div>
+                        </div>
+
+                        <!-- Merchant Token -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Merchant Token (X-Merchant-Token)</label>
+                            <input type="password" name="merchant_token" class="form-control"
+                                value="{{ configs.merchant_token }}" placeholder="••••••••••••••••" required>
+                            <div class="form-text">Seu token secreto de autenticação.</div>
+                        </div>
+
+                        <!-- Webhook Secret -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Webhook Secret</label>
+                            <input type="text" name="webhook_secret" class="form-control"
+                                value="{{ configs.webhook_secret }}" placeholder="whsec_...">
+                            <div class="form-text">Usado para validar se as notificações de pagamento realmente vieram
+                                do Nubank.</div>
+                        </div>
+
+                        <hr>
+
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="fas fa-save me-2"></i>Salvar Configurações
+                            </button>
+                            <button type="submit" name="action" value="test_connection" class="btn btn-outline-info">
+                                <i class="fas fa-sync me-2"></i>Testar Conexão
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Ajuda -->
+            <div class="card shadow-sm border-info">
+                <div class="card-body">
+                    <h6 class="fw-bold">Como configurar o Webhook?</h6>
+                    <p class="small text-muted mb-2">
+                        No painel da NuPay, configure a URL de notificação para:
+                    </p>
+                    <code class="bg-light p-2 d-block rounded mb-3">
+                        {{ request.url_root.rstrip('/') }}{{ url_for('webhooks.nupay_callback') }}
+                    </code>
+                    <p class="small mb-0">
+                        <i class="fas fa-info-circle me-1"></i>
+                        O sistema processará automaticamente os eventos de <strong>Pagamento Confirmado</strong> e
+                        <strong>Recorrência Autorizada</strong>.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

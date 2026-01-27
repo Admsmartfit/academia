@@ -2,12 +2,14 @@
 
 from app import db
 from app.models import Booking, BookingStatus
+from app.models.xp_ledger import XPLedger, XPSourceType
 from datetime import time
 
 
 class XPManager:
     """
-    Gerencia atribuicao de XP
+    Gerencia atribuicao de XP.
+    Agora registra todo XP no XPLedger para rastreamento e conversao.
     """
 
     XP_VALUES = {
@@ -28,6 +30,24 @@ class XPManager:
         'cancel_very_late': -10,  # Cancelar < 2h
         'no_show': -50,         # Nao comparecer
     }
+
+    @staticmethod
+    def _add_xp_with_ledger(user, amount, source_type, source_id=None, description=None):
+        """
+        Adiciona XP ao usuario e registra no ledger.
+        Verifica conversoes automaticas apos adicionar.
+        """
+        if amount <= 0:
+            return 0
+
+        # Usa o metodo add_xp do User que ja cria entrada no ledger
+        user.add_xp(amount, source_type, source_id, description)
+
+        # Verifica conversoes automaticas
+        from app.services.credit_service import CreditService
+        CreditService.check_automatic_conversions(user.id)
+
+        return amount
 
     @staticmethod
     def award_checkin_xp(booking):
@@ -56,16 +76,26 @@ class XPManager:
 
         total_xp = base_xp + bonus_xp
 
-        # Atribuir
-        user.xp += total_xp
-        booking.xp_earned = total_xp
+        # Atribuir com registro no ledger
+        modality_name = 'Aula'
+        if booking.schedule and booking.schedule.modality:
+            modality_name = booking.schedule.modality.name
 
+        XPManager._add_xp_with_ledger(
+            user=user,
+            amount=total_xp,
+            source_type=XPSourceType.CLASS,
+            source_id=booking.id,
+            description=f"Check-in: {modality_name}"
+        )
+
+        booking.xp_earned = total_xp
         db.session.commit()
 
         return total_xp
 
     @staticmethod
-    def award_purchase_xp(user, credits_purchased):
+    def award_purchase_xp(user, credits_purchased, subscription_id=None):
         """
         Atribui XP baseado na quantidade de creditos comprados
         """
@@ -79,15 +109,21 @@ class XPManager:
             xp_to_add = XPManager.XP_VALUES['purchase_5']
 
         if xp_to_add > 0:
-            user.xp += xp_to_add
-            db.session.commit()
+            XPManager._add_xp_with_ledger(
+                user=user,
+                amount=xp_to_add,
+                source_type=XPSourceType.BONUS,
+                source_id=subscription_id,
+                description=f"Compra de {credits_purchased} creditos"
+            )
 
         return xp_to_add
 
     @staticmethod
     def apply_penalty(user, penalty_type):
         """
-        Aplica penalidade de XP
+        Aplica penalidade de XP.
+        Penalidades afetam apenas o XP total (ranking), nao o ledger.
         """
         if penalty_type not in XPManager.PENALTIES:
             return 0
@@ -111,19 +147,29 @@ class XPManager:
             xp_to_add = XPManager.XP_VALUES['streak_3_days']
 
         if xp_to_add > 0:
-            user.xp += xp_to_add
-            db.session.commit()
+            XPManager._add_xp_with_ledger(
+                user=user,
+                amount=xp_to_add,
+                source_type=XPSourceType.STREAK,
+                description=f"Sequencia de {streak_days} dias"
+            )
 
         return xp_to_add
 
     @staticmethod
-    def award_referral_xp(user):
+    def award_referral_xp(user, referred_user_id=None):
         """
         Atribui XP por indicacao
         """
         xp_to_add = XPManager.XP_VALUES['referral']
-        user.xp += xp_to_add
-        db.session.commit()
+
+        XPManager._add_xp_with_ledger(
+            user=user,
+            amount=xp_to_add,
+            source_type=XPSourceType.REFERRAL,
+            source_id=referred_user_id,
+            description="Indicacao de novo aluno"
+        )
 
         return xp_to_add
 
@@ -133,10 +179,32 @@ class XPManager:
         Atribui XP por completar perfil
         """
         xp_to_add = XPManager.XP_VALUES['profile_complete']
-        user.xp += xp_to_add
-        db.session.commit()
+
+        XPManager._add_xp_with_ledger(
+            user=user,
+            amount=xp_to_add,
+            source_type=XPSourceType.BONUS,
+            description="Perfil completo"
+        )
 
         return xp_to_add
+
+    @staticmethod
+    def award_achievement_xp(user, achievement_id, xp_amount, achievement_name=None):
+        """
+        Atribui XP por conquista desbloqueada
+        """
+        desc = f"Conquista: {achievement_name}" if achievement_name else "Conquista desbloqueada"
+
+        XPManager._add_xp_with_ledger(
+            user=user,
+            amount=xp_amount,
+            source_type=XPSourceType.ACHIEVEMENT,
+            source_id=achievement_id,
+            description=desc
+        )
+
+        return xp_amount
 
 
 # Singleton

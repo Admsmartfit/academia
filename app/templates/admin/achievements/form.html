@@ -16,16 +16,16 @@
                         <div class="mb-3">
                             <label class="form-label">Nome da Conquista *</label>
                             <input type="text" name="name" class="form-control"
-                                   value="{{ achievement.name if achievement else '' }}"
-                                   placeholder="Ex: Estreante" required>
+                                value="{{ achievement.name if achievement else '' }}" placeholder="Ex: Estreante"
+                                required>
                         </div>
 
                         <!-- Descricao -->
                         <div class="mb-3">
                             <label class="form-label">Descricao *</label>
                             <input type="text" name="description" class="form-control"
-                                   value="{{ achievement.description if achievement else '' }}"
-                                   placeholder="Ex: Completou a primeira aula" required>
+                                value="{{ achievement.description if achievement else '' }}"
+                                placeholder="Ex: Completou a primeira aula" required>
                         </div>
 
                         <!-- Icone -->
@@ -35,18 +35,20 @@
                                 <div class="col-md-6">
                                     <label class="form-label small">Upload de Imagem</label>
                                     <input type="file" name="icon" class="form-control" accept="image/*">
-                                    {% if achievement and achievement.icon_url and achievement.icon_url.startswith('/') %}
+                                    {% if achievement and achievement.icon_url and achievement.icon_url.startswith('/')
+                                    %}
                                     <div class="mt-2">
                                         <small class="text-muted">Atual:</small>
-                                        <img src="{{ achievement.icon_url }}" class="ms-2" style="width: 40px; height: 40px;">
+                                        <img src="{{ achievement.icon_url }}" class="ms-2"
+                                            style="width: 40px; height: 40px;">
                                     </div>
                                     {% endif %}
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small">OU Emoji</label>
                                     <input type="text" name="icon_emoji" class="form-control"
-                                           value="{{ achievement.icon_url if achievement and achievement.icon_url and not achievement.icon_url.startswith('/') else '' }}"
-                                           placeholder="Ex: 🏆 💪 ⭐ 🔥">
+                                        value="{{ achievement.icon_url if achievement and achievement.icon_url and not achievement.icon_url.startswith('/') else '' }}"
+                                        placeholder="Ex: 🏆 💪 ⭐ 🔥">
                                     <small class="text-muted">Use um emoji como icone</small>
                                 </div>
                             </div>
@@ -57,9 +59,9 @@
                             <label class="form-label">Tipo de Criterio *</label>
                             <select name="criteria_type" id="criteria_type" class="form-control" required>
                                 {% for ctype in criteria_types %}
-                                <option value="{{ ctype.name }}"
-                                        {% if achievement and achievement.criteria_type.name == ctype.name %}selected{% endif %}>
-                                    {{ ctype.value.replace('_', ' ').title() }}
+                                <option value="{{ ctype.name }}" {% if achievement and
+                                    achievement.criteria_type.name==ctype.name %}selected{% endif %}>
+                                    {{ ctype.value }}
                                 </option>
                                 {% endfor %}
                             </select>
@@ -70,8 +72,7 @@
                         <div class="mb-3">
                             <label class="form-label">Valor do Criterio *</label>
                             <input type="number" name="criteria_value" class="form-control"
-                                   value="{{ achievement.criteria_value if achievement else 1 }}"
-                                   min="1" required>
+                                value="{{ achievement.criteria_value if achievement else 1 }}" min="1" required>
                             <small class="text-muted">
                                 Ex: Se escolheu "Bookings Count", coloque 10 para "completar 10 aulas"
                             </small>
@@ -83,8 +84,8 @@
                             <select name="modality_id" class="form-control">
                                 <option value="">Selecione...</option>
                                 {% for mod in modalities %}
-                                <option value="{{ mod.id }}"
-                                        {% if achievement and achievement.criteria_extra and achievement.criteria_extra.get('modality_id') == mod.id %}selected{% endif %}>
+                                <option value="{{ mod.id }}" {% if achievement and achievement.criteria_extra and
+                                    achievement.criteria_extra.get('modality_id')==mod.id %}selected{% endif %}>
                                     {{ mod.name }}
                                 </option>
                                 {% endfor %}
@@ -96,16 +97,15 @@
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Recompensa (XP)</label>
                                 <input type="number" name="xp_reward" class="form-control"
-                                       value="{{ achievement.xp_reward if achievement else 50 }}"
-                                       min="0">
+                                    value="{{ achievement.xp_reward if achievement else 50 }}" min="0">
                             </div>
 
                             <!-- Cor -->
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Cor</label>
                                 <input type="color" name="color" class="form-control form-control-color"
-                                       value="{{ achievement.color if achievement else '#FFD700' }}"
-                                       style="width: 100px; height: 38px;">
+                                    value="{{ achievement.color if achievement else '#FFD700' }}"
+                                    style="width: 100px; height: 38px;">
                             </div>
                         </div>
 
@@ -144,53 +144,53 @@
 </div>
 
 <script>
-// Mostrar/ocultar campo de modalidade
-document.getElementById('criteria_type').addEventListener('change', function() {
-    const modalitySelect = document.getElementById('modality-select');
-    const helpText = document.getElementById('criteria-help');
+    // Mostrar/ocultar campo de modalidade
+    document.getElementById('criteria_type').addEventListener('change', function () {
+        const modalitySelect = document.getElementById('modality-select');
+        const helpText = document.getElementById('criteria-help');
 
-    const helpTexts = {
-        'BOOKINGS_COUNT': 'Numero de aulas completadas pelo aluno',
-        'STREAK_DAYS': 'Dias consecutivos com pelo menos uma aula',
-        'XP_THRESHOLD': 'Quantidade minima de XP acumulado',
-        'SPECIFIC_MODALITY': 'Aulas completadas de uma modalidade especifica',
-        'EARLY_MORNING': 'Aulas completadas antes das 7h',
-        'PURCHASE_COUNT': 'Numero de pacotes comprados',
-        'REFERRAL_COUNT': 'Amigos indicados que se cadastraram',
-        'CUSTOM': 'Logica personalizada (requer implementacao)'
-    };
+        const helpTexts = {
+            'BOOKINGS_COUNT': 'Numero de aulas completadas pelo aluno',
+            'STREAK_DAYS': 'Dias consecutivos com pelo menos uma aula',
+            'XP_THRESHOLD': 'Quantidade minima de XP acumulado',
+            'SPECIFIC_MODALITY': 'Aulas completadas de uma modalidade especifica',
+            'EARLY_MORNING': 'Aulas completadas antes das 7h',
+            'PURCHASE_COUNT': 'Numero de pacotes comprados',
+            'REFERRAL_COUNT': 'Amigos indicados que se cadastraram',
+            'CUSTOM': 'Logica personalizada (requer implementacao)'
+        };
 
-    helpText.textContent = helpTexts[this.value] || '';
+        helpText.textContent = helpTexts[this.value] || '';
 
-    if (this.value === 'SPECIFIC_MODALITY') {
-        modalitySelect.style.display = 'block';
-    } else {
-        modalitySelect.style.display = 'none';
+        if (this.value === 'SPECIFIC_MODALITY') {
+            modalitySelect.style.display = 'block';
+        } else {
+            modalitySelect.style.display = 'none';
+        }
+    });
+
+    // Trigger ao carregar
+    document.getElementById('criteria_type').dispatchEvent(new Event('change'));
+
+    // Preview em tempo real
+    function updatePreview() {
+        const name = document.querySelector('input[name="name"]').value || 'Nome da Conquista';
+        const desc = document.querySelector('input[name="description"]').value || 'Descricao da conquista';
+        const emoji = document.querySelector('input[name="icon_emoji"]').value || '🏆';
+        const xp = document.querySelector('input[name="xp_reward"]').value || 0;
+
+        document.getElementById('preview-name').textContent = name;
+        document.getElementById('preview-desc').textContent = desc;
+        document.getElementById('preview-icon').textContent = emoji;
+        document.getElementById('preview-xp').textContent = '+' + xp + ' XP';
     }
-});
 
-// Trigger ao carregar
-document.getElementById('criteria_type').dispatchEvent(new Event('change'));
+    document.querySelector('input[name="name"]').addEventListener('input', updatePreview);
+    document.querySelector('input[name="description"]').addEventListener('input', updatePreview);
+    document.querySelector('input[name="icon_emoji"]').addEventListener('input', updatePreview);
+    document.querySelector('input[name="xp_reward"]').addEventListener('input', updatePreview);
 
-// Preview em tempo real
-function updatePreview() {
-    const name = document.querySelector('input[name="name"]').value || 'Nome da Conquista';
-    const desc = document.querySelector('input[name="description"]').value || 'Descricao da conquista';
-    const emoji = document.querySelector('input[name="icon_emoji"]').value || '🏆';
-    const xp = document.querySelector('input[name="xp_reward"]').value || 0;
-
-    document.getElementById('preview-name').textContent = name;
-    document.getElementById('preview-desc').textContent = desc;
-    document.getElementById('preview-icon').textContent = emoji;
-    document.getElementById('preview-xp').textContent = '+' + xp + ' XP';
-}
-
-document.querySelector('input[name="name"]').addEventListener('input', updatePreview);
-document.querySelector('input[name="description"]').addEventListener('input', updatePreview);
-document.querySelector('input[name="icon_emoji"]').addEventListener('input', updatePreview);
-document.querySelector('input[name="xp_reward"]').addEventListener('input', updatePreview);
-
-// Inicializar preview
-updatePreview();
+    // Inicializar preview
+    updatePreview();
 </script>
 {% endblock %}

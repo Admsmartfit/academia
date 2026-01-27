@@ -33,8 +33,12 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(20), default='student')
 
     # Gamificacao
-    xp = db.Column(db.Integer, default=0)
+    xp = db.Column(db.Integer, default=0)  # XP total historico (para ranking)
     level = db.Column(db.Integer, default=1)
+
+    # Cache de XP e Creditos (atualizados por triggers/services)
+    xp_available = db.Column(db.Integer, default=0)  # XP disponivel para conversao (janela 3 meses)
+    credits_balance = db.Column(db.Integer, default=0)  # Total de creditos ativos (wallets)
 
     # Perfil
     photo_url = db.Column(db.String(255))
@@ -95,14 +99,66 @@ class User(UserMixin, db.Model):
             status=BookingStatus.COMPLETED
         ).count()
 
-    def add_xp(self, amount):
-        """Adiciona XP ao usuario"""
+    def add_xp(self, amount, source_type=None, source_id=None, description=None):
+        """
+        Adiciona XP ao usuario.
+        Cria entrada no XPLedger para rastreamento granular.
+        """
+        from app.models.xp_ledger import XPLedger, XPSourceType
+
+        # Atualiza XP total (para ranking)
         self.xp += amount
+
         # Calcula novo nivel (cada 100 XP = 1 nivel)
         new_level = (self.xp // 100) + 1
         if new_level > self.level:
             self.level = new_level
+
+        # Cria entrada no ledger para rastreamento
+        if source_type is None:
+            source_type = XPSourceType.BONUS
+
+        XPLedger.create_entry(
+            user_id=self.id,
+            xp_amount=amount,
+            source_type=source_type,
+            source_id=source_id,
+            description=description
+        )
+
+        # Atualiza cache de XP disponivel
+        self.refresh_xp_cache()
+
         db.session.commit()
+
+    def refresh_xp_cache(self):
+        """Atualiza cache de XP disponivel para conversao"""
+        from app.models.xp_ledger import XPLedger
+        self.xp_available = XPLedger.get_user_available_xp(self.id)
+
+    def refresh_credits_cache(self):
+        """Atualiza cache de creditos totais"""
+        from app.models.credit_wallet import CreditWallet
+        self.credits_balance = CreditWallet.get_user_total_credits(self.id)
+
+    def refresh_all_caches(self):
+        """Atualiza todos os caches do usuario"""
+        self.refresh_xp_cache()
+        self.refresh_credits_cache()
+        db.session.commit()
+
+    @property
+    def wallet_credits(self):
+        """Total de creditos em wallets ativas (com FIFO)"""
+        from app.models.credit_wallet import CreditWallet
+        return CreditWallet.get_user_total_credits(self.id)
+
+    @property
+    def expiring_credits(self):
+        """Creditos que vao expirar em 7 dias"""
+        from app.models.credit_wallet import CreditWallet
+        wallets = CreditWallet.get_expiring_soon(self.id, days=7)
+        return sum(w.credits_remaining for w in wallets)
 
     @staticmethod
     def validate_cpf(cpf):

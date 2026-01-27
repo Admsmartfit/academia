@@ -6,21 +6,27 @@ import enum
 
 
 class TemplateCategory(enum.Enum):
-    TRANSACTIONAL = "transactional"  # Confirmacoes, lembretes
-    MARKETING = "marketing"          # Promocoes
+    TRANSACTIONAL = "Transacional (Alertas/Avisos)"
+    MARKETING = "Marketing (Promoções)"
 
 
 class TemplateTrigger(enum.Enum):
-    PAYMENT_CONFIRMED = "payment_confirmed"
-    CLASS_REMINDER_24H = "class_reminder_24h"
-    CLASS_REMINDER_2H = "class_reminder_2h"
-    CREDITS_EXPIRING = "credits_expiring"
-    CREDITS_DEPLETED = "credits_depleted"
-    ACHIEVEMENT_UNLOCKED = "achievement_unlocked"
-    PAYMENT_OVERDUE = "payment_overdue"
-    SUBSCRIPTION_BLOCKED = "subscription_blocked"
-    WELCOME = "welcome"
-    CUSTOM = "custom"
+    PAYMENT_CONFIRMED = "Confirmação de Pagamento"
+    CLASS_REMINDER_24H = "Lembrete de Aula (24h antes)"
+    CLASS_REMINDER_2H = "Lembrete de Aula (2h antes)"
+    CREDITS_EXPIRING = "Créditos com Baixa Validade"
+    CREDITS_EXPIRING_1D = "Créditos Expiram Amanhã"
+    CREDITS_EXPIRED = "Créditos Expiraram"
+    CREDITS_DEPLETED = "Créditos Esgotados"
+    ACHIEVEMENT_UNLOCKED = "Nova Conquista Desbloqueada"
+    XP_CONVERSION_AUTO = "Conversão Automática de XP"
+    XP_CONVERSION_MANUAL = "Conversão Manual de XP"
+    XP_GOAL_NEAR = "XP Próximo de Meta"
+    PAYMENT_OVERDUE = "Pagamento em Atraso"
+    SUBSCRIPTION_BLOCKED = "Assinatura Bloqueada"
+    SUBSCRIPTION_CANCELLED = "Assinatura Cancelada (Inadimplência)"
+    WELCOME = "Boas-vindas (Novo Cadastro)"
+    CUSTOM = "Personalizado / Envio Manual"
 
 
 class WhatsAppTemplate(db.Model):

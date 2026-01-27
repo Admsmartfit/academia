@@ -6,14 +6,14 @@ import enum
 
 
 class CriteriaType(enum.Enum):
-    BOOKINGS_COUNT = "bookings_count"           # X aulas completadas
-    STREAK_DAYS = "streak_days"                 # X dias consecutivos
-    XP_THRESHOLD = "xp_threshold"               # Atingir X XP
-    SPECIFIC_MODALITY = "specific_modality"     # X aulas de modalidade Y
-    EARLY_MORNING = "early_morning"             # X aulas antes das 7h
-    PURCHASE_COUNT = "purchase_count"           # X compras realizadas
-    REFERRAL_COUNT = "referral_count"           # Indicar X amigos
-    CUSTOM = "custom"                           # Logica custom
+    BOOKINGS_COUNT = "Total de Aulas Completadas"
+    STREAK_DAYS = "Dias Consecutivos (Sequência)"
+    XP_THRESHOLD = "Atingir Pontuação XP"
+    SPECIFIC_MODALITY = "Aulas de Modalidade Específica"
+    EARLY_MORNING = "Aulas Matinais (Antes das 7h)"
+    PURCHASE_COUNT = "Total de Compras Realizadas"
+    REFERRAL_COUNT = "Indicações de Amigos"
+    CUSTOM = "Lógica Personalizada / Manual"
 
 
 class Achievement(db.Model):

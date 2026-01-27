@@ -43,7 +43,10 @@ def index():
             'credits': p.credits,
             'price': float(p.price),
             'installments': p.installments,
-            'installment_price': float(p.installment_price) if p.installment_price else 0
+            'installment_price': float(p.installment_price) if p.installment_price else 0,
+            'extra_benefits': p.extra_benefits or [],
+            'badge': p.badge,
+            'is_featured': p.is_featured
         })
     
     return render_template(

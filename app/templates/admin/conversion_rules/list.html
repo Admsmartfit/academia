@@ -1,0 +1,225 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Regras de Conversao XP{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="fas fa-exchange-alt me-2"></i>Regras de Conversao XP para Creditos
+    </h4>
+    <div>
+        <a href="{{ url_for('admin_conversion_rules.conversion_report') }}" class="btn btn-outline-primary me-2">
+            <i class="fas fa-chart-bar me-2"></i>Relatorio
+        </a>
+        <a href="{{ url_for('admin_conversion_rules.create_rule') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Nova Regra
+        </a>
+    </div>
+</div>
+
+<!-- Estatisticas -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Conversoes</h6>
+                        <h3 class="mb-0">{{ total_conversions }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-sync-alt fa-2x text-muted"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">XP Convertido</h6>
+                        <h3 class="mb-0">{{ "{:,}".format(total_xp_spent) }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-star fa-2x text-info"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Creditos Gerados</h6>
+                        <h3 class="mb-0">{{ "{:,}".format(total_credits_granted) }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-coins fa-2x text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Este Mes</h6>
+                        <h3 class="mb-0">{{ monthly_stats.total_conversions }}</h3>
+                        <small class="text-muted">{{ monthly_stats.unique_users }} usuarios</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-calendar-alt fa-2x text-warning"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Regras -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-list me-2"></i>Regras Cadastradas</span>
+        <small class="text-muted">{{ rules|length }} regra(s)</small>
+    </div>
+    <div class="card-body">
+        {% if rules %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">Prior.</th>
+                        <th>Regra</th>
+                        <th class="text-center">XP Necessario</th>
+                        <th class="text-center">Creditos</th>
+                        <th class="text-center">Validade</th>
+                        <th class="text-center">Tipo</th>
+                        <th class="text-center">Limites</th>
+                        <th class="text-center">Usos</th>
+                        <th class="text-center">Status</th>
+                        <th style="width: 150px;">Acoes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rule in rules %}
+                    <tr class="{{ 'table-secondary' if not rule.is_active }}">
+                        <td>
+                            <span class="badge bg-secondary">{{ rule.priority }}</span>
+                        </td>
+                        <td>
+                            <strong>{{ rule.name }}</strong>
+                            {% if rule.description %}
+                            <br><small class="text-muted">{{ rule.description[:60] }}{% if rule.description|length > 60 %}...{% endif %}</small>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-info text-dark fs-6">{{ "{:,}".format(rule.xp_required) }} XP</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-success fs-6">{{ rule.credits_granted }} cred</span>
+                        </td>
+                        <td class="text-center">
+                            {{ rule.credit_validity_days }} dias
+                        </td>
+                        <td class="text-center">
+                            {% if rule.is_automatic %}
+                            <span class="badge bg-primary" title="Conversao automatica ao atingir XP">
+                                <i class="fas fa-robot"></i> Auto
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary" title="Usuario precisa solicitar manualmente">
+                                <i class="fas fa-hand-pointer"></i> Manual
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <small>
+                                {% if rule.max_uses_per_user %}
+                                Max: {{ rule.max_uses_per_user }}x
+                                {% else %}
+                                <span class="text-success">Ilimitado</span>
+                                {% endif %}
+                                {% if rule.cooldown_days %}
+                                <br>Cooldown: {{ rule.cooldown_days }}d
+                                {% endif %}
+                            </small>
+                        </td>
+                        <td class="text-center">
+                            <span class="fw-bold">{{ rule.usage_count }}</span>
+                        </td>
+                        <td class="text-center">
+                            {% if rule.is_active %}
+                            <span class="badge bg-success">Ativa</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inativa</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{{ url_for('admin_conversion_rules.edit_rule', id=rule.id) }}"
+                                   class="btn btn-sm btn-outline-primary" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form action="{{ url_for('admin_conversion_rules.toggle_rule', id=rule.id) }}"
+                                      method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-{{ 'warning' if rule.is_active else 'success' }}"
+                                            title="{{ 'Desativar' if rule.is_active else 'Ativar' }}">
+                                        <i class="fas fa-{{ 'pause' if rule.is_active else 'play' }}"></i>
+                                    </button>
+                                </form>
+                                <form action="{{ url_for('admin_conversion_rules.delete_rule', id=rule.id) }}"
+                                      method="POST" class="d-inline"
+                                      onsubmit="return confirm('Tem certeza que deseja remover esta regra?')">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Remover">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-exchange-alt fa-4x text-muted mb-3"></i>
+            <h5>Nenhuma regra cadastrada</h5>
+            <p class="text-muted">Crie sua primeira regra de conversao XP para creditos.</p>
+            <a href="{{ url_for('admin_conversion_rules.create_rule') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Criar Regra
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Info Card -->
+<div class="card mt-4">
+    <div class="card-header bg-light">
+        <i class="fas fa-info-circle me-2"></i>Como funciona
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <h6><i class="fas fa-star text-warning me-2"></i>XP Disponivel</h6>
+                <p class="text-muted small">O aluno acumula XP nos ultimos 3 meses. XP mais antigo sai da janela de conversao, mas continua valendo para o ranking.</p>
+            </div>
+            <div class="col-md-4">
+                <h6><i class="fas fa-robot text-primary me-2"></i>Conversao Automatica</h6>
+                <p class="text-muted small">Se ativada, o sistema converte automaticamente quando o aluno atinge o XP necessario (respeitando cooldown).</p>
+            </div>
+            <div class="col-md-4">
+                <h6><i class="fas fa-clock text-info me-2"></i>Validade dos Creditos</h6>
+                <p class="text-muted small">Creditos gerados tem data de expiracao. O sistema usa FIFO: primeiro a vencer, primeiro a usar.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

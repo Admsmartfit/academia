@@ -1,12 +1,15 @@
 # app/routes/student.py
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from flask import abort
 from app.models import (
     Subscription, Payment, Booking, BookingStatus, SubscriptionStatus,
-    PaymentStatusEnum, ClassSchedule, User, RecurringBooking, FrequencyType
+    PaymentStatusEnum, ClassSchedule, User, RecurringBooking, FrequencyType,
+    ConversionRule, CreditWallet
 )
+from app.models.xp_ledger import XPLedger
+from app.services.credit_service import CreditService
 from app import db
 from datetime import datetime, timedelta
 from sqlalchemy import func
@@ -25,8 +28,17 @@ def dashboard():
         status=SubscriptionStatus.ACTIVE
     ).all()
 
-    # Total de creditos disponiveis
-    total_credits = sum(sub.credits_remaining for sub in active_subscriptions)
+    # Total de creditos disponiveis (assinaturas + wallets)
+    subscription_credits = sum(sub.credits_remaining for sub in active_subscriptions)
+    wallet_credits = CreditWallet.get_user_total_credits(current_user.id)
+    total_credits = subscription_credits + wallet_credits
+
+    # Creditos expirando em 7 dias
+    expiring_wallets = CreditWallet.get_expiring_soon(current_user.id, days=7)
+    expiring_credits = sum(w.credits_remaining for w in expiring_wallets)
+
+    # XP disponivel para conversao
+    xp_available = XPLedger.get_user_available_xp(current_user.id)
 
     # Proximas aulas
     today = datetime.now().date()
@@ -62,6 +74,9 @@ def dashboard():
     return render_template('student/dashboard.html',
                          active_subscriptions=active_subscriptions,
                          total_credits=total_credits,
+                         wallet_credits=wallet_credits,
+                         expiring_credits=expiring_credits,
+                         xp_available=xp_available,
                          upcoming_bookings=upcoming_bookings,
                          next_booking=next_booking,
                          pending_payments=pending_payments,
@@ -521,15 +536,83 @@ def update_cpf():
     data = request.get_json()
     if not data or 'cpf' not in data:
         return {'success': False, 'error': 'CPF não informado.'}, 400
-    
+
     cpf = data.get('cpf')
-    
+
     if not User.validate_cpf(cpf):
         return {'success': False, 'error': 'CPF inválido.'}, 400
-    
+
     try:
         current_user.cpf = User.format_cpf(cpf)
         db.session.commit()
         return {'success': True}
     except Exception as e:
         return {'success': False, 'error': 'Erro ao salvar CPF.'}, 500
+
+
+# ==================== XP E CREDITOS ====================
+
+@student_bp.route('/xp-credits')
+@login_required
+def xp_credits():
+    """Pagina de XP e Creditos - Conversao e Carteiras"""
+
+    # Resumo completo do usuario
+    summary = CreditService.get_user_summary(current_user.id)
+
+    # Regras de conversao disponiveis
+    available_rules = CreditService.get_available_rules(current_user.id)
+
+    # Carteiras de credito ativas
+    wallets = CreditWallet.get_user_active_wallets(current_user.id)
+
+    # Creditos expirando em 7 dias
+    expiring_wallets = CreditWallet.get_expiring_soon(current_user.id, days=7)
+
+    return render_template('student/xp_credits.html',
+        summary=summary,
+        available_rules=available_rules,
+        wallets=wallets,
+        expiring_wallets=expiring_wallets
+    )
+
+
+@student_bp.route('/convert-xp/<int:rule_id>', methods=['POST'])
+@login_required
+def convert_xp(rule_id):
+    """Executar conversao de XP em creditos"""
+
+    result = CreditService.convert_xp(current_user.id, rule_id, is_automatic=False)
+
+    if result['success']:
+        conversion = result['conversion']
+        wallet = result['wallet']
+        flash(
+            f'Conversao realizada! Voce ganhou {conversion.credits_granted} creditos '
+            f'(validos ate {wallet.expires_at.strftime("%d/%m/%Y")}).',
+            'success'
+        )
+    else:
+        flash(f'Erro na conversao: {result["error"]}', 'danger')
+
+    return redirect(url_for('student.xp_credits'))
+
+
+@student_bp.route('/api/credit-preview/<int:credits_needed>')
+@login_required
+def credit_preview(credits_needed):
+    """API para preview de quais creditos serao usados"""
+
+    preview = CreditService.preview_credit_usage(current_user.id, credits_needed)
+
+    return jsonify(preview)
+
+
+@student_bp.route('/api/xp-summary')
+@login_required
+def xp_summary_api():
+    """API para obter resumo de XP e creditos"""
+
+    summary = CreditService.get_user_summary(current_user.id)
+
+    return jsonify(summary)

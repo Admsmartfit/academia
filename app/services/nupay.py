@@ -21,11 +21,16 @@ class NuPayService:
     """
 
     def __init__(self):
-        """Inicializa o serviço com credenciais do config."""
-        self.base_url = current_app.config.get('NUPAY_BASE_URL', 'https://api.spinpay.com.br')
+        """Inicializa o serviço com credenciais (preferencialmente do SystemConfig)."""
+        from app.models import SystemConfig
+        
+        self.base_url = SystemConfig.get('nupay_base_url', current_app.config.get('NUPAY_BASE_URL', 'https://api.spinpay.com.br'))
+        self.merchant_key = SystemConfig.get('nupay_merchant_key', current_app.config.get('NUPAY_MERCHANT_KEY', ''))
+        self.merchant_token = SystemConfig.get('nupay_merchant_token', current_app.config.get('NUPAY_MERCHANT_TOKEN', ''))
+        
         self.headers = {
-            'X-Merchant-Key': current_app.config.get('NUPAY_MERCHANT_KEY', ''),
-            'X-Merchant-Token': current_app.config.get('NUPAY_MERCHANT_TOKEN', ''),
+            'X-Merchant-Key': self.merchant_key,
+            'X-Merchant-Token': self.merchant_token,
             'Content-Type': 'application/json'
         }
 

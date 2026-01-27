@@ -28,6 +28,7 @@ class Package(db.Model):
     color = db.Column(db.String(7), default='#FF6B35')
     is_featured = db.Column(db.Boolean, default=False)  # Destaque
     display_order = db.Column(db.Integer, default=0)
+    badge = db.Column(db.String(50))  # Ex: "MAIS VENDIDO", "NOVO"
 
     # Beneficios extras
     extra_benefits = db.Column(db.JSON)  # Ex: ["Toalha gratis", "Garrafinha"]

@@ -149,6 +149,13 @@
             </li>
 
             <li class="nav-item">
+                <a href="{{ url_for('admin_conversion_rules.list_rules') }}"
+                    class="nav-link {% if 'conversion_rules' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-exchange-alt"></i> Conversao XP
+                </a>
+            </li>
+
+            <li class="nav-item">
                 <a href="{{ url_for('admin_whatsapp.list_templates') }}"
                     class="nav-link {% if 'whatsapp' in request.endpoint and 'megaapi' not in request.endpoint %}active{% endif %}">
                     <i class="fab fa-whatsapp"></i> WhatsApp
@@ -159,6 +166,13 @@
                 <a href="{{ url_for('admin_megaapi.settings') }}"
                     class="nav-link {% if 'megaapi' in request.endpoint %}active{% endif %}">
                     <i class="fab fa-whatsapp"></i> Config WhatsApp
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="{{ url_for('admin_nupay.settings') }}"
+                    class="nav-link {% if 'nupay' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-credit-card"></i> Config NuPay
                 </a>
             </li>
 

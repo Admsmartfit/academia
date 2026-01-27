@@ -89,6 +89,10 @@ def register():
     if current_user.is_authenticated:
         return redirect(url_for('student.dashboard'))
 
+    # Capturar parametro trial para rastrear origem da landing page
+    trial_type = request.args.get('trial')
+    show_fes_banner = (trial_type == 'fes')
+
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
         email = request.form.get('email', '').strip().lower()
@@ -96,6 +100,7 @@ def register():
         cpf = request.form.get('cpf', '').strip()
         password = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
+        trial_type = request.form.get('trial_type', '')
 
         # Validacoes
         errors = []
@@ -131,7 +136,9 @@ def register():
         if errors:
             for error in errors:
                 flash(error, 'danger')
-            return render_template('auth/register.html')
+            return render_template('auth/register.html',
+                trial_type=trial_type,
+                show_fes_banner=show_fes_banner)
 
         # Criar usuario
         user = User(
@@ -150,7 +157,9 @@ def register():
         flash('Conta criada com sucesso! Faca login para continuar.', 'success')
         return redirect(url_for('auth.login'))
 
-    return render_template('auth/register.html')
+    return render_template('auth/register.html',
+        trial_type=trial_type,
+        show_fes_banner=show_fes_banner)
 
 
 @auth_bp.route('/logout')

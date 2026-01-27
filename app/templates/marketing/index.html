@@ -4,16 +4,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Academia | Transforme seu corpo com flexibilidade total</title>
+    <title>Centro de Biohacking & Alta Performance | Tecnologia FES</title>
     <meta name="description"
-        content="Pague apenas pelas aulas que frequentar. Sem mensalidade fixa. Sem multa de cancelamento.">
+        content="Recrute 90% mais fibras musculares em treinos de apenas 20 minutos. Tecnologia FES de eletroestimulacao para resultados extraordinarios.">
 
-    <!-- Google Fonts -->
+    <!-- SEO Meta Tags -->
+    <meta name="keywords" content="FES, eletroestimulacao, treino, academia, hipertrofia, biohacking, fitness">
+    <meta name="author" content="Biohack Academia">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph / Social -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Centro de Biohacking & Alta Performance | Tecnologia FES">
+    <meta property="og:description" content="Recrute 90% mais fibras musculares em treinos de apenas 20 minutos.">
+    <meta property="og:site_name" content="Biohack Academia">
+
+    <!-- Performance: DNS Prefetch & Preconnect -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+
+    <!-- Google Fonts with display=swap for better performance -->
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Outfit:wght@400;600;700;800&display=swap"
         rel="stylesheet">
+
+    <!-- Font Awesome - loaded async for performance -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
 
     <style>
         :root {
@@ -25,6 +45,11 @@
             --text-secondary: #94a3b8;
             --glass: rgba(30, 41, 59, 0.7);
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+            /* FES Theme */
+            --fes-glow: rgba(255, 107, 53, 0.6);
+            --fes-pulse: rgba(255, 107, 53, 0.3);
+            --gradient-tech: linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%);
         }
 
         * {
@@ -50,6 +75,26 @@
         h3 {
             font-family: 'Outfit', sans-serif;
             font-weight: 800;
+        }
+
+        /* FES Pulse Animation */
+        @keyframes fes-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 var(--fes-pulse); }
+            50% { box-shadow: 0 0 30px 15px var(--fes-glow); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+
+        .fes-glow {
+            animation: fes-pulse 2s infinite;
         }
 
         /* Navigation */
@@ -89,7 +134,7 @@
 
         .nav-links {
             display: flex;
-            gap: 2.5rem;
+            gap: 2rem;
             align-items: center;
         }
 
@@ -118,31 +163,490 @@
             box-shadow: 0 6px 20px var(--accent-glow);
         }
 
-        /* Hero Section */
+        /* Hero Section - FES Focus */
         #hero {
-            height: 100vh;
+            min-height: 100vh;
             position: relative;
             display: flex;
             align-items: center;
+            justify-content: center;
             padding: 0 5%;
-            background: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.4)), url('/static/img/hero.png');
+            background: linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.6)), url('/static/img/hero-fes.jpg');
             background-size: cover;
             background-position: center;
+            text-align: center;
         }
 
         .hero-content {
-            max-width: 800px;
+            max-width: 900px;
             z-index: 1;
         }
 
+        .hero-badge {
+            display: inline-block;
+            background: rgba(255, 107, 53, 0.2);
+            color: var(--accent);
+            padding: 0.5rem 1.5rem;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--accent);
+        }
+
         .hero-content h1 {
-            font-size: clamp(3rem, 8vw, 5rem);
+            font-size: clamp(2.5rem, 6vw, 4rem);
             line-height: 1.1;
             margin-bottom: 1.5rem;
             background: linear-gradient(to right, #fff, #94a3b8);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
+        }
+
+        .hero-content .highlight {
+            background: var(--gradient-tech);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 700px;
+            margin: 0 auto 2rem;
+        }
+
+        .hero-ctas {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 3rem;
+        }
+
+        .btn-primary {
+            display: inline-block;
+            background: var(--accent);
+            color: white;
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            transition: var(--transition);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--accent-glow);
+        }
+
+        .btn-primary.fes-glow {
+            animation: fes-pulse 2s infinite;
+        }
+
+        .btn-secondary {
+            display: inline-block;
+            background: transparent;
+            color: var(--text-main);
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            transition: var(--transition);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .trust-badges {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .trust-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .trust-badge i {
+            color: var(--accent);
+        }
+
+        /* Problem/Solution Section */
+        #problema {
+            padding: 6rem 5%;
+            background: var(--bg-dark);
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .section-header h2 {
+            font-size: clamp(2rem, 4vw, 2.5rem);
+            margin-bottom: 1rem;
+        }
+
+        .section-header p {
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+            font-size: 1.1rem;
+        }
+
+        .problems-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto 4rem;
+        }
+
+        .problem-card {
+            background: var(--bg-card);
+            padding: 2.5rem;
+            border-radius: 24px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: var(--transition);
+        }
+
+        .problem-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 107, 53, 0.3);
+        }
+
+        .problem-icon {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 107, 53, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+        }
+
+        .problem-icon i {
+            font-size: 2rem;
+            color: var(--accent);
+        }
+
+        .problem-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .problem-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .problem-highlight {
+            background: rgba(255, 107, 53, 0.1);
+            border: 2px solid var(--accent);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .problem-highlight p {
+            font-size: 1.25rem;
+            color: var(--text-main);
+            margin-bottom: 1.5rem;
+        }
+
+        .problem-highlight strong {
+            color: var(--accent);
+        }
+
+        /* Science FES Section */
+        #ciencia {
+            padding: 6rem 5%;
+            background: linear-gradient(180deg, var(--bg-dark) 0%, #0a0f1a 100%);
+        }
+
+        .science-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .comparison-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        .comparison-card {
+            padding: 2.5rem;
+            border-radius: 24px;
+            text-align: center;
+        }
+
+        .comparison-card.normal {
+            background: rgba(100, 100, 100, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .comparison-card.fes {
+            background: rgba(255, 107, 53, 0.1);
+            border: 2px solid var(--accent);
+            position: relative;
+        }
+
+        .comparison-card.fes::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 26px;
+            background: var(--gradient-tech);
+            z-index: -1;
+            opacity: 0.3;
+        }
+
+        .comparison-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .comparison-card.fes h3 {
+            color: var(--accent);
+        }
+
+        .activation-meter {
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .activation-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 1s ease-out;
+        }
+
+        .activation-fill.low {
+            width: 30%;
+            background: #666;
+        }
+
+        .activation-fill.high {
+            width: 90%;
+            background: var(--gradient-tech);
+        }
+
+        .activation-value {
+            font-size: 3rem;
+            font-weight: 800;
+            margin: 1rem 0;
+        }
+
+        .comparison-card.normal .activation-value {
+            color: #666;
+        }
+
+        .comparison-card.fes .activation-value {
+            color: var(--accent);
+        }
+
+        .fiber-type {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* How it works */
+        .how-it-works {
+            margin-bottom: 4rem;
+        }
+
+        .how-it-works h3 {
+            text-align: center;
+            font-size: 1.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .step-item {
+            background: var(--bg-card);
+            padding: 1.5rem;
+            border-radius: 16px;
+            text-align: center;
+            border-left: 4px solid var(--accent);
+        }
+
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: var(--accent);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            margin: 0 auto 1rem;
+        }
+
+        .step-item p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* Badges */
+        .science-badges {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 3rem;
+        }
+
+        .science-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--bg-card);
+            padding: 1rem 1.5rem;
+            border-radius: 50px;
+        }
+
+        .science-badge i {
+            color: var(--accent);
+            font-size: 1.25rem;
+        }
+
+        /* Infographic */
+        .infographic {
+            background: var(--gradient-tech);
+            padding: 2rem 3rem;
+            border-radius: 16px;
+            text-align: center;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .infographic p {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .infographic span {
+            font-size: 3rem;
+            display: block;
+            margin: 0.5rem 0;
+        }
+
+        /* Comparison Table Section */
+        #comparativo {
+            padding: 6rem 5%;
+            background: var(--bg-dark);
+        }
+
+        .comparison-table {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--bg-card);
+            border-radius: 24px;
+            overflow: hidden;
+        }
+
+        .comparison-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 1.25rem 1.5rem;
+            text-align: center;
+        }
+
+        .comparison-table thead th {
+            background: var(--bg-dark);
+            font-size: 1.1rem;
+        }
+
+        .comparison-table thead th:first-child {
+            text-align: left;
+        }
+
+        .comparison-table thead th:last-child {
+            background: var(--accent);
+            color: white;
+        }
+
+        .comparison-table tbody tr {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .comparison-table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        .comparison-table tbody td:first-child {
+            text-align: left;
+            color: var(--text-secondary);
+        }
+
+        .comparison-table tbody td:nth-child(2) {
+            color: #888;
+        }
+
+        .comparison-table tbody td:last-child {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .recommended-badge {
+            display: inline-block;
+            background: var(--accent);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-left: 0.5rem;
+        }
+
+        .comparison-cta {
+            text-align: center;
+            margin-top: 3rem;
+        }
+
+        /* Modalities Section */
+        section {
+            padding: 5rem 0;
+        }
+
+        .modalities-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            padding: 0 5%;
+            max-width: 1400px;
+            margin: 0 auto;
         }
 
         .modality-card {
@@ -156,37 +660,26 @@
             border-top: 4px solid var(--modality-color, var(--accent));
         }
 
-        .progress-bar {
-            height: 100%;
+        .modality-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .modality-card.featured {
+            border: 2px solid var(--accent);
+            transform: scale(1.02);
+        }
+
+        .modality-card.featured::before {
+            content: 'TECNOLOGIA EXCLUSIVA';
+            position: absolute;
+            top: 1rem;
+            right: -2rem;
             background: var(--accent);
-            border-radius: 10px;
-            transition: width 1s ease-out;
-            width: var(--progress-width, 0%);
-        }
-
-        .section-header {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
-
-        .section-header h2 {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .section-header p {
-            color: var(--text-secondary);
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        .modalities-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 2rem;
-            padding: 0 5%;
-            max-width: 1400px;
-            margin: 0 auto;
+            color: white;
+            padding: 0.25rem 2.5rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            transform: rotate(45deg);
         }
 
         .modality-icon {
@@ -214,72 +707,48 @@
             font-weight: 600;
         }
 
-        section {
-            padding: 5rem 0;
-        }
-
+        /* Simulator Section */
         .ranking-container {
             max-width: 900px;
             margin: 0 auto;
             padding: 0 5%;
         }
 
-        .ranking-list {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .ranking-item {
+        .simulator-row {
             display: grid;
-            grid-template-columns: 60px 1fr auto auto;
+            grid-template-columns: 1fr 200px 100px;
             align-items: center;
-            gap: 1.5rem;
-            background: var(--bg-card);
-            padding: 1.25rem 1.5rem;
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
         }
 
-        .ranking-pos {
-            font-size: 1.5rem;
-            font-weight: 800;
-            text-align: center;
-        }
-
-        .ranking-name {
-            font-weight: 600;
-            display: block;
-            margin-bottom: 0.5rem;
-        }
-
-        .progress-container {
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .ranking-xp {
-            font-weight: 700;
-            color: var(--accent);
-        }
-
-        .ranking-lvl {
+        .simulator-row.fes-row {
             background: rgba(255, 107, 53, 0.1);
-            color: var(--accent);
-            padding: 0.5rem 1rem;
-            border-radius: 50px;
-            font-size: 0.85rem;
+            border: 1px solid var(--accent);
+        }
+
+        .fes-savings {
+            background: var(--gradient-tech);
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+
+        .fes-savings p {
+            color: white;
             font-weight: 600;
         }
 
+        /* Plans Section */
         .plans-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 2rem;
             padding: 0 5%;
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
 
@@ -290,11 +759,20 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
             position: relative;
             text-align: center;
+            transition: var(--transition);
+        }
+
+        .plan-card:hover {
+            transform: translateY(-5px);
         }
 
         .plan-card.featured {
             border: 2px solid var(--accent);
             transform: scale(1.05);
+        }
+
+        .plan-card.featured:hover {
+            transform: scale(1.07);
         }
 
         .featured-badge {
@@ -352,6 +830,10 @@
             color: var(--text-main);
         }
 
+        .plan-features li.fes-benefit {
+            color: var(--accent);
+        }
+
         .btn-plan {
             display: block;
             background: var(--accent);
@@ -368,22 +850,291 @@
             box-shadow: 0 6px 20px var(--accent-glow);
         }
 
-        .btn-primary {
-            display: inline-block;
+        /* Ranking Section */
+        .ranking-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .ranking-item {
+            display: grid;
+            grid-template-columns: 60px 1fr auto auto;
+            align-items: center;
+            gap: 1.5rem;
+            background: var(--bg-card);
+            padding: 1.25rem 1.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .ranking-pos {
+            font-size: 1.5rem;
+            font-weight: 800;
+            text-align: center;
+        }
+
+        .ranking-name {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-container {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
             background: var(--accent);
-            color: white;
-            padding: 1rem 2rem;
-            border-radius: 50px;
-            text-decoration: none;
+            border-radius: 10px;
+            transition: width 1s ease-out;
+        }
+
+        .ranking-xp {
             font-weight: 700;
+            color: var(--accent);
+        }
+
+        .ranking-lvl {
+            background: rgba(255, 107, 53, 0.1);
+            color: var(--accent);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* Testimonials Section */
+        #depoimentos {
+            padding: 6rem 5%;
+            background: linear-gradient(180deg, var(--bg-dark) 0%, rgba(255, 107, 53, 0.05) 100%);
+        }
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .testimonial-card {
+            background: var(--bg-card);
+            border-radius: 24px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .testimonial-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent);
+            opacity: 0;
             transition: var(--transition);
         }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px var(--accent-glow);
+        .testimonial-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 107, 53, 0.3);
         }
 
+        .testimonial-card:hover::before {
+            opacity: 1;
+        }
+
+        .testimonial-card.featured {
+            border: 2px solid var(--accent);
+            transform: scale(1.02);
+        }
+
+        .testimonial-card.featured::before {
+            opacity: 1;
+        }
+
+        .testimonial-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .testimonial-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--gradient-tech);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .testimonial-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .testimonial-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--text-main);
+        }
+
+        .testimonial-role {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .testimonial-content {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .quote-icon {
+            position: absolute;
+            top: -10px;
+            left: -5px;
+            font-size: 2rem;
+            color: var(--accent);
+            opacity: 0.3;
+        }
+
+        .testimonial-content p {
+            font-style: italic;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            padding-left: 1.5rem;
+        }
+
+        .testimonial-result {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: rgba(255, 107, 53, 0.1);
+            border-radius: 12px;
+        }
+
+        .result-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .result-value {
+            font-weight: 700;
+            color: var(--accent);
+            font-size: 1.1rem;
+        }
+
+        /* FAQ Section */
+        #faq {
+            padding: 6rem 5%;
+            background: var(--bg-dark);
+        }
+
+        .faq-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .faq-item {
+            background: var(--bg-card);
+            border-radius: 16px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .faq-question {
+            padding: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+        }
+
+        .faq-question:hover {
+            color: var(--accent);
+        }
+
+        .faq-question i {
+            transition: var(--transition);
+        }
+
+        .faq-item.active .faq-question i {
+            transform: rotate(45deg);
+        }
+
+        .faq-answer {
+            padding: 0 1.5rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            color: var(--text-secondary);
+        }
+
+        .faq-item.active .faq-answer {
+            padding: 0 1.5rem 1.5rem;
+            max-height: 300px;
+        }
+
+        /* CTA Final */
+        #cta-final {
+            padding: 6rem 5%;
+            background: linear-gradient(135deg, #ff6b35 0%, #e55a2b 100%);
+            text-align: center;
+        }
+
+        #cta-final h2 {
+            font-size: clamp(2rem, 4vw, 3rem);
+            margin-bottom: 1rem;
+        }
+
+        #cta-final p {
+            font-size: 1.25rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        #cta-final .btn-primary {
+            background: white;
+            color: var(--accent);
+            font-size: 1.1rem;
+            padding: 1.25rem 3rem;
+        }
+
+        #cta-final .btn-primary:hover {
+            transform: scale(1.05);
+        }
+
+        .cta-features {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        .cta-feature {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        /* Footer */
         footer {
             background: var(--bg-card);
             padding: 3rem 5%;
@@ -399,6 +1150,7 @@
             justify-content: center;
             gap: 2rem;
             margin-bottom: 1.5rem;
+            flex-wrap: wrap;
         }
 
         .footer-links a {
@@ -415,30 +1167,259 @@
             color: var(--text-secondary);
             font-size: 0.85rem;
         }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hero-content h1 {
+                font-size: 2.5rem;
+            }
+
+            .comparison-table {
+                overflow-x: auto;
+            }
+
+            .simulator-row {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .ranking-item {
+                grid-template-columns: 50px 1fr;
+                gap: 1rem;
+            }
+
+            .ranking-xp,
+            .ranking-lvl {
+                display: none;
+            }
+        }
     </style>
 </head>
 
 <body>
     <nav id="navbar">
-        <a href="/" class="logo">ACADEMIA<span>.</span></a>
+        <a href="/" class="logo">BIOHACK<span>.</span></a>
         <div class="nav-links">
             <a href="#hero">Inicio</a>
+            <a href="#ciencia">Ciencia FES</a>
             <a href="#modalidades">Modalidades</a>
-            <a href="#simulador">Simulador</a>
             <a href="#planos">Planos</a>
-            <a href="#ranking">Ranking</a>
+            <a href="#depoimentos">Depoimentos</a>
+            <a href="#faq">FAQ</a>
             <a href="{{ url_for('auth.login') }}" class="btn-login">Entrar</a>
         </div>
     </nav>
 
+    <!-- HERO SECTION - FES Focus -->
     <section id="hero">
         <div class="hero-content">
-            <h1>Transforme seu corpo com flexibilidade total</h1>
-            <p>Pague apenas pelas aulas que frequentar. Sem mensalidade fixa. Sem multa de cancelamento.</p>
-            <a href="{{ url_for('auth.register') }}" class="btn-primary">COMECE AGORA</a>
+            <div class="hero-badge">
+                <i class="fas fa-bolt"></i> TECNOLOGIA DE PONTA
+            </div>
+            <h1>O FUTURO DA <span class="highlight">HIPERTROFIA</span> CHEGOU</h1>
+            <p class="hero-subtitle">
+                Tecnologia FES: Recrute <strong>90% mais fibras musculares</strong> em treinos de apenas 20 minutos.
+                A ciencia da fisioterapia de elite aplicada ao seu ganho de massa.
+            </p>
+            <div class="hero-ctas">
+                <a href="{{ url_for('auth.register', trial='fes') }}" class="btn-primary fes-glow">
+                    <i class="fas fa-calendar-check"></i> Agendar Sessao Experimental
+                </a>
+                <a href="#planos" class="btn-secondary">
+                    Conhecer Planos
+                </a>
+            </div>
+            <div class="trust-badges">
+                <div class="trust-badge">
+                    <i class="fas fa-users"></i>
+                    <span>500+ alunos ativos</span>
+                </div>
+                <div class="trust-badge">
+                    <i class="fas fa-star"></i>
+                    <span>4.9/5 avaliacao</span>
+                </div>
+                <div class="trust-badge">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Aprovado ANVISA</span>
+                </div>
+            </div>
         </div>
     </section>
 
+    <!-- PROBLEM/SOLUTION SECTION -->
+    <section id="problema">
+        <div class="section-header">
+            <h2>POR QUE SEUS TREINOS NAO ESTAO FUNCIONANDO</h2>
+            <p>Voce treina, se esforca, mas os resultados pararam? O problema nao e dedicacao - e <strong>ATIVACAO</strong>.</p>
+        </div>
+
+        <div class="problems-grid">
+            <div class="problem-card">
+                <div class="problem-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <h3>Falta de Tempo</h3>
+                <p>Horas na academia, resultados minimos. Sua rotina nao permite treinos longos.</p>
+            </div>
+
+            <div class="problem-card">
+                <div class="problem-icon">
+                    <i class="fas fa-dumbbell"></i>
+                </div>
+                <h3>Plato de Resultados</h3>
+                <p>Seu corpo se adaptou e parou de evoluir. Mesmo aumentando carga, nada muda.</p>
+            </div>
+
+            <div class="problem-card">
+                <div class="problem-icon">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <h3>Fibras Dormentes</h3>
+                <p>95% das pessoas usam apenas 30% do potencial muscular em treinos convencionais.</p>
+            </div>
+        </div>
+
+        <div class="problem-highlight">
+            <p>Seu corpo tem fibras musculares que <strong>NUNCA</strong> foram ativadas por treinos convencionais.</p>
+            <a href="#ciencia" class="btn-primary">
+                <i class="fas fa-arrow-down"></i> DESCOBRIR A SOLUCAO
+            </a>
+        </div>
+    </section>
+
+    <!-- SCIENCE FES SECTION -->
+    <section id="ciencia">
+        <div class="science-container">
+            <div class="section-header">
+                <h2>A CIENCIA POR TRAS DO SHAPE PERFEITO</h2>
+                <p>Entenda como a tecnologia FES revoluciona seus resultados</p>
+            </div>
+
+            <div class="comparison-cards">
+                <div class="comparison-card normal">
+                    <h3>TREINO COMUM</h3>
+                    <div class="activation-meter">
+                        <div class="activation-fill low"></div>
+                    </div>
+                    <div class="activation-value">30%</div>
+                    <p>de ativacao muscular</p>
+                    <p class="fiber-type">Apenas fibras Tipo I</p>
+                </div>
+
+                <div class="comparison-card fes">
+                    <h3><i class="fas fa-bolt"></i> TREINO COM FES</h3>
+                    <div class="activation-meter">
+                        <div class="activation-fill high"></div>
+                    </div>
+                    <div class="activation-value">90%</div>
+                    <p>de ativacao muscular</p>
+                    <p class="fiber-type">Fibras Tipo I + II</p>
+                </div>
+            </div>
+
+            <div class="how-it-works">
+                <h3>COMO FUNCIONA</h3>
+                <div class="steps-grid">
+                    <div class="step-item">
+                        <div class="step-number">1</div>
+                        <p>Impulsos eletricos controlados</p>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-number">2</div>
+                        <p>Bypassa limitacao do sistema nervoso</p>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-number">3</div>
+                        <p>Ativa fibras profundas Tipo II</p>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-number">4</div>
+                        <p>Contracao tetanica = hipertrofia maxima</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="science-badges">
+                <div class="science-badge">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Aprovado ANVISA</span>
+                </div>
+                <div class="science-badge">
+                    <i class="fas fa-hospital"></i>
+                    <span>Usado em Fisioterapia de Elite</span>
+                </div>
+                <div class="science-badge">
+                    <i class="fas fa-medal"></i>
+                    <span>Tecnologia Olimpica</span>
+                </div>
+            </div>
+
+            <div class="infographic">
+                <p>Equivalencia de Treino</p>
+                <span>20 min FES = 1h30 Musculacao</span>
+                <p>Mesmos resultados, 4x menos tempo</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- COMPARISON TABLE SECTION -->
+    <section id="comparativo">
+        <div class="section-header">
+            <h2>COMPARATIVO DETALHADO</h2>
+            <p>Veja a diferenca entre treino convencional e treino com FES</p>
+        </div>
+
+        <div class="comparison-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Aspecto</th>
+                        <th>Treino Comum</th>
+                        <th>Treino FES <span class="recommended-badge">RECOMENDADO</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Tempo por sessao</td>
+                        <td>1h30</td>
+                        <td>20 min</td>
+                    </tr>
+                    <tr>
+                        <td>Ativacao muscular</td>
+                        <td>30%</td>
+                        <td>90%</td>
+                    </tr>
+                    <tr>
+                        <td>Resultados visiveis</td>
+                        <td>12 semanas</td>
+                        <td>4 semanas</td>
+                    </tr>
+                    <tr>
+                        <td>Risco de lesao</td>
+                        <td>Medio</td>
+                        <td>Minimo</td>
+                    </tr>
+                    <tr>
+                        <td>Recrutamento Tipo II</td>
+                        <td>Parcial</td>
+                        <td>Total</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="comparison-cta">
+            <a href="{{ url_for('auth.register', trial='fes') }}" class="btn-primary fes-glow">
+                <i class="fas fa-bolt"></i> QUERO EXPERIMENTAR FES
+            </a>
+        </div>
+    </section>
+
+    <!-- MODALITIES SECTION -->
     <section id="modalidades">
         <div class="section-header">
             <h2>Modalidades</h2>
@@ -446,28 +1427,8 @@
         </div>
         <div class="modalities-grid">
             {% for modality in modalities %}
-            <div class="modality-card" style="--modality-color: {{ modality.color }};">
-                <span class="modality-icon">
-                    {% if modality.icon %}
-                        {{ modality.icon }}
-                    {% else %}
-                        {% if modality.name == 'Musculacao' %}
-                            🏋️‍♂️
-                        {% elif modality.name == 'Yoga' %}
-                            🧘‍♀️
-                        {% elif modality.name == 'Spinning' %}
-                            🚴‍♂️
-                        {% elif modality.name == 'Boxe' %}
-                            🥊
-                        {% elif modality.name == 'Crossfit' %}
-                            🔥
-                        {% elif modality.name == 'Pilates' %}
-                            🤸
-                        {% else %}
-                            💪
-                        {% endif %}
-                    {% endif %}
-                </span>
+            <div class="modality-card {{ 'featured fes-glow' if modality.is_featured }}" style="--modality-color: {{ modality.color }};">
+                <span class="modality-icon">{{ modality.icon }}</span>
                 <h3>{{ modality.name }}</h3>
                 <p>{{ modality.description }}</p>
                 <span class="modality-badge">{{ modality.credits_cost }} credito(s)/aula</span>
@@ -476,6 +1437,7 @@
         </div>
     </section>
 
+    <!-- SIMULATOR SECTION -->
     <section id="simulador">
         <div class="section-header">
             <h2>Simule seu Treino</h2>
@@ -484,9 +1446,12 @@
         <div class="ranking-container" style="max-width: 800px;">
             <div class="simulator-controls" style="display: grid; gap: 1.5rem; margin-bottom: 3rem;">
                 {% for modality in modalities %}
-                <div class="simulator-row" data-modality-id="{{ modality.id }}" data-cost="{{ modality.credits_cost }}"
-                    style="display: grid; grid-template-columns: 1fr 200px 100px; align-items: center; gap: 1rem; padding: 1rem; background: rgba(255,255,255,0.02); border-radius: 12px;">
+                <div class="simulator-row {{ 'fes-row' if modality.is_featured }}"
+                     data-modality-id="{{ modality.id }}"
+                     data-cost="{{ modality.credits_cost }}"
+                     data-is-fes="{{ 'true' if modality.is_featured else 'false' }}">
                     <label style="font-weight: 600;">
+                        {% if modality.is_featured %}<i class="fas fa-bolt" style="color: var(--accent);"></i>{% endif %}
                         {{ modality.name }}
                         <span style="font-weight: normal; font-size: 0.8rem; color: var(--text-secondary);">({{ modality.credits_cost }} cred/aula)</span>
                     </label>
@@ -494,6 +1459,9 @@
                     <span class="frequency-display" style="text-align: right; font-weight: 700; color: var(--accent);">0x/semana</span>
                 </div>
                 {% endfor %}
+            </div>
+            <div id="fes-savings" class="fes-savings" style="display: none;">
+                <p><i class="fas fa-clock"></i> Tempo economizado por semana: <strong id="time-saved">0</strong> horas</p>
             </div>
             <div id="simulator-result" style="text-align: center; padding: 2.5rem; background: rgba(255, 107, 53, 0.05); border: 2px dashed var(--accent); border-radius: 24px;">
                 <p style="font-size: 1.25rem; margin-bottom: 1.5rem;">Voce precisa de: <strong id="total-credits" style="font-size: 2.5rem; color: var(--accent);">0</strong> creditos/mes</p>
@@ -504,31 +1472,33 @@
         </div>
     </section>
 
-    <!-- Data container for Packages to avoid JS Syntax Errors in IDE -->
+    <!-- Data container for Packages -->
     <script type="application/json" id="packages-data">{{ packages_json|tojson|safe }}</script>
 
     <script>
-        // Parse the JSON from the script tag instead of injecting directly into JS code
         const packagesDataElement = document.getElementById('packages-data');
         const packagesData = packagesDataElement ? JSON.parse(packagesDataElement.textContent) : [];
     </script>
 
+    <!-- PLANS SECTION -->
     <section id="planos">
         <div class="section-header">
             <h2>Escolha seu Plano</h2>
-            <p>Pacotes flexiveis que cabem no seu bolso e na sua rotina.</p>
+            <p>Pacotes flexiveis com tecnologia FES inclusa.</p>
         </div>
         <div class="plans-grid">
             {% for package in packages %}
             <div class="plan-card {{ 'featured' if package.is_featured }}">
-                {% if package.is_featured %}
+                {% if package.badge %}
+                <div class="featured-badge">{{ package.badge }}</div>
+                {% elif package.is_featured %}
                 <div class="featured-badge">RECOMENDADO</div>
                 {% endif %}
                 <span class="plan-name">{{ package.name }}</span>
                 <div class="plan-price">
                     <span class="price-currency">R$</span>
                     <span class="price-value">{{ package.price|int }}</span>
-                    <span class="price-period">/pacote</span>
+                    <span class="price-period">/mes</span>
                 </div>
                 <ul class="plan-features">
                     <li><strong>{{ package.credits }}</strong> creditos inclusos</li>
@@ -541,7 +1511,7 @@
                     {% endif %}
                     {% if package.extra_benefits %}
                         {% for benefit in package.extra_benefits %}
-                        <li>{{ benefit }}</li>
+                        <li class="fes-benefit"><i class="fas fa-bolt"></i> {{ benefit }}</li>
                         {% endfor %}
                     {% endif %}
                 </ul>
@@ -554,6 +1524,7 @@
         </div>
     </section>
 
+    <!-- RANKING SECTION -->
     <section id="ranking">
         <div class="section-header">
             <h2>Hall da Fama</h2>
@@ -563,22 +1534,17 @@
             <div class="ranking-list">
                 {% for user in top_users %}
                 <div class="ranking-item">
-                    <span class="ranking-pos {% if loop.index <= 3 %}pos-{{ loop.index }}{% endif %}">
-                        {% if loop.index == 1 %}
-                            🥇
-                        {% elif loop.index == 2 %}
-                            🥈
-                        {% elif loop.index == 3 %}
-                            🥉
-                        {% else %}
-                            {{ loop.index }}o
-                        {% endif %}
+                    <span class="ranking-pos">
+                        {% if loop.index == 1 %}🥇
+                        {% elif loop.index == 2 %}🥈
+                        {% elif loop.index == 3 %}🥉
+                        {% else %}{{ loop.index }}o{% endif %}
                     </span>
                     <div>
                         <span class="ranking-name">{{ anonymize_name(user.name) }}</span>
                         <div class="progress-container">
                             {% set max_xp = top_users[0].xp if top_users else 100 %}
-                            <div class="progress-bar" style="--w: {{ (user.xp / max_xp * 100)|round }}%; width: var(--w)"></div>
+                            <div class="progress-bar" style="width: {{ (user.xp / max_xp * 100)|round }}%"></div>
                         </div>
                     </div>
                     <span class="ranking-xp">{{ "{:,.0f}".format(user.xp) }} XP</span>
@@ -586,22 +1552,171 @@
                 </div>
                 {% endfor %}
             </div>
-            <div style="text-align: center; margin-top: 3rem;">
-                <p style="margin-bottom: 2rem; color: var(--text-secondary);">Desafie seus limites e apareca aqui!</p>
-                <a href="{{ url_for('auth.register') }}" class="btn-primary">QUERO ENTRAR NO RANKING</a>
+        </div>
+    </section>
+
+    <!-- TESTIMONIALS SECTION -->
+    <section id="depoimentos">
+        <div class="section-header">
+            <h2>O Que Dizem Nossos Alunos</h2>
+            <p>Historias reais de transformacao com FES</p>
+        </div>
+        <div class="testimonials-grid">
+            <div class="testimonial-card">
+                <div class="testimonial-header">
+                    <div class="testimonial-avatar">
+                        <i class="fas fa-briefcase"></i>
+                    </div>
+                    <div class="testimonial-info">
+                        <span class="testimonial-name">Carlos M.</span>
+                        <span class="testimonial-role">Executivo, 42 anos</span>
+                    </div>
+                </div>
+                <div class="testimonial-content">
+                    <i class="fas fa-quote-left quote-icon"></i>
+                    <p>"Com 20 minutos por sessao, finalmente consegui encaixar exercicio na minha rotina. Em 2 meses, perdi 8kg e ganhei definicao que nunca tinha conseguido com academia tradicional."</p>
+                </div>
+                <div class="testimonial-result">
+                    <span class="result-label">Resultado:</span>
+                    <span class="result-value">-8kg em 2 meses</span>
+                </div>
+            </div>
+
+            <div class="testimonial-card featured">
+                <div class="testimonial-header">
+                    <div class="testimonial-avatar">
+                        <i class="fas fa-running"></i>
+                    </div>
+                    <div class="testimonial-info">
+                        <span class="testimonial-name">Fernanda L.</span>
+                        <span class="testimonial-role">Atleta, 28 anos</span>
+                    </div>
+                </div>
+                <div class="testimonial-content">
+                    <i class="fas fa-quote-left quote-icon"></i>
+                    <p>"Sai do plato apos 3 anos estagnada. O FES ativou musculos que eu nem sabia que existiam. Minha performance em corrida melhorou 15% em apenas 6 semanas."</p>
+                </div>
+                <div class="testimonial-result">
+                    <span class="result-label">Resultado:</span>
+                    <span class="result-value">+15% performance</span>
+                </div>
+            </div>
+
+            <div class="testimonial-card">
+                <div class="testimonial-header">
+                    <div class="testimonial-avatar">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <div class="testimonial-info">
+                        <span class="testimonial-name">Roberto S.</span>
+                        <span class="testimonial-role">Reabilitacao, 55 anos</span>
+                    </div>
+                </div>
+                <div class="testimonial-content">
+                    <i class="fas fa-quote-left quote-icon"></i>
+                    <p>"Recuperei a forca da perna operada em metade do tempo que os medicos previam. A eletroestimulacao foi fundamental no meu processo de reabilitacao pos-cirurgia."</p>
+                </div>
+                <div class="testimonial-result">
+                    <span class="result-label">Resultado:</span>
+                    <span class="result-value">Reabilitacao 2x mais rapida</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ SECTION -->
+    <section id="faq">
+        <div class="section-header">
+            <h2>Perguntas Frequentes</h2>
+            <p>Tire suas duvidas sobre a tecnologia FES</p>
+        </div>
+        <div class="faq-container">
+            <div class="faq-item">
+                <div class="faq-question">
+                    <span>O FES doi?</span>
+                    <i class="fas fa-plus"></i>
+                </div>
+                <div class="faq-answer">
+                    <p>Nao. A sensacao e de um formigamento leve seguido de contracao muscular involuntaria. A intensidade e ajustada ao seu conforto e aumenta gradualmente conforme voce se adapta.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">
+                    <span>E seguro?</span>
+                    <i class="fas fa-plus"></i>
+                </div>
+                <div class="faq-answer">
+                    <p>Sim. A tecnologia FES e aprovada pela ANVISA e usada ha decadas em hospitais para reabilitacao. Nossos equipamentos sao certificados e as sessoes sao supervisionadas por profissionais treinados.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">
+                    <span>Substitui a musculacao tradicional?</span>
+                    <i class="fas fa-plus"></i>
+                </div>
+                <div class="faq-answer">
+                    <p>Complementa. O FES potencializa seus treinos ativando fibras que exercicios convencionais nao alcancam. O ideal e o treino hibrido, combinando peso livre com sessoes de eletroestimulacao.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">
+                    <span>Quanto tempo para ver resultados?</span>
+                    <i class="fas fa-plus"></i>
+                </div>
+                <div class="faq-answer">
+                    <p>Mudancas visiveis aparecem entre 4-6 semanas com treinos regulares (2-3x por semana). Muitos alunos relatam melhora na forca e postura ja nas primeiras sessoes.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">
+                    <span>Quem NAO pode fazer FES?</span>
+                    <i class="fas fa-plus"></i>
+                </div>
+                <div class="faq-answer">
+                    <p>Existem contraindicacoes especificas: portadores de marca-passo, gestantes, pessoas com epilepsia nao controlada ou implantes metalicos na regiao tratada. Sempre consulte seu medico antes.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA FINAL -->
+    <section id="cta-final">
+        <h2>PRONTO PARA EXPERIMENTAR O FUTURO?</h2>
+        <p>Agende sua Sessao de Ativacao FES - 100% GRATUITA</p>
+        <a href="{{ url_for('auth.register', trial='fes') }}" class="btn-primary">
+            <i class="fas fa-calendar-check"></i> AGENDAR MINHA SESSAO GRATUITA
+        </a>
+        <div class="cta-features">
+            <div class="cta-feature">
+                <i class="fas fa-check-circle"></i>
+                <span>Avaliacao corporal inclusa</span>
+            </div>
+            <div class="cta-feature">
+                <i class="fas fa-user-md"></i>
+                <span>Sessao supervisionada por especialista</span>
+            </div>
+            <div class="cta-feature">
+                <i class="fas fa-credit-card"></i>
+                <span>Sem cartao de credito necessario</span>
             </div>
         </div>
     </section>
 
     <footer>
-        <a href="/" class="logo footer-logo">ACADEMIA<span>.</span></a>
+        <a href="/" class="logo footer-logo">BIOHACK<span>.</span></a>
         <div class="footer-links">
             <a href="#hero">Inicio</a>
+            <a href="#ciencia">Ciencia FES</a>
             <a href="#modalidades">Modalidades</a>
             <a href="#planos">Planos</a>
+            <a href="#depoimentos">Depoimentos</a>
             <a href="{{ url_for('auth.login') }}">Login</a>
         </div>
-        <p class="copyright">&copy; {{ now().year }} Academia Gestao. Todos os direitos reservados. Design by NuPay Upgrade.</p>
+        <p class="copyright">&copy; {{ now().year }} Biohack Academia. Todos os direitos reservados.</p>
     </footer>
 
     <script src="{{ url_for('static', filename='js/simulator.js') }}"></script>
@@ -624,6 +1739,218 @@
                     behavior: 'smooth'
                 });
             });
+        });
+
+        // FAQ Accordion
+        document.querySelectorAll('.faq-question').forEach(question => {
+            question.addEventListener('click', () => {
+                const item = question.parentElement;
+                const isActive = item.classList.contains('active');
+
+                // Close all
+                document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('active'));
+
+                // Toggle current
+                if (!isActive) {
+                    item.classList.add('active');
+                }
+            });
+        });
+
+        // FES Time Savings Calculator
+        function updateFesSavings() {
+            const fesRows = document.querySelectorAll('.simulator-row[data-is-fes="true"]');
+            let totalFesSessions = 0;
+
+            fesRows.forEach(row => {
+                const slider = row.querySelector('.modality-slider');
+                totalFesSessions += parseInt(slider.value) || 0;
+            });
+
+            // Each FES session saves 70 minutes (1h30 - 20min)
+            const timeSavedMinutes = totalFesSessions * 70;
+            const timeSavedHours = (timeSavedMinutes / 60).toFixed(1);
+
+            const savingsDiv = document.getElementById('fes-savings');
+            const timeSavedSpan = document.getElementById('time-saved');
+
+            if (totalFesSessions > 0) {
+                savingsDiv.style.display = 'block';
+                timeSavedSpan.textContent = timeSavedHours;
+            } else {
+                savingsDiv.style.display = 'none';
+            }
+        }
+
+        // Add listener to all sliders for FES savings
+        document.querySelectorAll('.modality-slider').forEach(slider => {
+            slider.addEventListener('input', updateFesSavings);
+        });
+
+        // ========================================
+        // ANALYTICS & TRACKING (Fase 5)
+        // ========================================
+
+        // Simple event tracking for conversions
+        const FESAnalytics = {
+            // Track page sections viewed
+            sectionsViewed: new Set(),
+
+            // Track CTA clicks
+            trackCTAClick: function(ctaName, destination) {
+                console.log('[Analytics] CTA Click:', ctaName, destination);
+                // Integrar com Google Analytics ou similar:
+                // gtag('event', 'cta_click', { cta_name: ctaName, destination: destination });
+
+                // Store in localStorage for basic funnel analysis
+                const clicks = JSON.parse(localStorage.getItem('fes_cta_clicks') || '[]');
+                clicks.push({
+                    cta: ctaName,
+                    dest: destination,
+                    timestamp: new Date().toISOString(),
+                    sessionId: this.getSessionId()
+                });
+                localStorage.setItem('fes_cta_clicks', JSON.stringify(clicks.slice(-50)));
+            },
+
+            // Track section views
+            trackSectionView: function(sectionId) {
+                if (!this.sectionsViewed.has(sectionId)) {
+                    this.sectionsViewed.add(sectionId);
+                    console.log('[Analytics] Section Viewed:', sectionId);
+                    // gtag('event', 'section_view', { section_id: sectionId });
+                }
+            },
+
+            // Get or create session ID
+            getSessionId: function() {
+                let sessionId = sessionStorage.getItem('fes_session_id');
+                if (!sessionId) {
+                    sessionId = 'fes_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    sessionStorage.setItem('fes_session_id', sessionId);
+                }
+                return sessionId;
+            },
+
+            // Track time on page
+            startTime: Date.now(),
+            getTimeOnPage: function() {
+                return Math.round((Date.now() - this.startTime) / 1000);
+            },
+
+            // Track simulator usage
+            trackSimulatorUsage: function(totalCredits, hasFES) {
+                console.log('[Analytics] Simulator Used:', { credits: totalCredits, fes: hasFES });
+                // gtag('event', 'simulator_used', { total_credits: totalCredits, includes_fes: hasFES });
+            }
+        };
+
+        // Initialize analytics
+        FESAnalytics.getSessionId();
+
+        // Track CTA clicks
+        document.querySelectorAll('a[href*="register"], a[href*="checkout"]').forEach(link => {
+            link.addEventListener('click', function(e) {
+                const ctaText = this.textContent.trim().substring(0, 50);
+                const destination = this.getAttribute('href');
+                FESAnalytics.trackCTAClick(ctaText, destination);
+            });
+        });
+
+        // Intersection Observer for section tracking
+        const sectionObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && entry.intersectionRatio > 0.3) {
+                    FESAnalytics.trackSectionView(entry.target.id);
+                }
+            });
+        }, { threshold: 0.3 });
+
+        document.querySelectorAll('section[id]').forEach(section => {
+            sectionObserver.observe(section);
+        });
+
+        // Track simulator interactions
+        let simulatorDebounce;
+        document.querySelectorAll('.modality-slider').forEach(slider => {
+            slider.addEventListener('change', function() {
+                clearTimeout(simulatorDebounce);
+                simulatorDebounce = setTimeout(() => {
+                    const totalCredits = parseInt(document.getElementById('total-credits').textContent) || 0;
+                    const hasFES = document.querySelectorAll('.simulator-row[data-is-fes="true"] .modality-slider').length > 0;
+                    FESAnalytics.trackSimulatorUsage(totalCredits, hasFES);
+                }, 500);
+            });
+        });
+
+        // ========================================
+        // A/B TESTING INFRASTRUCTURE (Fase 5)
+        // ========================================
+
+        const ABTesting = {
+            // Get or assign variant
+            getVariant: function(testName, variants) {
+                const storageKey = 'ab_test_' + testName;
+                let variant = localStorage.getItem(storageKey);
+
+                if (!variant) {
+                    // Assign random variant
+                    const index = Math.floor(Math.random() * variants.length);
+                    variant = variants[index];
+                    localStorage.setItem(storageKey, variant);
+                    console.log('[A/B Test] Assigned variant:', testName, variant);
+                }
+
+                return variant;
+            },
+
+            // Apply variant changes
+            applyVariant: function(testName, variantConfig) {
+                const variant = this.getVariant(testName, Object.keys(variantConfig));
+                const changes = variantConfig[variant];
+
+                if (changes && typeof changes === 'function') {
+                    changes();
+                }
+
+                // Track variant assignment
+                console.log('[A/B Test] Applied:', testName, variant);
+                // gtag('event', 'ab_test_view', { test_name: testName, variant: variant });
+
+                return variant;
+            }
+        };
+
+        // Example A/B test configurations (uncomment to activate):
+        /*
+        // Test: CTA button text
+        ABTesting.applyVariant('hero_cta_text', {
+            'control': () => {},  // Keep original
+            'variant_a': () => {
+                const heroBtn = document.querySelector('#hero .btn-primary');
+                if (heroBtn) heroBtn.textContent = 'AGENDAR AGORA - GRATIS';
+            },
+            'variant_b': () => {
+                const heroBtn = document.querySelector('#hero .btn-primary');
+                if (heroBtn) heroBtn.textContent = 'EXPERIMENTAR FES GRATIS';
+            }
+        });
+
+        // Test: Social proof visibility
+        ABTesting.applyVariant('show_ranking', {
+            'show': () => {},  // Keep visible
+            'hide': () => {
+                const ranking = document.getElementById('ranking');
+                if (ranking) ranking.style.display = 'none';
+            }
+        });
+        */
+
+        // Track page exit intent
+        document.addEventListener('mouseleave', function(e) {
+            if (e.clientY < 10) {
+                console.log('[Analytics] Exit intent detected, time on page:', FESAnalytics.getTimeOnPage() + 's');
+            }
         });
     </script>
 </body>
