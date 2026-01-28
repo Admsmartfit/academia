@@ -5,7 +5,8 @@ from flask_login import login_required, current_user
 from functools import wraps
 from app.models import (
     User, Package, Subscription, Payment, Booking,
-    ClassSchedule, SubscriptionStatus, PaymentStatusEnum, BookingStatus
+    ClassSchedule, SubscriptionStatus, PaymentStatusEnum, BookingStatus,
+    HealthScreening, ScreeningStatus
 )
 from app import db
 from sqlalchemy import func
@@ -86,6 +87,12 @@ def dashboard():
         Subscription.status == SubscriptionStatus.ACTIVE
     ).count()
 
+    # Triagens de saude pendentes
+    pending_screenings_count = HealthScreening.query.filter(
+        HealthScreening.status == ScreeningStatus.PENDENTE_MEDICO,
+        HealthScreening.medical_certificate_url != None
+    ).count()
+
     return render_template('admin/dashboard.html',
         total_students=total_students,
         active_subscriptions=active_subscriptions,
@@ -97,5 +104,6 @@ def dashboard():
         occupancy_rate=occupancy_rate,
         new_students=new_students,
         pending_purchases=pending_purchases,
-        expiring_soon=expiring_soon
+        expiring_soon=expiring_soon,
+        pending_screenings_count=pending_screenings_count
     )

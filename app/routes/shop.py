@@ -6,6 +6,8 @@ from app.models import Package, Subscription, Payment, PaymentStatusEnum, Subscr
 from app import db
 from datetime import datetime, timedelta
 
+from app.utils.decorators import requires_health_screening
+
 shop_bp = Blueprint('shop', __name__, url_prefix='/shop')
 
 
@@ -44,6 +46,7 @@ def package_detail(id):
 
 @shop_bp.route('/checkout/<int:package_id>', methods=['GET', 'POST'])
 @login_required
+@requires_health_screening()
 def checkout(package_id):
     """Finalizar compra"""
     package = Package.query.get_or_404(package_id)

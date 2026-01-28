@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Agendar Aluno{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-plus me-2"></i>
+                        Agendar Aluno
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <strong>Aula:</strong> {{ schedule.modality.name }}<br>
+                        <strong>Horário:</strong> {{ schedule.start_time.strftime('%H:%M') }} - {{ schedule.end_time.strftime('%H:%M') }}<br>
+                        <strong>Data:</strong> {{ date }}
+                    </div>
+
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="user_id" class="form-label">Selecionar Aluno *</label>
+                            <select class="form-select" id="user_id" name="user_id" required>
+                                <option value="">-- Selecione um aluno --</option>
+                                {% for student in students %}
+                                <option value="{{ student.id }}">
+                                    {{ student.name }} ({{ student.email }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <input type="hidden" name="date" value="{{ date }}">
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('instructor.dashboard', date=date) }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Voltar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check me-1"></i> Confirmar Agendamento
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

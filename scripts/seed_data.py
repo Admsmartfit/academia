@@ -54,7 +54,8 @@ def seed():
                 "color": "#FF6B35",
                 "icon": "⚡",
                 "credits_cost": 30,
-                "is_featured": True
+                "is_featured": True,
+                "requires_gender_segregation": True
             }
         ]
 

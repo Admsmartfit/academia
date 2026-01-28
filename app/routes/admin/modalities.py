@@ -30,6 +30,8 @@ def create_modality():
             color=request.form.get('color', '#FF6B35'),
             icon=request.form.get('icon'),
             credits_cost=int(request.form.get('credits_cost', 1)),
+            is_featured=bool(request.form.get('is_featured')),
+            requires_gender_segregation=bool(request.form.get('requires_gender_segregation')),
             is_active=True
         )
 
@@ -55,6 +57,8 @@ def edit_modality(id):
         modality.color = request.form.get('color', '#FF6B35')
         modality.icon = request.form.get('icon')
         modality.credits_cost = int(request.form.get('credits_cost', 1))
+        modality.is_featured = bool(request.form.get('is_featured'))
+        modality.requires_gender_segregation = bool(request.form.get('requires_gender_segregation'))
 
         db.session.commit()
 

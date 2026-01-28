@@ -1,6 +1,6 @@
 # app/models/__init__.py
 
-from app.models.user import User
+from app.models.user import User, Gender
 from app.models.package import Package
 from app.models.subscription import Subscription, SubscriptionStatus, PaymentStatus
 from app.models.payment import Payment, PaymentStatusEnum
@@ -8,6 +8,7 @@ from app.models.booking import Booking, BookingStatus
 from app.models.recurring_booking import RecurringBooking, FrequencyType
 from app.models.class_schedule import ClassSchedule
 from app.models.modality import Modality
+from app.models.schedule_slot_gender import ScheduleSlotGender
 from app.models.achievement import Achievement, UserAchievement, CriteriaType
 from app.models.whatsapp_template import WhatsAppTemplate, TemplateCategory, TemplateTrigger
 from app.models.whatsapp_log import WhatsAppLog
@@ -19,8 +20,12 @@ from app.models.credit_wallet import CreditWallet, CreditSourceType
 from app.models.xp_conversion import XPConversion
 from app.models.xp_ledger import XPLedger, XPSourceType
 
+# Health Screening System
+from app.models.health import HealthScreening, EMSSessionLog, ScreeningType, ScreeningStatus
+
 __all__ = [
     'User',
+    'Gender',
     'Package',
     'Subscription',
     'SubscriptionStatus',
@@ -33,6 +38,7 @@ __all__ = [
     'FrequencyType',
     'ClassSchedule',
     'Modality',
+    'ScheduleSlotGender',
     'Achievement',
     'UserAchievement',
     'CriteriaType',
@@ -48,4 +54,9 @@ __all__ = [
     'XPConversion',
     'XPLedger',
     'XPSourceType',
+    # Health Screening
+    'HealthScreening',
+    'EMSSessionLog',
+    'ScreeningType',
+    'ScreeningStatus',
 ]

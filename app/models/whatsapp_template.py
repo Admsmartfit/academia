@@ -26,6 +26,8 @@ class TemplateTrigger(enum.Enum):
     SUBSCRIPTION_BLOCKED = "Assinatura Bloqueada"
     SUBSCRIPTION_CANCELLED = "Assinatura Cancelada (Inadimplência)"
     WELCOME = "Boas-vindas (Novo Cadastro)"
+    HEALTH_SCREENING_EXPIRING = "Triagem de Saúde Expirando"
+    HEALTH_SCREENING_EXPIRING_1D = "Triagem de Saúde Expira Amanhã"
     CUSTOM = "Personalizado / Envio Manual"
 
 

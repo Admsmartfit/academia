@@ -6,10 +6,11 @@ from flask import abort
 from app.models import (
     Subscription, Payment, Booking, BookingStatus, SubscriptionStatus,
     PaymentStatusEnum, ClassSchedule, User, RecurringBooking, FrequencyType,
-    ConversionRule, CreditWallet
+    ConversionRule, CreditWallet, ScheduleSlotGender, Gender, ScreeningType
 )
 from app.models.xp_ledger import XPLedger
 from app.services.credit_service import CreditService
+from app.services.gender_distribution_service import GenderDistributionService
 from app import db
 from datetime import datetime, timedelta
 from sqlalchemy import func
@@ -71,6 +72,9 @@ def dashboard():
         status=BookingStatus.COMPLETED
     ).count()
 
+    # Status da triagem de saúde
+    screening_status = current_user.get_screening_status(ScreeningType.PARQ)
+
     return render_template('student/dashboard.html',
                          active_subscriptions=active_subscriptions,
                          total_credits=total_credits,
@@ -81,7 +85,8 @@ def dashboard():
                          next_booking=next_booking,
                          pending_payments=pending_payments,
                          user_rank=user_rank,
-                         total_classes=total_classes)
+                         total_classes=total_classes,
+                         screening_status=screening_status)
 
 
 @student_bp.route('/subscriptions')
@@ -157,6 +162,33 @@ def schedule():
             status=BookingStatus.CONFIRMED
         ).first()
 
+            # Verificar genero
+            sched.gender_restricted = False
+            sched.slot_gender = None
+            sched.gender_message = None
+
+            if sched.modality.requires_gender_segregation:
+                can_book, msg = GenderDistributionService.can_user_book_slot(
+                    current_user, sched.id, selected_date
+                )
+                if not can_book:
+                    sched.gender_restricted = True
+                    sched.gender_message = msg
+
+                # Obter genero do slot para exibicao
+                slot_gender = ScheduleSlotGender.get_slot_gender(sched.id, selected_date)
+                if slot_gender:
+                    sched.slot_gender = slot_gender
+
+            # Verificar requisitos de saude (EMS, etc) para exibicao
+            sched.requires_ems = "Eletroestimulacao" in sched.modality.name or "FES" in sched.modality.name or "Eletrolipo" in sched.modality.name
+            
+            if sched.requires_ems:
+                from app.models.health import ScreeningType
+                sched.ems_ok = current_user.has_valid_screening(ScreeningType.EMS)
+            else:
+                sched.ems_ok = True
+
     # Assinaturas ativas para selecao
     active_subscriptions = Subscription.query.filter_by(
         user_id=current_user.id,
@@ -204,12 +236,31 @@ def book_class(schedule_id):
         user_id=current_user.id
     ).first_or_404()
 
-    # Validar agendamento
+    # Validar agendamento (Geral)
     can_book, error_msg = Booking.validate_booking(current_user, schedule, date, subscription)
-
     if not can_book:
         flash(error_msg, 'danger')
         return redirect(url_for('student.schedule', date=date_str))
+
+    # Validar triagem de saúde (PAR-Q / EMS)
+    can_access, screening_msg = current_user.can_access_modality(schedule.modality)
+    if not can_access:
+        flash(screening_msg, 'warning')
+        if "PAR-Q" in screening_msg:
+            return redirect(url_for('health.fill_parq'))
+        elif "anamnese" in screening_msg:
+            return redirect(url_for('health.fill_ems'))
+        return redirect(url_for('student.dashboard'))
+
+
+    # Validar restricao de genero para modalidades segregadas
+    if schedule.modality.requires_gender_segregation:
+        can_book_gender, gender_msg = GenderDistributionService.can_user_book_slot(
+            current_user, schedule.id, date
+        )
+        if not can_book_gender:
+            flash(gender_msg, 'danger')
+            return redirect(url_for('student.schedule', date=date_str))
 
     # Verificar se a data esta dentro da validade da assinatura
     if date > subscription.end_date:

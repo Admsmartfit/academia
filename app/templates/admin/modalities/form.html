@@ -63,6 +63,31 @@
                         </div>
                     </div>
 
+                    <!-- Opcoes Avancadas -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input type="checkbox" name="is_featured" class="form-check-input" id="is_featured"
+                                    {{ 'checked' if modality and modality.is_featured else '' }}>
+                                <label class="form-check-label" for="is_featured">
+                                    <i class="fas fa-star text-warning me-1"></i> Destaque na Landing Page
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input type="checkbox" name="requires_gender_segregation" class="form-check-input" id="requires_gender_segregation"
+                                    {{ 'checked' if modality and modality.requires_gender_segregation else '' }}>
+                                <label class="form-check-label" for="requires_gender_segregation">
+                                    <i class="fas fa-venus-mars text-info me-1"></i> Segregacao por Sexo
+                                </label>
+                            </div>
+                            <small class="text-muted d-block ms-4">
+                                Ex: FES - Homens e mulheres nao podem estar na mesma sessao
+                            </small>
+                        </div>
+                    </div>
+
                     <!-- Preview -->
                     <div class="mb-4">
                         <label class="form-label">Preview</label>

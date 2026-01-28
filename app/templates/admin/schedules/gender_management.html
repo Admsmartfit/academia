@@ -1,0 +1,214 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Gerenciamento de Sexo dos Horarios{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2 class="mb-0">
+                <i class="fas fa-venus-mars me-2"></i>Gerenciamento de Sexo dos Horarios
+            </h2>
+            <p class="text-muted">Configure o sexo permitido para cada horario em modalidades com segregacao</p>
+        </div>
+    </div>
+
+    <!-- Navegacao de Data -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <a href="{{ url_for('admin_schedules.gender_management', date=prev_date.strftime('%Y-%m-%d')) }}"
+                   class="btn btn-outline-secondary">
+                    <i class="fas fa-chevron-left me-1"></i> Anterior
+                </a>
+                <div class="text-center">
+                    <h5 class="mb-0">
+                        <i class="far fa-calendar-alt me-2"></i>
+                        {{ selected_date.strftime('%d/%m/%Y') }}
+                        {% if selected_date == selected_date.today() %}
+                        <span class="badge bg-success ms-2">Hoje</span>
+                        {% endif %}
+                    </h5>
+                    <small class="text-muted">
+                        {% set weekday_names = ['Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado', 'Domingo'] %}
+                        {{ weekday_names[selected_date.weekday()] }}-feira
+                    </small>
+                </div>
+                <a href="{{ url_for('admin_schedules.gender_management', date=next_date.strftime('%Y-%m-%d')) }}"
+                   class="btn btn-outline-secondary">
+                    Proxima <i class="fas fa-chevron-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estatisticas de Genero -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Distribuicao de Clientes</h6>
+                    <div class="d-flex justify-content-around">
+                        <div>
+                            <i class="fas fa-venus fa-2x text-danger mb-2"></i>
+                            <h4 class="mb-0">{{ gender_ratio.female_count }}</h4>
+                            <small class="text-muted">{{ "%.0f"|format(gender_ratio.female * 100) }}% Feminino</small>
+                        </div>
+                        <div>
+                            <i class="fas fa-mars fa-2x text-primary mb-2"></i>
+                            <h4 class="mb-0">{{ gender_ratio.male_count }}</h4>
+                            <small class="text-muted">{{ "%.0f"|format(gender_ratio.male * 100) }}% Masculino</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card bg-info bg-opacity-10 border-info">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="fas fa-info-circle me-2"></i>Como funciona</h6>
+                    <ul class="mb-0 small">
+                        <li>O sistema distribui automaticamente os slots entre homens e mulheres baseado na proporcao de clientes</li>
+                        <li>Considera o historico de frequencia de cada horario para otimizar a distribuicao</li>
+                        <li>Voce pode <strong>forcar</strong> um slot para um sexo especifico (nao sera alterado automaticamente)</li>
+                        <li>Quando o primeiro cliente agenda em um slot vazio, o slot assume o sexo desse cliente</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if modality_slots %}
+    {% for item in modality_slots %}
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center"
+             style="background-color: {{ item.modality.color }}20; border-left: 4px solid {{ item.modality.color }};">
+            <div>
+                <h5 class="mb-0">
+                    {{ item.modality.icon }} {{ item.modality.name }}
+                </h5>
+                <small class="text-muted">Capacidade: {{ item.slots[0].schedule.capacity if item.slots else '-' }} por sessao</small>
+            </div>
+            <form method="POST" action="{{ url_for('admin_schedules.apply_distribution', modality_id=item.modality.id) }}" class="d-inline">
+                <input type="hidden" name="date" value="{{ selected_date.strftime('%Y-%m-%d') }}">
+                <button type="submit" class="btn btn-outline-primary btn-sm"
+                        onclick="return confirm('Aplicar distribuicao automatica? Slots forcados nao serao alterados.')">
+                    <i class="fas fa-magic me-1"></i> Distribuir Automaticamente
+                </button>
+            </form>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Horario</th>
+                            <th>Instrutor</th>
+                            <th>Sexo Atual</th>
+                            <th>Agendamentos</th>
+                            <th>Status</th>
+                            <th class="text-end">Acoes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for slot in item.slots %}
+                        <tr>
+                            <td>
+                                <strong>{{ slot.schedule.start_time.strftime('%H:%M') }}</strong>
+                                <span class="text-muted">- {{ slot.schedule.end_time.strftime('%H:%M') }}</span>
+                            </td>
+                            <td>{{ slot.schedule.instructor.name }}</td>
+                            <td>
+                                {% if slot.slot_gender %}
+                                    {% if slot.slot_gender.gender == Gender.FEMALE %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-venus me-1"></i> Feminino
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-primary">
+                                        <i class="fas fa-mars me-1"></i> Masculino
+                                    </span>
+                                    {% endif %}
+                                {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-question me-1"></i> Nao definido
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if slot.bookings_count > 0 else 'light text-dark' }}">
+                                    {{ slot.bookings_count }}/{{ slot.schedule.capacity }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if slot.is_forced %}
+                                <span class="badge bg-warning text-dark" title="Definido manualmente">
+                                    <i class="fas fa-lock me-1"></i> Forcado
+                                </span>
+                                {% else %}
+                                <span class="badge bg-light text-dark">
+                                    <i class="fas fa-unlock me-1"></i> Automatico
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <!-- Forcar Feminino -->
+                                    <form method="POST" action="{{ url_for('admin_schedules.force_gender', schedule_id=slot.schedule.id) }}" class="d-inline">
+                                        <input type="hidden" name="date" value="{{ selected_date.strftime('%Y-%m-%d') }}">
+                                        <input type="hidden" name="gender" value="female">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                title="Forcar Feminino"
+                                                {% if slot.slot_gender and slot.slot_gender.gender == Gender.FEMALE %}disabled{% endif %}>
+                                            <i class="fas fa-venus"></i>
+                                        </button>
+                                    </form>
+
+                                    <!-- Forcar Masculino -->
+                                    <form method="POST" action="{{ url_for('admin_schedules.force_gender', schedule_id=slot.schedule.id) }}" class="d-inline">
+                                        <input type="hidden" name="date" value="{{ selected_date.strftime('%Y-%m-%d') }}">
+                                        <input type="hidden" name="gender" value="male">
+                                        <button type="submit" class="btn btn-outline-primary btn-sm"
+                                                title="Forcar Masculino"
+                                                {% if slot.slot_gender and slot.slot_gender.gender == Gender.MALE %}disabled{% endif %}>
+                                            <i class="fas fa-mars"></i>
+                                        </button>
+                                    </form>
+
+                                    <!-- Limpar Forcado -->
+                                    {% if slot.is_forced %}
+                                    <form method="POST" action="{{ url_for('admin_schedules.clear_forced', schedule_id=slot.schedule.id) }}" class="d-inline">
+                                        <input type="hidden" name="date" value="{{ selected_date.strftime('%Y-%m-%d') }}">
+                                        <button type="submit" class="btn btn-outline-secondary btn-sm"
+                                                title="Remover Forcado">
+                                            <i class="fas fa-unlock"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-calendar-times fa-4x text-muted mb-3 opacity-25"></i>
+            <h5 class="text-muted">Nenhuma modalidade com segregacao por sexo</h5>
+            <p class="text-muted mb-0">
+                Configure uma modalidade com <strong>requires_gender_segregation = True</strong>
+                e crie horarios para ela.
+            </p>
+            <a href="{{ url_for('admin_modalities.list_modalities') }}" class="btn btn-primary mt-3">
+                <i class="fas fa-cog me-1"></i> Gerenciar Modalidades
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

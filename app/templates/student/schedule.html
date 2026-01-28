@@ -25,12 +25,12 @@
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <a href="{{ url_for('student.schedule', date=(selected_date - timedelta(days=7)).strftime('%Y-%m-%d')) }}"
-                   class="btn btn-outline-secondary btn-sm">
+                    class="btn btn-outline-secondary btn-sm">
                     <i class="fas fa-chevron-left"></i> Semana Anterior
                 </a>
                 <h5 class="mb-0">{{ selected_date.strftime('%B %Y') }}</h5>
                 <a href="{{ url_for('student.schedule', date=(selected_date + timedelta(days=7)).strftime('%Y-%m-%d')) }}"
-                   class="btn btn-outline-secondary btn-sm">
+                    class="btn btn-outline-secondary btn-sm">
                     Proxima Semana <i class="fas fa-chevron-right"></i>
                 </a>
             </div>
@@ -39,7 +39,7 @@
                 {% for date in week_dates %}
                 <div class="col">
                     <a href="{{ url_for('student.schedule', date=date.strftime('%Y-%m-%d')) }}"
-                       class="btn w-100 {% if date == selected_date %}btn-primary{% elif date < now().date() %}btn-outline-secondary disabled{% else %}btn-outline-primary{% endif %}">
+                        class="btn w-100 {% if date == selected_date %}btn-primary{% elif date < now().date() %}btn-outline-secondary disabled{% else %}btn-outline-primary{% endif %}">
                         <small>{{ ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'][date.weekday()] }}</small>
                         <br>
                         <strong>{{ date.day }}</strong>
@@ -59,12 +59,10 @@
                 {% for sub in active_subscriptions %}
                 <div class="col-md-4">
                     <div class="form-check">
-                        <input class="form-check-input subscription-radio" type="radio"
-                               name="subscription_select" id="sub_{{ sub.id }}"
-                               value="{{ sub.id }}"
-                               {% if loop.first %}checked{% endif %}
-                               data-credits="{{ sub.credits_remaining }}"
-                               data-end-date="{{ sub.end_date.strftime('%d/%m/%Y') }}">
+                        <input class="form-check-input subscription-radio" type="radio" name="subscription_select"
+                            id="sub_{{ sub.id }}" value="{{ sub.id }}" {% if loop.first %}checked{% endif %}
+                            data-credits="{{ sub.credits_remaining }}"
+                            data-end-date="{{ sub.end_date.strftime('%d/%m/%Y') }}">
                         <label class="form-check-label" for="sub_{{ sub.id }}">
                             <strong>{{ sub.package.name }}</strong>
                             <br>
@@ -91,7 +89,8 @@
         <div class="card-header">
             <h5 class="mb-0">
                 <i class="fas fa-clock"></i>
-                Horarios de {{ selected_date.strftime('%d/%m/%Y') }} ({{ ['Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado', 'Domingo'][selected_date.weekday()] }})
+                Horarios de {{ selected_date.strftime('%d/%m/%Y') }} ({{ ['Segunda', 'Terca', 'Quarta', 'Quinta',
+                'Sexta', 'Sabado', 'Domingo'][selected_date.weekday()] }})
             </h5>
         </div>
         <div class="card-body">
@@ -115,12 +114,36 @@
                                 <span class="text-muted">- {{ schedule.end_time.strftime('%H:%M') }}</span>
                             </td>
                             <td>
-                                {% if schedule.modality.icon_url %}
-                                <span class="me-1">{{ schedule.modality.icon_url }}</span>
+                                {% if schedule.modality.icon %}
+                                <span class="me-1">{{ schedule.modality.icon }}</span>
                                 {% endif %}
                                 <strong>{{ schedule.modality.name }}</strong>
+                                {% if schedule.modality.requires_gender_segregation %}
+                                {% if schedule.slot_gender %}
+                                {% if schedule.slot_gender.value == 'female' %}
+                                <span class="badge bg-danger ms-1" title="Exclusivo Feminino">
+                                    <i class="fas fa-venus"></i>
+                                </span>
+                                {% else %}
+                                <span class="badge bg-primary ms-1" title="Exclusivo Masculino">
+                                    <i class="fas fa-mars"></i>
+                                </span>
+                                {% endif %}
+                                {% else %}
+                                <span class="badge bg-secondary ms-1" title="Segregacao por sexo">
+                                    <i class="fas fa-venus-mars"></i>
+                                </span>
+                                {% endif %}
+                                {% endif %}
                                 {% if schedule.modality.description %}
                                 <br><small class="text-muted">{{ schedule.modality.description[:50] }}...</small>
+                                {% endif %}
+
+                                {% if schedule.requires_ems and not schedule.ems_ok %}
+                                <br>
+                                <span class="badge bg-warning text-dark mt-1">
+                                    <i class="fas fa-clipboard-list me-1"></i> Requer Anamnese EMS
+                                </span>
                                 {% endif %}
                             </td>
                             <td>{{ schedule.instructor.name }}</td>
@@ -136,19 +159,27 @@
                             <td class="text-center">
                                 {% if schedule.user_booked %}
                                 <span class="badge bg-info">Ja agendado</span>
-                                {% elif schedule.available_spots <= 0 %}
-                                <button class="btn btn-sm btn-secondary" disabled>Lotado</button>
-                                {% elif not active_subscriptions %}
-                                <button class="btn btn-sm btn-secondary" disabled>Sem creditos</button>
-                                {% else %}
-                                <form action="{{ url_for('student.book_class', schedule_id=schedule.id) }}" method="POST" class="d-inline booking-form">
-                                    <input type="hidden" name="date" value="{{ selected_date.strftime('%Y-%m-%d') }}">
-                                    <input type="hidden" name="subscription_id" class="subscription-input" value="{{ active_subscriptions[0].id if active_subscriptions else '' }}">
-                                    <button type="submit" class="btn btn-sm btn-primary">
-                                        <i class="fas fa-plus"></i> Agendar
-                                    </button>
-                                </form>
-                                {% endif %}
+                                {% elif schedule.gender_restricted %}
+                                <button class="btn btn-sm btn-secondary" disabled title="{{ schedule.gender_message }}">
+                                    <i class="fas fa-ban"></i> Restrito
+                                </button>
+                                <br><small class="text-danger">{{ schedule.gender_message }}</small>
+                                {% elif schedule.available_spots <= 0 %} <button class="btn btn-sm btn-secondary"
+                                    disabled>Lotado</button>
+                                    {% elif not active_subscriptions %}
+                                    <button class="btn btn-sm btn-secondary" disabled>Sem creditos</button>
+                                    {% else %}
+                                    <form action="{{ url_for('student.book_class', schedule_id=schedule.id) }}"
+                                        method="POST" class="d-inline booking-form">
+                                        <input type="hidden" name="date"
+                                            value="{{ selected_date.strftime('%Y-%m-%d') }}">
+                                        <input type="hidden" name="subscription_id" class="subscription-input"
+                                            value="{{ active_subscriptions[0].id if active_subscriptions else '' }}">
+                                        <button type="submit" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-plus"></i> Agendar
+                                        </button>
+                                    </form>
+                                    {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -167,22 +198,22 @@
 </div>
 
 <script>
-// Atualizar subscription_id em todos os forms quando mudar o radio
-document.querySelectorAll('.subscription-radio').forEach(function(radio) {
-    radio.addEventListener('change', function() {
-        document.querySelectorAll('.subscription-input').forEach(function(input) {
-            input.value = radio.value;
+    // Atualizar subscription_id em todos os forms quando mudar o radio
+    document.querySelectorAll('.subscription-radio').forEach(function (radio) {
+        radio.addEventListener('change', function () {
+            document.querySelectorAll('.subscription-input').forEach(function (input) {
+                input.value = radio.value;
+            });
         });
     });
-});
 
-// Confirmar agendamento
-document.querySelectorAll('.booking-form').forEach(function(form) {
-    form.addEventListener('submit', function(e) {
-        if (!confirm('Confirmar agendamento desta aula? Um credito sera debitado.')) {
-            e.preventDefault();
-        }
+    // Confirmar agendamento
+    document.querySelectorAll('.booking-form').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+            if (!confirm('Confirmar agendamento desta aula? Um credito sera debitado.')) {
+                e.preventDefault();
+            }
+        });
     });
-});
 </script>
 {% endblock %}

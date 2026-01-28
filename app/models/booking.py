@@ -35,10 +35,14 @@ class Booking(db.Model):
     # Lembretes
     reminder_24h_sent = db.Column(db.Boolean, default=False)
     reminder_2h_sent = db.Column(db.Boolean, default=False)
+    reminder_hydration_sent = db.Column(db.Boolean, default=False)
 
     # Cancelamento
     cancelled_at = db.Column(db.DateTime)
     cancellation_reason = db.Column(db.Text)
+    
+    # Notas / Observacoes (Checklist, etc)
+    notes = db.Column(db.Text)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

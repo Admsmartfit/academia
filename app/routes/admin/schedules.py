@@ -1,11 +1,12 @@
 # app/routes/admin/schedules.py
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import login_required
-from app.models import ClassSchedule, Modality, User
+from flask_login import login_required, current_user
+from app.models import ClassSchedule, Modality, User, ScheduleSlotGender, Gender, Booking, BookingStatus
 from app import db
 from app.routes.admin.dashboard import admin_required
-from datetime import time
+from app.services.gender_distribution_service import GenderDistributionService
+from datetime import time, datetime, timedelta
 
 schedules_bp = Blueprint('admin_schedules', __name__, url_prefix='/admin/schedules')
 
@@ -164,3 +165,198 @@ def delete_schedule(id):
 
     flash('Horario excluido.', 'info')
     return redirect(url_for('admin_schedules.list_schedules'))
+
+
+# ==================== GERENCIAMENTO DE GENERO ====================
+
+@schedules_bp.route('/gender-management')
+@login_required
+@admin_required
+def gender_management():
+    """Gerenciamento de genero dos slots para modalidades segregadas"""
+    # Data selecionada (hoje por padrao)
+    date_str = request.args.get('date')
+    if date_str:
+        try:
+            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            selected_date = datetime.now().date()
+    else:
+        selected_date = datetime.now().date()
+
+    # Buscar modalidades com segregacao por genero
+    segregated_modalities = Modality.query.filter_by(
+        requires_gender_segregation=True,
+        is_active=True
+    ).all()
+
+    # Para cada modalidade, buscar slots do dia
+    modality_slots = []
+    for modality in segregated_modalities:
+        # Dia da semana
+        weekday = selected_date.weekday()
+        sys_weekday = (weekday + 1) % 7
+
+        schedules = ClassSchedule.query.filter_by(
+            modality_id=modality.id,
+            weekday=sys_weekday,
+            is_active=True
+        ).order_by(ClassSchedule.start_time).all()
+
+        slots_info = []
+        for sched in schedules:
+            # Verificar genero atual do slot
+            slot_gender_obj = ScheduleSlotGender.query.filter_by(
+                schedule_id=sched.id,
+                date=selected_date
+            ).first()
+
+            # Contar bookings do dia
+            bookings_count = Booking.query.filter_by(
+                schedule_id=sched.id,
+                date=selected_date,
+                status=BookingStatus.CONFIRMED
+            ).count()
+
+            slots_info.append({
+                'schedule': sched,
+                'slot_gender': slot_gender_obj,
+                'bookings_count': bookings_count,
+                'is_forced': slot_gender_obj.is_forced if slot_gender_obj else False
+            })
+
+        if schedules:
+            modality_slots.append({
+                'modality': modality,
+                'slots': slots_info
+            })
+
+    # Estatisticas de genero
+    gender_ratio = GenderDistributionService.get_gender_ratio()
+
+    # Datas de navegacao
+    prev_date = selected_date - timedelta(days=1)
+    next_date = selected_date + timedelta(days=1)
+
+    return render_template('admin/schedules/gender_management.html',
+                         modality_slots=modality_slots,
+                         selected_date=selected_date,
+                         prev_date=prev_date,
+                         next_date=next_date,
+                         gender_ratio=gender_ratio,
+                         Gender=Gender)
+
+
+@schedules_bp.route('/force-gender/<int:schedule_id>', methods=['POST'])
+@login_required
+@admin_required
+def force_gender(schedule_id):
+    """Forca o genero de um slot especifico"""
+    schedule = ClassSchedule.query.get_or_404(schedule_id)
+
+    date_str = request.form.get('date')
+    gender_str = request.form.get('gender')
+
+    if not date_str or not gender_str:
+        flash('Data e genero sao obrigatorios.', 'danger')
+        return redirect(url_for('admin_schedules.gender_management'))
+
+    try:
+        slot_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        flash('Data invalida.', 'danger')
+        return redirect(url_for('admin_schedules.gender_management'))
+
+    # Converter genero
+    if gender_str == 'male':
+        gender = Gender.MALE
+    elif gender_str == 'female':
+        gender = Gender.FEMALE
+    else:
+        flash('Genero invalido.', 'danger')
+        return redirect(url_for('admin_schedules.gender_management', date=date_str))
+
+    # Verificar se ja existem agendamentos do sexo oposto
+    existing_bookings = Booking.query.join(User).filter(
+        Booking.schedule_id == schedule_id,
+        Booking.date == slot_date,
+        Booking.status == BookingStatus.CONFIRMED,
+        User.gender.isnot(None),
+        User.gender != gender
+    ).count()
+
+    if existing_bookings > 0:
+        flash(f'Nao e possivel alterar o genero deste slot. Existem {existing_bookings} agendamento(s) do sexo oposto.', 'danger')
+        return redirect(url_for('admin_schedules.gender_management', date=date_str))
+
+    # Forcar genero
+    ScheduleSlotGender.force_gender(
+        schedule_id=schedule_id,
+        slot_date=slot_date,
+        gender=gender,
+        forced_by_id=current_user.id
+    )
+
+    gender_label = 'Masculino' if gender == Gender.MALE else 'Feminino'
+    flash(f'Slot das {schedule.start_time.strftime("%H:%M")} forcado para {gender_label}.', 'success')
+    return redirect(url_for('admin_schedules.gender_management', date=date_str))
+
+
+@schedules_bp.route('/apply-distribution/<int:modality_id>', methods=['POST'])
+@login_required
+@admin_required
+def apply_distribution(modality_id):
+    """Aplica a distribuicao automatica de genero para uma modalidade"""
+    modality = Modality.query.get_or_404(modality_id)
+
+    date_str = request.form.get('date')
+    if not date_str:
+        flash('Data e obrigatoria.', 'danger')
+        return redirect(url_for('admin_schedules.gender_management'))
+
+    try:
+        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        flash('Data invalida.', 'danger')
+        return redirect(url_for('admin_schedules.gender_management'))
+
+    # Aplicar distribuicao (sem sobrescrever forcados)
+    updated = GenderDistributionService.apply_distribution(modality_id, target_date, force=False)
+
+    flash(f'Distribuicao aplicada para {modality.name}. {updated} slot(s) atualizado(s).', 'success')
+    return redirect(url_for('admin_schedules.gender_management', date=date_str))
+
+
+@schedules_bp.route('/clear-forced/<int:schedule_id>', methods=['POST'])
+@login_required
+@admin_required
+def clear_forced(schedule_id):
+    """Remove a definicao forcada de um slot"""
+    schedule = ClassSchedule.query.get_or_404(schedule_id)
+
+    date_str = request.form.get('date')
+    if not date_str:
+        flash('Data e obrigatoria.', 'danger')
+        return redirect(url_for('admin_schedules.gender_management'))
+
+    try:
+        slot_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        flash('Data invalida.', 'danger')
+        return redirect(url_for('admin_schedules.gender_management'))
+
+    slot_gender = ScheduleSlotGender.query.filter_by(
+        schedule_id=schedule_id,
+        date=slot_date
+    ).first()
+
+    if slot_gender:
+        slot_gender.is_forced = False
+        slot_gender.forced_by_id = None
+        slot_gender.forced_at = None
+        db.session.commit()
+        flash(f'Definicao forcada removida do slot das {schedule.start_time.strftime("%H:%M")}.', 'info')
+    else:
+        flash('Slot nao encontrado.', 'warning')
+
+    return redirect(url_for('admin_schedules.gender_management', date=date_str))

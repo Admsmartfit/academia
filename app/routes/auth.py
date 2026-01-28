@@ -3,7 +3,7 @@
 import re
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
-from app.models import User
+from app.models import User, Gender
 from app import db
 from datetime import datetime
 
@@ -98,6 +98,7 @@ def register():
         email = request.form.get('email', '').strip().lower()
         phone = request.form.get('phone', '').strip()
         cpf = request.form.get('cpf', '').strip()
+        gender_str = request.form.get('gender', '').strip()
         password = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
         trial_type = request.form.get('trial_type', '')
@@ -119,6 +120,16 @@ def register():
             errors.append('O CPF é obrigatório.')
         elif not User.validate_cpf(cpf):
             errors.append('CPF inválido.')
+
+        # Validar sexo
+        gender = None
+        if gender_str:
+            if gender_str == 'male':
+                gender = Gender.MALE
+            elif gender_str == 'female':
+                gender = Gender.FEMALE
+            else:
+                errors.append('Sexo inválido.')
 
         # Validar e formatar telefone
         phone_formatted = None
@@ -146,6 +157,7 @@ def register():
             email=email,
             phone=phone_formatted,
             cpf=User.format_cpf(cpf),
+            gender=gender,
             role='student',
             is_active=True
         )

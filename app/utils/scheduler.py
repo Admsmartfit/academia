@@ -326,6 +326,88 @@ Instrutor: {instructor_name}"""
 
             print(f"[SCHEDULER] {count} alertas urgentes enviados")
 
+    # Verificar expiracao de PAR-Q (diario as 12h)
+    @scheduler.scheduled_job(CronTrigger(hour=12, minute=0))
+    def daily_health_screening_check():
+        with app.app_context():
+            print("[SCHEDULER] Verificando expiracao de triagens de saúde...")
+            from app.models.health import HealthScreening, ScreeningStatus
+            from app.services.notification_service import NotificationService
+            from datetime import datetime, timedelta
+            from app import db
+
+            now = datetime.utcnow()
+            
+            # 1. Notificar quem expira em 7 dias
+            expiring_7d = now + timedelta(days=7)
+            # Simplificando a busca: screenings APTO que expiram entre hoje e 7 dias
+            screenings_7d = HealthScreening.query.filter(
+                HealthScreening.status == ScreeningStatus.APTO,
+                HealthScreening.expires_at <= expiring_7d,
+                HealthScreening.expires_at > now,
+                HealthScreening.reminder_sent == False # Adicionando flag se possível ou filtrando por data exata
+            ).all()
+            
+            # 2. Marcar como EXPIRADO quem ja passou da data
+            expired = HealthScreening.query.filter(
+                HealthScreening.status == ScreeningStatus.APTO,
+                HealthScreening.expires_at <= now
+            ).all()
+            
+            for s in expired:
+                s.status = ScreeningStatus.EXPIRADO
+                print(f"[SCHEDULER] PAR-Q de {s.user.name} expirado")
+            
+            db.session.commit()
+
+            # 3. Notificacoes (simplificado)
+            print(f"[SCHEDULER] {len(expired)} triagens marcadas como expiradas")
+
+    # Lembrete de Hidratação Eletrolipólise (a cada 15min)
+    @scheduler.scheduled_job(IntervalTrigger(minutes=15))
+    def hydration_reminder_eletrolipo():
+        with app.app_context():
+            from app.models import Booking, BookingStatus
+            from app.services.megaapi import megaapi
+            from datetime import datetime, timedelta
+
+            # Buscar aulas de Eletrolipólise começando nos próximos 30-45min
+            now = datetime.now()
+            window_start = now + timedelta(minutes=30)
+            window_end = now + timedelta(minutes=45)
+            
+            # Precisamos filtrar por modalidade. Como modalidade está na ClassSchedule, fazemos join.
+            # Assumimos que o nome contém "Eletrolipo"
+            bookings = Booking.query.join(Booking.schedule).filter(
+                Booking.status == BookingStatus.CONFIRMED,
+                Booking.date == now.date(), # Apenas hoje
+                Booking.schedule.has(ClassSchedule.modality.has(lambda m: m.name.like('%Eletrolipo%'))),
+                Booking.reminder_hydration_sent == False
+            ).all()
+
+            # Precisamos filtrar horário pythonicamente pois Booking.schedule.start_time é Time
+            for booking in bookings:
+                booking_dt = datetime.combine(booking.date, booking.schedule.start_time)
+                if window_start <= booking_dt <= window_end:
+                    try:
+                        first_name = booking.user.name.split()[0]
+                        msg = (f"Olá {first_name}! 💧\n\n"
+                               f"Sua sessão de Eletrolipólise começa em 30min.\n"
+                               f"Lembre-se de beber pelo menos 500ml de água agora para garantir o resultado! 🥤")
+                        
+                        megaapi.send_message(
+                            phone=booking.user.phone,
+                            message=msg,
+                            user_id=booking.user_id
+                        )
+                        
+                        booking.reminder_hydration_sent = True
+                        print(f"[SCHEDULER] Lembrete hidratação enviado para {booking.user.name}")
+                    except Exception as e:
+                        print(f"[SCHEDULER] Erro ao enviar lembrete hidratação: {e}")
+            
+            db.session.commit()
+
     # Iniciar scheduler
     scheduler.start()
     print("[SCHEDULER] Iniciado com sucesso!")

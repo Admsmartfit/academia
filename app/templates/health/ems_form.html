@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+
+{% block title %}Anamnese de Eletroestimulação (EMS){% endblock %}
+
+{% block content %}
+<main class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <!-- Header -->
+                <div class="bg-primary p-4 text-white text-center">
+                    <h3 class="fw-bold mb-1"><i class="fas fa-bolt me-2"></i>Anamnese EMS</h3>
+                    <p class="mb-0 opacity-75">Questionário para Treinamento de Eletroestimulação</p>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="progress" style="height: 6px; border-radius: 0;">
+                    <div id="formProgress" class="progress-bar bg-info progress-bar-striped progress-bar-animated"
+                        role="progressbar" style="width: 10%;"></div>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+                    <form id="emsForm" action="{{ url_for('health.fill_ems') }}" method="POST">
+
+                        <!-- Passo a Passo -->
+                        <div class="step-container">
+
+                            <!-- Perguntas GLOBAIS (Q1-Q3: Absolutas) -->
+                            <div class="step active" data-step="1">
+                                <h4 class="fw-bold mb-4 text-primary">Contraindicações Absolutas ⚠️</h4>
+
+                                <div class="mb-4 p-3 bg-light rounded-3">
+                                    <p class="fw-bold mb-2">1. Você possui marca-passo ou algum implante eletrônico
+                                        ativo?</p>
+                                    <div class="d-flex gap-3">
+                                        <input type="radio" class="btn-check" name="q1" id="q1_sim" value="sim"
+                                            required>
+                                        <label class="btn btn-outline-danger flex-fill py-3 fw-bold"
+                                            for="q1_sim">SIM</label>
+
+                                        <input type="radio" class="btn-check" name="q1" id="q1_nao" value="nao"
+                                            required>
+                                        <label class="btn btn-outline-success flex-fill py-3 fw-bold"
+                                            for="q1_nao">NÃO</label>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4 p-3 bg-light rounded-3">
+                                    <p class="fw-bold mb-2">2. Você está grávida ou suspeita de gravidez?</p>
+                                    <div class="d-flex gap-3">
+                                        <input type="radio" class="btn-check" name="q2" id="q2_sim" value="sim"
+                                            required>
+                                        <label class="btn btn-outline-danger flex-fill py-3 fw-bold"
+                                            for="q2_sim">SIM</label>
+
+                                        <input type="radio" class="btn-check" name="q2" id="q2_nao" value="nao"
+                                            required>
+                                        <label class="btn btn-outline-success flex-fill py-3 fw-bold"
+                                            for="q2_nao">NÃO</label>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4 p-3 bg-light rounded-3">
+                                    <p class="fw-bold mb-2">3. Você possui histórico de epilepsia ou convulsões?</p>
+                                    <div class="d-flex gap-3">
+                                        <input type="radio" class="btn-check" name="q3" id="q3_sim" value="sim"
+                                            required>
+                                        <label class="btn btn-outline-danger flex-fill py-3 fw-bold"
+                                            for="q3_sim">SIM</label>
+
+                                        <input type="radio" class="btn-check" name="q3" id="q3_nao" value="nao"
+                                            required>
+                                        <label class="btn btn-outline-success flex-fill py-3 fw-bold"
+                                            for="q3_nao">NÃO</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Pergunta Q4-Q6 (Relativas) -->
+                            <div class="step d-none" data-step="2">
+                                <h4 class="fw-bold mb-4 text-primary">Histórico de Saúde 🏥</h4>
+
+                                <div class="mb-4 p-3 bg-light rounded-3">
+                                    <p class="fw-bold mb-2">4. Possui alguma hérnia abdominal ou inguinal?</p>
+                                    <div class="d-flex gap-3">
+                                        <input type="radio" class="btn-check" name="q4" id="q4_sim" value="sim"
+                                            required>
+                                        <label class="btn btn-outline-danger flex-fill py-3 fw-bold"
+                                            for="q4_sim">SIM</label>
+
+                                        <input type="radio" class="btn-check" name="q4" id="q4_nao" value="nao"
+                                            required>
+                                        <label class="btn btn-outline-success flex-fill py-3 fw-bold"
+                                            for="q4_nao">NÃO</label>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4 p-3 bg-light rounded-3">
+                                    <p class="fw-bold mb-2">5. Possui trombose ou problemas circulatórios graves?</p>
+                                    <div class="d-flex gap-3">
+                                        <input type="radio" class="btn-check" name="q5" id="q5_sim" value="sim"
+                                            required>
+                                        <label class="btn btn-outline-danger flex-fill py-3 fw-bold"
+                                            for="q5_sim">SIM</label>
+
+                                        <input type="radio" class="btn-check" name="q5" id="q5_nao" value="nao"
+                                            required>
+                                        <label class="btn btn-outline-success flex-fill py-3 fw-bold"
+                                            for="q5_nao">NÃO</label>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4 p-3 bg-light rounded-3">
+                                    <p class="fw-bold mb-2">6. Possui algum tumor diagnosticado nos últimos 5 anos?</p>
+                                    <div class="d-flex gap-3">
+                                        <input type="radio" class="btn-check" name="q6" id="q6_sim" value="sim"
+                                            required>
+                                        <label class="btn btn-outline-danger flex-fill py-3 fw-bold"
+                                            for="q6_sim">SIM</label>
+
+                                        <input type="radio" class="btn-check" name="q6" id="q6_nao" value="nao"
+                                            required>
+                                        <label class="btn btn-outline-success flex-fill py-3 fw-bold"
+                                            for="q6_nao">NÃO</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Pergunta Q7-Q10 (Relativas/Controle) -->
+                            <div class="step d-none" data-step="3">
+                                <h4 class="fw-bold mb-4 text-primary">Finalizando... ✅</h4>
+
+                                <div class="mb-4 p-3 bg-light rounded-3">
+                                    <p class="fw-bold mb-2">7. Possui implantes metálicos na área a ser tratada?</p>
+                                    <div class="d-flex gap-3">
+                                        <input type="radio" class="btn-check" name="q7" id="q7_sim" value="sim"
+                                            required>
+                                        <label class="btn btn-outline-danger flex-fill py-3 fw-bold"
+                                            for="q7_sim">SIM</label>
+
+                                        <input type="radio" class="btn-check" name="q7" id="q7_nao" value="nao"
+                                            required>
+                                        <label class="btn btn-outline-success flex-fill py-3 fw-bold"
+                                            for="q7_nao">NÃO</label>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4 p-3 bg-light rounded-3">
+                                    <p class="fw-bold mb-2">8. Você tem consciência de que o treino EMS não substitui
+                                        totalmente a musculação convencional?</p>
+                                    <div class="d-flex gap-3">
+                                        <input type="radio" class="btn-check" name="q8" id="q8_sim" value="sim"
+                                            required>
+                                        <label class="btn btn-outline-success flex-fill py-3 fw-bold"
+                                            for="q8_sim">SIM</label>
+
+                                        <input type="radio" class="btn-check" name="q8" id="q8_nao" value="nao"
+                                            required>
+                                        <label class="btn btn-outline-danger flex-fill py-3 fw-bold"
+                                            for="q8_nao">NÃO</label>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4 p-3 bg-light rounded-3">
+                                    <p class="fw-bold mb-2">9. Você concorda em informar ao instrutor qualquer
+                                        desconforto imediato?</p>
+                                    <div class="d-flex gap-3">
+                                        <input type="radio" class="btn-check" name="q9" id="q9_sim" value="sim"
+                                            required>
+                                        <label class="btn btn-outline-success flex-fill py-3 fw-bold"
+                                            for="q9_sim">SIM</label>
+
+                                        <input type="radio" class="btn-check" name="q9" id="q9_nao" value="nao"
+                                            required>
+                                        <label class="btn btn-outline-danger flex-fill py-3 fw-bold"
+                                            for="q9_nao">NÃO</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Termos Finais -->
+                            <div class="step d-none" data-step="4">
+                                <h4 class="fw-bold mb-4 text-primary">Termo de Consentimento 📝</h4>
+                                <div class="p-3 bg-light rounded-3 mb-4"
+                                    style="max-height: 200px; overflow-y: auto; font-size: 0.9rem;">
+                                    <p>Eu declaro que as informações acima são verdadeiras e que estou ciente de que o
+                                        treinamento de eletroestimulação (EMS) utiliza impulsos elétricos de baixa
+                                        frequência para estimular a musculatura.</p>
+                                    <p>Entendo que existem contraindicações absolutas e relativas e me comprometo a
+                                        comunicar qualquer alteração no meu estado de saúde.</p>
+                                    <p>Autorizo a realização das sessões conforme os protocolos da academia.</p>
+                                </div>
+
+                                <div class="form-check mb-4">
+                                    <input class="form-check-input" type="checkbox" id="accept_terms" required>
+                                    <label class="form-check-label fw-bold" for="accept_terms">
+                                        Li e concordo com os termos apresentados acima.
+                                    </label>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Footer Navigation -->
+                        <div class="d-flex justify-content-between mt-5">
+                            <button type="button" id="prevBtn"
+                                class="btn btn-outline-secondary btn-lg px-4 rounded-pill d-none">
+                                <i class="fas fa-arrow-left me-2"></i> VOLTAR
+                            </button>
+                            <button type="button" id="nextBtn"
+                                class="btn btn-primary btn-lg px-5 rounded-pill shadow ml-auto">
+                                PRÓXIMO <i class="fas fa-arrow-right ms-2"></i>
+                            </button>
+                            <button type="submit" id="submitBtn"
+                                class="btn btn-success btn-lg px-5 rounded-pill shadow d-none">
+                                FINALIZAR <i class="fas fa-check ms-2"></i>
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<style>
+    .step {
+        transition: all 0.3s ease-in-out;
+    }
+
+    .btn-check:checked+.btn-outline-success {
+        background-color: #198754;
+        color: white;
+        border-color: #198754;
+    }
+
+    .btn-check:checked+.btn-outline-danger {
+        background-color: #dc3545;
+        color: white;
+        border-color: #dc3545;
+    }
+
+    .btn-outline-success:hover,
+    .btn-outline-danger:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        let currentStep = 1;
+        const totalSteps = 4;
+        const form = document.getElementById('emsForm');
+        const nextBtn = document.getElementById('nextBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        const progressBar = document.getElementById('formProgress');
+
+        function updateStep(step) {
+            document.querySelectorAll('.step').forEach(el => el.classList.add('d-none'));
+            document.querySelector(`.step[data-step="${step}"]`).classList.remove('d-none');
+
+            // Progress
+            progressBar.style.width = (step / totalSteps * 100) + '%';
+
+            // Buttons
+            prevBtn.classList.toggle('d-none', step === 1);
+            if (step === totalSteps) {
+                nextBtn.classList.add('d-none');
+                submitBtn.classList.remove('d-none');
+            } else {
+                nextBtn.classList.remove('d-none');
+                submitBtn.classList.add('d-none');
+            }
+        }
+
+        nextBtn.addEventListener('click', () => {
+            if (validateStep(currentStep)) {
+                currentStep++;
+                updateStep(currentStep);
+            }
+        });
+
+        prevBtn.addEventListener('click', () => {
+            currentStep--;
+            updateStep(currentStep);
+        });
+
+        function validateStep(step) {
+            const currentStepEl = document.querySelector(`.step[data-step="${step}"]`);
+            const inputs = currentStepEl.querySelectorAll('input[type="radio"]');
+
+            // Agrupar por nome
+            const names = new Set();
+            inputs.forEach(i => names.add(i.name));
+
+            let valid = true;
+            names.forEach(name => {
+                if (!currentStepEl.querySelector(`input[name="${name}"]:checked`)) {
+                    valid = false;
+                    const radios = currentStepEl.querySelectorAll(`input[name="${name}"]`);
+                    radios.forEach(r => r.closest('.bg-light').classList.add('border', 'border-danger'));
+                } else {
+                    const radios = currentStepEl.querySelectorAll(`input[name="${name}"]`);
+                    radios.forEach(r => r.closest('.bg-light').classList.remove('border', 'border-danger'));
+                }
+            });
+
+            if (!valid) {
+                alert('Por favor, responda todas as perguntas desta etapa.');
+            }
+            return valid;
+        }
+
+        form.addEventListener('submit', (e) => {
+            if (!document.getElementById('accept_terms').checked) {
+                e.preventDefault();
+                alert('Você precisa aceitar os termos para continuar.');
+            }
+        });
+    });
+</script>
+{% endblock %}

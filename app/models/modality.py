@@ -16,6 +16,10 @@ class Modality(db.Model):
     credits_cost = db.Column(db.Integer, default=1, nullable=False)
     is_featured = db.Column(db.Boolean, default=False)  # Destaque na landing page
 
+    # Segregação por sexo (ex: FES/Eletroestimulação)
+    # Quando True, homens e mulheres não podem estar na mesma sessão
+    requires_gender_segregation = db.Column(db.Boolean, default=False)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

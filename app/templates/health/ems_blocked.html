@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Acesso Bloqueado - EMS{% endblock %}
+
+{% block content %}
+<main class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div class="card border-0 shadow-lg p-5 rounded-4 bg-white">
+                <div class="mb-4">
+                    <div class="icon-circle bg-danger bg-opacity-10 text-danger mx-auto d-flex align-items-center justify-content-center mb-4"
+                        style="width: 100px; height: 100px; border-radius: 50%;">
+                        <i class="fas fa-ban fa-3x"></i>
+                    </div>
+                    <h2 class="fw-bold mb-3 text-dark">Acesso Restrito</h2>
+                    <p class="lead text-muted mb-4">
+                        Por motivos de segurança, identificamos contraindicações absolutas para a prática de
+                        Eletroestimulação (EMS).
+                    </p>
+                </div>
+
+                <div class="alert alert-light border text-start mb-4 rounded-3 p-4">
+                    <h5 class="fw-bold text-danger mb-3"><i class="fas fa-heartbeat me-2"></i>Por que fui bloqueado?
+                    </h5>
+                    <p class="mb-0 text-muted">
+                        Procedimentos com correntes elétricas (como FES e Eletrolipólise) possuem riscos elevados para
+                        pessoas com:
+                    </p>
+                    <ul class="text-muted mt-2 mb-0">
+                        <li>Marca-passo ou dispositivos eletrônicos implantados</li>
+                        <li>Gestantes</li>
+                        <li>Histórico de epilepsia ou convulsões</li>
+                    </ul>
+                </div>
+
+                <div class="bg-light p-4 rounded-4 mb-4">
+                    <h5 class="fw-bold text-primary mb-3">Mas não desanime! 💪</h5>
+                    <p class="text-muted mb-0">
+                        Temos diversas outras modalidades incríveis que você pode praticar com segurança.
+                        Que tal experimentar <strong>Musculação</strong>, <strong>Yoga</strong> ou
+                        <strong>Pilates</strong>?
+                    </p>
+                </div>
+
+                <div class="d-grid gap-3">
+                    <a href="{{ url_for('student.dashboard') }}"
+                        class="btn btn-primary btn-lg rounded-pill shadow-sm py-3 fw-bold">
+                        VER OUTRAS MODALIDADES <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
+                    <a href="https://wa.me/5511999999999" target="_blank"
+                        class="btn btn-outline-secondary rounded-pill py-2">
+                        <i class="fab fa-whatsapp me-2"></i> Falar com um Especialista
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}

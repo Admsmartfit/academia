@@ -4,10 +4,6 @@
 
 {% block extra_css %}
 <style>
-    .navbar-instructor {
-        background-color: #1a1a2e;
-    }
-
     .instructor-header {
         background: linear-gradient(135deg, #FF6B35 0%, #db592a 100%);
         color: white;
@@ -22,6 +18,13 @@
         border: none;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         overflow: hidden;
+        transition: transform 0.2s;
+    }
+
+    .class-card.current-time {
+        border: 3px solid #FFD93D;
+        box-shadow: 0 6px 20px rgba(255, 217, 61, 0.3);
+        transform: scale(1.02);
     }
 
     .class-card .card-header {
@@ -43,21 +46,6 @@
         border-bottom: none;
     }
 
-    .checkin-btn {
-        background-color: #28a745;
-        color: white;
-        border: none;
-        padding: 6px 15px;
-        border-radius: 20px;
-        font-weight: 500;
-        transition: all 0.2s;
-    }
-
-    .checkin-btn:hover {
-        background-color: #218838;
-        transform: scale(1.05);
-    }
-
     .modality-circle {
         width: 40px;
         height: 40px;
@@ -68,107 +56,402 @@
         align-items: center;
         justify-content: center;
     }
+
+    .date-nav {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+
+    .date-nav-btn {
+        background: white;
+        border: 1px solid #dee2e6;
+        padding: 8px 15px;
+        border-radius: 8px;
+        color: #495057;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+
+    .date-nav-btn:hover {
+        background: #f8f9fa;
+        border-color: #FF6B35;
+        color: #FF6B35;
+    }
+
+    .date-display {
+        font-size: 1.1rem;
+        font-weight: 600;
+        min-width: 200px;
+        text-align: center;
+    }
+
+    .bulk-actions {
+        position: sticky;
+        bottom: 20px;
+        background: white;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        display: none;
+    }
+
+    .bulk-actions.show {
+        display: flex;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <header class="instructor-header shadow-sm mt-0">
     <div class="container text-center">
-        <h1 class="h3 mb-1">Minhas Aulas de Hoje</h1>
+        <h1 class="h3 mb-1">Minhas Aulas</h1>
         <p class="mb-0 opacity-75">
-            <i class="far fa-calendar-alt me-1"></i> {{ today.strftime('%d/%m/%Y') }}
+            <i class="fas fa-chalkboard-teacher me-1"></i> Painel do Instrutor
         </p>
     </div>
 </header>
 
 <main class="container mb-5">
-    {% if schedules %}
-    <div class="row">
-        {% for sched in schedules %}
-        <div class="col-lg-6">
-            <div class="card class-card">
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center">
-                        <div class="modality-circle me-3" data-color="{{ sched.modality.color }}">
-                            {{ sched.modality.icon if sched.modality.icon else '💪' }}
-                        </div>
-                        <div>
-                            <h6 class="mb-0">{{ sched.modality.name }}</h6>
-                            <small class="text-muted"><i class="far fa-clock me-1"></i>{{
-                                sched.start_time.strftime('%H:%M') }} - {{ sched.end_time.strftime('%H:%M') }}</small>
-                        </div>
-                    </div>
-                    <div class="text-end">
-                        <span class="badge bg-light text-dark border">{{ sched.today_bookings|length }}/{{
-                            sched.capacity }}</span>
-                    </div>
-                </div>
-                <div class="card-body p-0">
-                    {% if sched.today_bookings %}
-                    <div class="student-list">
-                        {% for booking in sched.today_bookings %}
-                        <div class="student-item d-flex justify-content-between align-items-center">
-                            <div class="d-flex align-items-center">
-                                <div class="avatar-sm me-3 bg-light rounded-circle d-flex align-items-center justify-content-center"
-                                    style="width: 35px; height: 35px;">
-                                    {% if booking.status.name == 'COMPLETED' %}
-                                    <i class="fas fa-user-check text-success"></i>
-                                    {% else %}
-                                    <i class="fas fa-user text-muted"></i>
-                                    {% endif %}
-                                </div>
-                                <div>
-                                    <p
-                                        class="mb-0 fw-bold {{ 'text-muted text-decoration-line-through' if booking.status.name == 'COMPLETED' else '' }}">
-                                        {{ booking.user.name }}
-                                    </p>
-                                </div>
-                            </div>
+    <!-- Navegação de Data -->
+    <div class="date-nav mb-4">
+        <a href="{{ url_for('instructor.dashboard', date=prev_date.strftime('%Y-%m-%d')) }}" class="date-nav-btn">
+            <i class="fas fa-chevron-left"></i> Anterior
+        </a>
+        <div class="date-display">
+            <i class="far fa-calendar-alt me-2"></i>
+            {{ selected_date.strftime('%d/%m/%Y') }}
+            {% if selected_date == today %}
+            <span class="badge bg-success ms-2">Hoje</span>
+            {% endif %}
+        </div>
+        <a href="{{ url_for('instructor.dashboard', date=next_date.strftime('%Y-%m-%d')) }}" class="date-nav-btn">
+            Próxima <i class="fas fa-chevron-right"></i>
+        </a>
+    </div>
 
-                            {% if booking.status.name == 'CONFIRMED' %}
-                            <div class="d-flex gap-2">
-                                <form action="{{ url_for('instructor.checkin', booking_id=booking.id) }}" method="POST">
-                                    <button type="submit" class="checkin-btn btn-sm">
-                                        <i class="fas fa-check me-1"></i> Check-in
-                                    </button>
-                                </form>
-                                <form action="{{ url_for('instructor.no_show', booking_id=booking.id) }}" method="POST"
-                                    onsubmit="return confirm('Marcar falta para este aluno?')">
-                                    <button type="submit"
-                                        class="btn btn-link btn-sm text-danger p-0 ms-2 text-decoration-none"
-                                        title="Registrar Falta">
-                                        <i class="fas fa-times"></i> Falta
-                                    </button>
-                                </form>
+    {% if schedules %}
+    <div class="alert alert-info mb-3">
+        <i class="fas fa-info-circle me-2"></i>
+        <small>
+            <strong>Atenção:</strong> Alunos que não faltarem serão marcados como presentes automaticamente.
+            Use o cancelamento em lote caso você (instrutor) não possa dar a aula.
+        </small>
+    </div>
+
+    <form id="bulkCancelForm" method="POST" action="{{ url_for('instructor.bulk_cancel') }}">
+        <div class="row">
+            {% for sched in schedules %}
+            {% set is_current = current_time and current_time >= sched.start_time and current_time <= sched.end_time %}
+                <div class="col-lg-6">
+                <div class="card class-card {{ 'current-time' if is_current else '' }}">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="modality-circle me-3" data-color="{{ sched.modality.color }}">
+                                {{ sched.modality.icon if sched.modality.icon else '💪' }}
                             </div>
-                            {% elif booking.status.name == 'COMPLETED' %}
-                            <span class="badge bg-success"><i class="fas fa-check-double"></i> Realizado</span>
-                            {% elif booking.status.name == 'NO_SHOW' %}
-                            <span class="badge bg-danger">Ausente</span>
-                            {% endif %}
+                            <div>
+                                <h6 class="mb-0">
+                                    {{ sched.modality.name }}
+                                    {% if is_current %}
+                                    <span class="badge bg-warning text-dark ms-2">
+                                        <i class="fas fa-circle fa-xs me-1"></i>Agora
+                                    </span>
+                                    {% endif %}
+                                </h6>
+                                <small class="text-muted">
+                                    <i class="far fa-clock me-1"></i>
+                                    {{ sched.start_time.strftime('%H:%M') }} - {{ sched.end_time.strftime('%H:%M') }}
+                                </small>
+                            </div>
                         </div>
-                        {% endfor %}
+                        <div class="text-end">
+                            <span class="badge bg-light text-dark border">
+                                {{ sched.today_bookings|length }}/{{ sched.capacity }}
+                            </span>
+                        </div>
                     </div>
-                    {% else %}
-                    <div class="p-4 text-center text-muted border-top">
-                        <p class="mb-0"><i class="fas fa-info-circle me-1"></i> Ninguém agendado.</p>
+                    <div class="card-body p-0">
+                        {% if sched.today_bookings %}
+                        <div class="student-list">
+                            {% for booking in sched.today_bookings %}
+                            <div class="student-item d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    {% if booking.status.name == 'CONFIRMED' %}
+                                    <input type="checkbox" name="booking_ids[]" value="{{ booking.id }}"
+                                        class="form-check-input me-3 bulk-checkbox">
+                                    {% else %}
+                                    <div style="width: 20px;" class="me-3"></div>
+                                    {% endif %}
+
+                                    <div class="avatar-sm me-3 bg-light rounded-circle d-flex align-items-center justify-content-center"
+                                        style="width: 35px; height: 35px;">
+                                        {% if booking.status.name == 'COMPLETED' %}
+                                        <i class="fas fa-user-check text-success"></i>
+                                        {% elif booking.status.name == 'NO_SHOW' %}
+                                        <i class="fas fa-user-times text-danger"></i>
+                                        {% else %}
+                                        <i class="fas fa-user text-primary"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <p
+                                            class="mb-0 fw-bold {{ 'text-muted text-decoration-line-through' if booking.status.name == 'NO_SHOW' else '' }}">
+                                            {{ booking.user.name }}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {% if booking.status.name == 'CONFIRMED' %}
+                                <div class="d-flex gap-2">
+                                    {% if "FES" in sched.modality.name or "Eletrolipo" in sched.modality.name %}
+                                    <!-- Checklist apenas para Eletrolipólise -->
+                                    {% if "Eletrolipo" in sched.modality.name %}
+                                    <button type="button" class="btn btn-sm btn-info text-white" data-bs-toggle="modal"
+                                        data-bs-target="#modalChecklist{{ booking.id }}">
+                                        <i class="fas fa-clipboard-check me-1"></i> Check-in
+                                    </button>
+
+                                    <!-- Modal CHECKLIST -->
+                                    <div class="modal fade" id="modalChecklist{{ booking.id }}" tabindex="-1">
+                                        <div class="modal-dialog text-start">
+                                            <form
+                                                action="{{ url_for('instructor.validate_checklist', booking_id=booking.id) }}"
+                                                method="POST">
+                                                <div class="modal-content border-0 shadow">
+                                                    <div class="modal-header bg-info text-white">
+                                                        <h5 class="modal-title"><i
+                                                                class="fas fa-clipboard-check me-2"></i>Checklist
+                                                            Eletrolipólise</h5>
+                                                        <button type="button" class="btn-close btn-close-white"
+                                                            data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body p-4">
+                                                        <div class="alert alert-warning small mb-3">
+                                                            <i class="fas fa-exclamation-triangle me-1"></i> Itens
+                                                            obrigatórios para segurança do aluno.
+                                                        </div>
+
+                                                        <div class="mb-3">
+                                                            <label class="fw-bold mb-2">Segurança:</label>
+                                                            <div class="form-check mb-2">
+                                                                <input class="form-check-input" type="checkbox"
+                                                                    name="hydration" id="checkHyd{{ booking.id }}"
+                                                                    required>
+                                                                <label class="form-check-label"
+                                                                    for="checkHyd{{ booking.id }}">
+                                                                    Aluno ingeriu pelo menos 500ml de água? 💧
+                                                                </label>
+                                                            </div>
+                                                            <div class="form-check mb-2">
+                                                                <input class="form-check-input" type="checkbox"
+                                                                    name="no_fasting" id="checkFast{{ booking.id }}"
+                                                                    required>
+                                                                <label class="form-check-label"
+                                                                    for="checkFast{{ booking.id }}">
+                                                                    Aluno <strong>NÃO</strong> está em jejum? 🍔
+                                                                </label>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold">Área a ser tratada (para
+                                                                regra 48h):</label>
+                                                            <input type="text" name="area" class="form-control"
+                                                                placeholder="Ex: Abdominal Superior" required>
+                                                            <div class="form-text">Se houver sessão < 48h nesta área, o
+                                                                    sistema bloqueará.</div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer bg-light">
+                                                            <button type="button" class="btn btn-secondary"
+                                                                data-bs-dismiss="modal">Cancelar</button>
+                                                            <button type="submit"
+                                                                class="btn btn-info text-white fw-bold">Validar e
+                                                                Iniciar</button>
+                                                        </div>
+                                                    </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                                        data-bs-target="#modalLogEMS{{ booking.id }}">
+                                        <i class="fas fa-edit me-1"></i> LOG EMS
+                                    </button>
+
+                                    <!-- Modal LOG EMS -->
+                                    <div class="modal fade" id="modalLogEMS{{ booking.id }}" tabindex="-1">
+                                        <div class="modal-dialog text-start">
+                                            <form
+                                                action="{{ url_for('instructor.log_ems_session', booking_id=booking.id) }}"
+                                                method="POST">
+                                                <div class="modal-content border-0 shadow">
+                                                    <div class="modal-header bg-primary text-white">
+                                                        <h5 class="modal-title">Log de Sessão - {{
+                                                            booking.user.name.split()[0] }}</h5>
+                                                        <button type="button" class="btn-close btn-close-white"
+                                                            data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="row g-3">
+                                                            <div class="col-6">
+                                                                <label
+                                                                    class="form-label small fw-bold text-muted">Freqüência
+                                                                    (Hz)</label>
+                                                                <input type="number" name="frequency"
+                                                                    class="form-control" required placeholder="Ex: 85">
+                                                            </div>
+                                                            <div class="col-6">
+                                                                <label
+                                                                    class="form-label small fw-bold text-muted">Intensidade
+                                                                    (mA)</label>
+                                                                <input type="number" name="intensity"
+                                                                    class="form-control" required placeholder="Ex: 30">
+                                                            </div>
+                                                            <div class="col-6">
+                                                                <label
+                                                                    class="form-label small fw-bold text-muted">Duração
+                                                                    (min)</label>
+                                                                <input type="number" name="duration"
+                                                                    class="form-control" value="20" required>
+                                                            </div>
+                                                            <div class="col-6">
+                                                                <label class="form-label small fw-bold text-muted">Área
+                                                                    Tratada</label>
+                                                                <input type="text" name="area" class="form-control"
+                                                                    placeholder="Ex: Abdominal">
+                                                            </div>
+                                                            <div class="col-12">
+                                                                <div
+                                                                    class="form-check form-switch p-3 bg-light rounded-3">
+                                                                    <input class="form-check-input ms-0 me-2"
+                                                                        type="checkbox" name="discomfort"
+                                                                        id="discomfort{{ booking.id }}">
+                                                                    <label class="form-check-label fw-bold"
+                                                                        for="discomfort{{ booking.id }}">ALUNO RELATOU
+                                                                        DESCONFORTO?</label>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-12">
+                                                                <label
+                                                                    class="form-label small fw-bold text-muted">Observações</label>
+                                                                <textarea name="notes" class="form-control"
+                                                                    rows="2"></textarea>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer bg-light">
+                                                        <button type="button" class="btn btn-secondary"
+                                                            data-bs-dismiss="modal">Fechar</button>
+                                                        <button type="submit" class="btn btn-primary">Salvar e
+                                                            Concluir</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    <form action="{{ url_for('instructor.no_show', booking_id=booking.id) }}"
+                                        method="POST" class="d-inline"
+                                        onsubmit="return confirm('Marcar falta para {{ booking.user.name }}?')">
+                                        <button type="submit" class="btn btn-sm btn-outline-warning"
+                                            title="Marcar Falta">
+                                            <i class="fas fa-user-times me-1"></i> Faltou
+                                        </button>
+                                    </form>
+                                </div>
+                                {% elif booking.status.name == 'COMPLETED' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-double"></i> Concluída
+                                </span>
+                                {% elif booking.status.name == 'NO_SHOW' %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-user-times"></i> Faltou
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="p-4 text-center text-muted border-top">
+                            <p class="mb-0">
+                                <i class="fas fa-info-circle me-1"></i> Ninguém agendado
+                            </p>
+                        </div>
+                        {% endif %}
                     </div>
-                    {% endif %}
                 </div>
-            </div>
         </div>
         {% endfor %}
-    </div>
+        </div>
+
+        <!-- Barra de Ações em Lote -->
+        <div class="bulk-actions align-items-center justify-content-between" id="bulkActions">
+            <div>
+                <span id="selectedCount">0</span> aula(s) selecionada(s)
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-secondary" onclick="clearSelection()">
+                    Limpar
+                </button>
+                <button type="button" class="btn btn-danger" onclick="showBulkCancelModal()">
+                    <i class="fas fa-times me-1"></i> Cancelar Aulas (Instrutor Ausente)
+                </button>
+            </div>
+        </div>
+    </form>
     {% else %}
     <div class="text-center py-5 bg-light rounded-3 shadow-sm border">
         <i class="fas fa-calendar-times fa-4x text-muted mb-3 opacity-25"></i>
-        <h4 class="text-muted">Sem aulas registradas para hoje!</h4>
+        <h4 class="text-muted">Sem aulas neste dia!</h4>
         <p class="text-muted mb-0">Seus horários aparecerão aqui automaticamente.</p>
     </div>
     {% endif %}
 </main>
+
+<!-- Modal de Cancelamento em Lote -->
+<div class="modal fade" id="bulkCancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Cancelar Aulas - Instrutor Ausente
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong id="bulkCount">0</strong> aula(s) será(ão) cancelada(s).</p>
+                <p class="text-muted small mb-3">
+                    Todos os alunos destas aulas serão notificados e terão seus créditos estornados.
+                </p>
+                <div class="mb-3">
+                    <label for="bulkCancelReason" class="form-label">Motivo do Cancelamento *</label>
+                    <textarea class="form-control" id="bulkCancelReason" name="bulk_reason" rows="3" required
+                        placeholder="Ex: Instrutor com problema de saúde, emergência pessoal..."></textarea>
+                    <small class="text-muted">O motivo será enviado aos alunos.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Voltar</button>
+                <button type="button" class="btn btn-danger" onclick="submitBulkCancel()">
+                    <i class="fas fa-times me-1"></i> Confirmar Cancelamento
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
 {% block extra_js %}
 <script>
+    // Aplicar cores das modalidades
     document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('.modality-circle').forEach(function (el) {
             const color = el.getAttribute('data-color');
@@ -176,7 +459,63 @@
                 el.style.backgroundColor = color;
             }
         });
+
+        // Atualizar contador de selecionados
+        updateBulkActionsBar();
     });
+
+    // Cancelamento em Lote
+    function showBulkCancelModal() {
+        const selected = document.querySelectorAll('.bulk-checkbox:checked');
+        if (selected.length === 0) {
+            alert('Selecione pelo menos uma aula.');
+            return;
+        }
+        document.getElementById('bulkCount').textContent = selected.length;
+        new bootstrap.Modal(document.getElementById('bulkCancelModal')).show();
+    }
+
+    function submitBulkCancel() {
+        const reason = document.getElementById('bulkCancelReason').value.trim();
+        if (!reason) {
+            alert('Motivo é obrigatório.');
+            return;
+        }
+
+        // Adicionar motivo ao form principal
+        const form = document.getElementById('bulkCancelForm');
+        const reasonInput = document.createElement('input');
+        reasonInput.type = 'hidden';
+        reasonInput.name = 'reason';
+        reasonInput.value = reason;
+        form.appendChild(reasonInput);
+
+        form.submit();
+    }
+
+    // Gerenciar checkboxes
+    document.addEventListener('change', function (e) {
+        if (e.target.classList.contains('bulk-checkbox')) {
+            updateBulkActionsBar();
+        }
+    });
+
+    function updateBulkActionsBar() {
+        const selected = document.querySelectorAll('.bulk-checkbox:checked');
+        const bulkActions = document.getElementById('bulkActions');
+        const selectedCount = document.getElementById('selectedCount');
+
+        if (selected.length > 0) {
+            bulkActions.classList.add('show');
+            selectedCount.textContent = selected.length;
+        } else {
+            bulkActions.classList.remove('show');
+        }
+    }
+
+    function clearSelection() {
+        document.querySelectorAll('.bulk-checkbox:checked').forEach(cb => cb.checked = false);
+        updateBulkActionsBar();
+    }
 </script>
-{% endblock %}
 {% endblock %}

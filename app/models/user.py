@@ -14,6 +14,11 @@ class UserRole(enum.Enum):
     INSTRUCTOR = "instructor"
 
 
+class Gender(enum.Enum):
+    MALE = "male"
+    FEMALE = "female"
+
+
 class User(UserMixin, db.Model):
     """
     Modelo de usuario do sistema
@@ -28,6 +33,9 @@ class User(UserMixin, db.Model):
 
     # CPF (necessário para NuPay)
     cpf = db.Column(db.String(14), nullable=True)  # Formato: 123.456.789-00
+
+    # Sexo (necessário para modalidades com segregação)
+    gender = db.Column(db.Enum(Gender), nullable=True)
 
     # Role
     role = db.Column(db.String(20), default='student')
@@ -70,6 +78,22 @@ class User(UserMixin, db.Model):
     @property
     def is_instructor(self):
         return self.role == 'instructor'
+
+    @property
+    def is_male(self):
+        return self.gender == Gender.MALE
+
+    @property
+    def is_female(self):
+        return self.gender == Gender.FEMALE
+
+    @property
+    def gender_label(self):
+        if self.gender == Gender.MALE:
+            return 'Masculino'
+        elif self.gender == Gender.FEMALE:
+            return 'Feminino'
+        return 'Não informado'
 
     @property
     def active_subscription(self):
@@ -218,6 +242,49 @@ class User(UserMixin, db.Model):
             return None
 
         return f'{cpf[:3]}.{cpf[3:6]}.{cpf[6:9]}-{cpf[9:]}'
+
+    def has_valid_screening(self, screening_type):
+        """Verifica se usuário tem screening válido"""
+        from app.models.health import HealthScreening, ScreeningStatus
+        latest = HealthScreening.query.filter_by(
+            user_id=self.id,
+            screening_type=screening_type,
+            status=ScreeningStatus.APTO
+        ).filter(
+            HealthScreening.expires_at > datetime.utcnow()
+        ).order_by(HealthScreening.created_at.desc()).first()
+
+        return latest is not None
+
+    def can_access_modality(self, modality):
+        """Verifica se pode acessar uma modalidade específica"""
+        from app.models.health import ScreeningType
+        # PAR-Q obrigatório para todos
+        if not self.has_valid_screening(ScreeningType.PARQ):
+            return False, "Preencha o questionário de saúde (PAR-Q)"
+
+        # Se for FES, precisa também de anamnese EMS
+        if modality.name == "Eletroestimulacao FES":
+            if not self.has_valid_screening(ScreeningType.EMS):
+                return False, "Preencha a anamnese de eletroestimulação"
+
+        return True, "OK"
+
+    def get_screening_status(self, screening_type):
+        """Retorna status do screening"""
+        from app.models.health import HealthScreening, ScreeningStatus
+        latest = HealthScreening.query.filter_by(
+            user_id=self.id,
+            screening_type=screening_type
+        ).order_by(HealthScreening.created_at.desc()).first()
+
+        if not latest:
+            return None
+
+        if latest.expires_at < datetime.utcnow():
+            return ScreeningStatus.EXPIRADO
+
+        return latest.status
 
     def __repr__(self):
         return f'<User {self.name}>'

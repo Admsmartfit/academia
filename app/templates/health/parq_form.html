@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block title %}Questionário de Saúde (PAR-Q){% endblock %}
+
+{% block extra_css %}
+<style>
+    .parq-container {
+        max-width: 600px;
+        margin: 2rem auto;
+        padding: 1rem;
+    }
+
+    .question-card {
+        display: none;
+        animation: fadeIn 0.5s;
+    }
+
+    .question-card.active {
+        display: block;
+    }
+
+    .btn-answer {
+        width: 100%;
+        padding: 1.5rem;
+        font-size: 1.25rem;
+        font-weight: bold;
+        margin-bottom: 1rem;
+        border-radius: 15px;
+        transition: transform 0.2s, background-color 0.2s;
+    }
+
+    .btn-answer:active {
+        transform: scale(0.98);
+    }
+
+    .progress {
+        height: 10px;
+        border-radius: 5px;
+        margin-bottom: 2rem;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .icon-box {
+        font-size: 3rem;
+        color: var(--primary-color);
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="container">
+    <div class="parq-container card shadow-sm border-0">
+        <div class="card-body">
+            <div class="text-center mb-4">
+                <div class="icon-box">
+                    <i class="fas fa-heartbeat"></i>
+                </div>
+                <h2 class="fw-bold">Questionário de Saúde</h2>
+                <p class="text-muted">Leva apenas 1 minuto. Responda com sinceridade por sua segurança. 😊</p>
+            </div>
+
+            <div class="progress">
+                <div id="parq-progress" class="progress-bar bg-primary" role="progressbar" style="width: 14%;"
+                    aria-valuenow="14" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+
+            <form id="parq-form" action="{{ url_for('health.submit_parq') }}" method="POST">
+                {% if next_url %}
+                <input type="hidden" name="next" value="{{ next_url }}">
+                {% endif %}
+                <!-- Pergunta 1 -->
+                <div class="question-card active" data-step="1">
+                    <h4 class="mb-4">1. Algum médico já disse que você possui algum problema de coração e recomendou que
+                        só fizesse atividade física sob prescrição médica?</h4>
+                    <button type="button" class="btn btn-outline-danger btn-answer"
+                        onclick="setAnswer(1, 'sim')">SIM</button>
+                    <button type="button" class="btn btn-outline-success btn-answer"
+                        onclick="setAnswer(1, 'nao')">NÃO</button>
+                    <input type="hidden" name="q1" id="q1">
+                </div>
+
+                <!-- Pergunta 2 -->
+                <div class="question-card" data-step="2">
+                    <h4 class="mb-4">2. Você sente dores no peito quando pratica atividade física?</h4>
+                    <button type="button" class="btn btn-outline-danger btn-answer"
+                        onclick="setAnswer(2, 'sim')">SIM</button>
+                    <button type="button" class="btn btn-outline-success btn-answer"
+                        onclick="setAnswer(2, 'nao')">NÃO</button>
+                    <input type="hidden" name="q2" id="q2">
+                </div>
+
+                <!-- Pergunta 3 -->
+                <div class="question-card" data-step="3">
+                    <h4 class="mb-4">3. No último mês, você sentiu dores no peito quando não estava praticando atividade
+                        física?</h4>
+                    <button type="button" class="btn btn-outline-danger btn-answer"
+                        onclick="setAnswer(3, 'sim')">SIM</button>
+                    <button type="button" class="btn btn-outline-success btn-answer"
+                        onclick="setAnswer(3, 'nao')">NÃO</button>
+                    <input type="hidden" name="q3" id="q3">
+                </div>
+
+                <!-- Pergunta 4 -->
+                <div class="question-card" data-step="4">
+                    <h4 class="mb-4">4. Você perde o equilíbrio em razão de tonturas ou já perdeu a consciência?</h4>
+                    <button type="button" class="btn btn-outline-danger btn-answer"
+                        onclick="setAnswer(4, 'sim')">SIM</button>
+                    <button type="button" class="btn btn-outline-success btn-answer"
+                        onclick="setAnswer(4, 'nao')">NÃO</button>
+                    <input type="hidden" name="q4" id="q4">
+                </div>
+
+                <!-- Pergunta 5 -->
+                <div class="question-card" data-step="5">
+                    <h4 class="mb-4">5. Você tem algum problema ósseo ou articular que poderia ser piorado pela
+                        atividade física?</h4>
+                    <button type="button" class="btn btn-outline-danger btn-answer"
+                        onclick="setAnswer(5, 'sim')">SIM</button>
+                    <button type="button" class="btn btn-outline-success btn-answer"
+                        onclick="setAnswer(5, 'nao')">NÃO</button>
+                    <input type="hidden" name="q5" id="q5">
+                </div>
+
+                <!-- Pergunta 6 -->
+                <div class="question-card" data-step="6">
+                    <h4 class="mb-4">6. Está tomando atualmente algum medicamento para pressão arterial ou problema
+                        cardíaco?</h4>
+                    <button type="button" class="btn btn-outline-danger btn-answer"
+                        onclick="setAnswer(6, 'sim')">SIM</button>
+                    <button type="button" class="btn btn-outline-success btn-answer"
+                        onclick="setAnswer(6, 'nao')">NÃO</button>
+                    <input type="hidden" name="q6" id="q6">
+                </div>
+
+                <!-- Pergunta 7 -->
+                <div class="question-card" data-step="7">
+                    <h4 class="mb-4">7. Sabe de alguma outra razão pela qual não deveria fazer atividade física?</h4>
+                    <button type="button" class="btn btn-outline-danger btn-answer"
+                        onclick="setAnswer(7, 'sim')">SIM</button>
+                    <button type="button" class="btn btn-outline-success btn-answer"
+                        onclick="setAnswer(7, 'nao')">NÃO</button>
+                    <input type="hidden" name="q7" id="q7">
+                </div>
+
+                <!-- Termo de Responsabilidade (Step Final) -->
+                <div class="question-card" data-step="8">
+                    <div class="text-start mb-4 p-3 bg-light rounded shadow-sm"
+                        style="font-size: 0.9rem; line-height: 1.6;">
+                        <h5 class="fw-bold mb-3"><i class="fas fa-file-contract me-2"></i>TERMO DE RESPONSABILIDADE</h5>
+                        <p>Olá! Antes de começarmos sua jornada fitness, precisamos que você leia e concorde com alguns
+                            pontos importantes. 😊</p>
+                        <p>Eu, <strong>{{ current_user.name }}</strong>, CPF <strong>{{ current_user.cpf or 'Não
+                                informado' }}</strong>, declaro que:</p>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check-circle text-success me-2"></i><strong>Veracidade:</strong>
+                                Confirmei que minhas respostas acima são verdadeiras.</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i><strong>Conheço os Riscos:</strong>
+                                Entendo que exercícios físicos envolvem riscos naturais, e assumo responsabilidade por
+                                condições de saúde não informadas.</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i><strong>Orientação Médica:</strong>
+                                Se respondi "SIM" a qualquer pergunta, sei que devo consultar um médico antes de
+                                começar.</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i><strong>Privacidade:</strong>
+                                Autorizo o uso dos meus dados de saúde apenas para gestão de segurança da academia.</li>
+                        </ul>
+                    </div>
+
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" id="agree-terms" required>
+                        <label class="form-check-label fw-bold" for="agree-terms">
+                            Li, entendi e concordo com tudo acima! 💪
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-pill shadow">
+                        CONFIRMAR E CONTINUAR <i class="fas fa-arrow-right ms-2"></i>
+                    </button>
+                </div>
+            </form>
+
+            <div class="mt-4 text-center">
+                <button id="prev-btn" class="btn btn-link text-muted" style="display: none;" onclick="prevStep()">
+                    <i class="fas fa-chevron-left me-1"></i> Voltar
+                </button>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentStep = 1;
+    const totalSteps = 8;
+    const progress = document.getElementById('parq-progress');
+    const form = document.getElementById('parq-form');
+    const prevBtn = document.getElementById('prev-btn');
+
+    function setAnswer(step, answer) {
+        document.getElementById(`q${step}`).value = answer;
+        nextStep();
+    }
+
+    function nextStep() {
+        if (currentStep < totalSteps) {
+            document.querySelector(`[data-step="${currentStep}"]`).classList.remove('active');
+            currentStep++;
+            document.querySelector(`[data-step="${currentStep}"]`).classList.add('active');
+            updateProgress();
+
+            if (currentStep > 1) {
+                prevBtn.style.display = 'inline-block';
+            }
+        }
+    }
+
+    function prevStep() {
+        if (currentStep > 1) {
+            document.querySelector(`[data-step="${currentStep}"]`).classList.remove('active');
+            currentStep--;
+            document.querySelector(`[data-step="${currentStep}"]`).classList.add('active');
+            updateProgress();
+
+            if (currentStep === 1) {
+                prevBtn.style.display = 'none';
+            }
+        }
+    }
+
+    function updateProgress() {
+        const percent = (currentStep / totalSteps) * 100;
+        progress.style.width = `${percent}%`;
+        progress.setAttribute('aria-valuenow', percent);
+    }
+</script>
+{% endblock %}

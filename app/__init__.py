@@ -59,6 +59,8 @@ def create_app(config_name='default'):
     from app.routes.admin.conversion_rules import conversion_rules_bp
     from app.routes.instructor import instructor_bp
     from app.routes.webhooks import webhooks_bp
+    from app.routes.health import health_bp
+    from app.routes.admin.health import admin_health_bp
 
     app.register_blueprint(marketing_bp)
     app.register_blueprint(auth_bp)
@@ -78,6 +80,8 @@ def create_app(config_name='default'):
     app.register_blueprint(conversion_rules_bp)
     app.register_blueprint(instructor_bp)
     app.register_blueprint(webhooks_bp)
+    app.register_blueprint(health_bp)
+    app.register_blueprint(admin_health_bp)
 
     # Iniciar scheduler
     if not app.debug or os.getenv('WERKZEUG_RUN_MAIN') == 'true':

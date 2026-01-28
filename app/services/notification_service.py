@@ -244,6 +244,47 @@ class NotificationService:
 
         return False
 
+    @staticmethod
+    def notify_health_screening_expiring(user_id, screening_type, days_remaining, expires_at):
+        """
+        Notifica usuário sobre expiração do PAR-Q ou Anamnese.
+        """
+        user = User.query.get(user_id)
+        if not user or not user.phone:
+            return False
+
+        if days_remaining <= 1:
+            trigger = TemplateTrigger.HEALTH_SCREENING_EXPIRING_1D
+        else:
+            trigger = TemplateTrigger.HEALTH_SCREENING_EXPIRING
+
+        template = WhatsAppTemplate.query.filter_by(
+            trigger=trigger,
+            is_active=True
+        ).first()
+
+        if not template:
+            return False
+
+        try:
+            variables = [
+                user.name.split()[0],
+                screening_type.value.upper(),
+                str(days_remaining),
+                expires_at.strftime('%d/%m/%Y')
+            ]
+
+            megaapi.send_template_message(
+                phone=user.phone,
+                template_name=template.template_code,
+                variables=variables,
+                user_id=user_id
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Erro ao enviar alerta de saude: {e}")
+            return False
+
 
 # Singleton
 notification_service = NotificationService()
