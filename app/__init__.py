@@ -61,6 +61,10 @@ def create_app(config_name='default'):
     from app.routes.webhooks import webhooks_bp
     from app.routes.health import health_bp
     from app.routes.admin.health import admin_health_bp
+    from app.routes.admin.crm import crm_bp
+    from app.routes.api.face import face_api_bp
+    from app.routes.api.training import training_api_bp
+    from app.routes.api.crm import crm_api_bp
 
     app.register_blueprint(marketing_bp)
     app.register_blueprint(auth_bp)
@@ -82,6 +86,10 @@ def create_app(config_name='default'):
     app.register_blueprint(webhooks_bp)
     app.register_blueprint(health_bp)
     app.register_blueprint(admin_health_bp)
+    app.register_blueprint(crm_bp)
+    app.register_blueprint(face_api_bp)
+    app.register_blueprint(training_api_bp)
+    app.register_blueprint(crm_api_bp)
 
     # Iniciar scheduler
     if not app.debug or os.getenv('WERKZEUG_RUN_MAIN') == 'true':

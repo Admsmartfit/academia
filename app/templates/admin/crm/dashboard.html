@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>CRM & Retenção</h2>
+        <div>
+            <button class="btn btn-outline-primary mr-2" onclick="loadDashboardData(); loadStudents();">
+                <i class="fas fa-sync-alt"></i> Atualizar
+            </button>
+            <button class="btn btn-success" disabled>
+                <i class="fas fa-magic"></i> Automação Ativa
+            </button>
+        </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card green">
+                <div class="stats-icon"><i class="fas fa-users"></i></div>
+                <div class="stats-info">
+                    <h3 id="total-students">0</h3>
+                    <p>Total de Alunos</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="stats-card yellow">
+                <div class="stats-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="stats-info">
+                    <h3 id="at-risk">0</h3>
+                    <p>Em Risco</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="stats-card red">
+                <div class="stats-icon"><i class="fas fa-user-times"></i></div>
+                <div class="stats-info">
+                    <h3 id="critical">0</h3>
+                    <p>Críticos</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="stats-card blue">
+                <div class="stats-icon"><i class="fas fa-heartbeat"></i></div>
+                <div class="stats-info">
+                    <h3 id="avg-score">0</h3>
+                    <p>Score Médio</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <label>Nível de Risco</label>
+                    <select id="risk-filter" class="form-control">
+                        <option value="">Todos</option>
+                        <option value="CRITICAL">Crítico</option>
+                        <option value="HIGH">Alto</option>
+                        <option value="MEDIUM">Médio</option>
+                        <option value="LOW">Baixo</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label>Dias sem Check-in</label>
+                    <select id="days-filter" class="form-control">
+                        <option value="">Qualquer</option>
+                        <option value="7">7+ dias</option>
+                        <option value="14">14+ dias</option>
+                        <option value="30">30+ dias</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label>Ordenar por</label>
+                    <select id="sort-filter" class="form-control">
+                        <option value="score-asc">Score (menor primeiro)</option>
+                        <option value="score-desc">Score (maior primeiro)</option>
+                        <option value="last-checkin">Último check-in</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-primary btn-block" onclick="applyFilters()">
+                        <i class="fas fa-filter"></i> Filtrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de alunos -->
+    <div class="card">
+        <div class="card-header">
+            <h5>Alunos em Risco</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="students-table">
+                    <thead>
+                        <tr>
+                            <th>Aluno</th>
+                            <th>Score</th>
+                            <th>Último Check-in</th>
+                            <th>Frequência (30d)</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="students-tbody">
+                        <!-- Gerado via JS -->
+                        <tr>
+                            <td colspan="5" class="text-center">Carregando...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Ações -->
+<div class="modal fade" id="actionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ações para <span id="modal-student-name"></span></h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="modal-student-id">
+
+                <div class="list-group">
+                    <a href="#" class="list-group-item list-group-item-action" onclick="sendMessage('RECOVERY')">
+                        <i class="fas fa-comment text-primary"></i> Enviar Mensagem de Recuperação
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" onclick="scheduleCall()">
+                        <i class="fas fa-phone text-success"></i> Agendar Ligação
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" onclick="offerDiscount()">
+                        <i class="fas fa-tag text-warning"></i> Oferecer Desconto
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" onclick="viewHistory()">
+                        <i class="fas fa-history text-info"></i> Ver Histórico Completo
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .stats-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid;
+        margin-bottom: 20px;
+    }
+
+    .stats-card.green {
+        border-left-color: #28a745;
+    }
+
+    .stats-card.yellow {
+        border-left-color: #ffc107;
+    }
+
+    .stats-card.red {
+        border-left-color: #dc3545;
+    }
+
+    .stats-card.blue {
+        border-left-color: #007bff;
+    }
+
+    .stats-icon {
+        font-size: 3em;
+        margin-right: 20px;
+        opacity: 0.3;
+    }
+
+    .stats-info h3 {
+        margin: 0;
+        font-size: 2.5em;
+        font-weight: bold;
+    }
+
+    .stats-info p {
+        margin: 0;
+        color: #6c757d;
+    }
+
+    .risk-badge {
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 0.85em;
+        font-weight: bold;
+    }
+
+    .risk-badge.critical {
+        background: #dc3545;
+        color: white;
+    }
+
+    .risk-badge.high {
+        background: #fd7e14;
+        color: white;
+    }
+
+    .risk-badge.medium {
+        background: #ffc107;
+        color: #000;
+    }
+
+    .risk-badge.low {
+        background: #28a745;
+        color: white;
+    }
+</style>
+
+<script>
+    let studentsData = [];
+
+    $(document).ready(async () => {
+        await loadDashboardData();
+        await loadStudents();
+    });
+
+    async function loadDashboardData() {
+        try {
+            const response = await fetch('/api/crm/dashboard/summary');
+            const data = await response.json();
+
+            $('#total-students').text(data.total_students);
+            $('#at-risk').text(data.at_risk);
+            $('#critical').text(data.critical);
+            $('#avg-score').text(data.avg_score.toFixed(1));
+        } catch (err) {
+            console.error('Erro ao carregar resumo:', err);
+        }
+    }
+
+    async function loadStudents() {
+        try {
+            const response = await fetch('/api/crm/students/at-risk');
+            studentsData = await response.json();
+            renderStudents();
+        } catch (err) {
+            console.error('Erro ao carregar alunos:', err);
+        }
+    }
+
+    function renderStudents() {
+        const tbody = $('#students-tbody');
+        tbody.empty();
+
+        const filtered = applyClientFilters(studentsData);
+
+        if (filtered.length === 0) {
+            tbody.html('<tr><td colspan="5" class="text-center">Nenhum aluno encontrado</td></tr>');
+            return;
+        }
+
+        filtered.forEach(student => {
+            const row = $(`
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <img src="${student.avatar_url || '/static/img/default-avatar.png'}" 
+                             class="rounded-circle mr-2" width="40" height="40" 
+                             onerror="this.src='/static/img/default-avatar.png'">
+                        <div>
+                            <strong>${student.name}</strong><br>
+                            <small class="text-muted">${student.email}</small>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="progress flex-grow-1 mr-2" style="height: 20px;">
+                            <div class="progress-bar ${getScoreColor(student.health_score)}" 
+                                 role="progressbar" 
+                                 style="width: ${student.health_score}%">
+                                ${student.health_score.toFixed(0)}
+                            </div>
+                        </div>
+                        <span class="risk-badge ${student.risk_level.toLowerCase()}">
+                            ${getRiskLabel(student.risk_level)}
+                        </span>
+                    </div>
+                </td>
+                <td>
+                    ${student.last_checkin ?
+                    formatDate(student.last_checkin) :
+                    '<span class="text-danger">Nunca</span>'}
+                </td>
+                <td>${student.frequency_30d} check-ins</td>
+                <td>
+                    <button class="btn btn-sm btn-primary" 
+                            onclick="showActions(${student.id}, '${student.name.replace(/'/g, "\\'")}')">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                </td>
+            </tr>
+        `);
+
+            tbody.append(row);
+        });
+    }
+
+    function applyClientFilters(data) {
+        let filtered = [...data];
+
+        // Aplicar filtros conforme seleção do usuário
+        const riskFilter = $('#risk-filter').val();
+        const daysFilter = $('#days-filter').val();
+        const sortFilter = $('#sort-filter').val();
+
+        if (riskFilter) {
+            filtered = filtered.filter(s => s.risk_level === riskFilter);
+        }
+
+        if (daysFilter) {
+            filtered = filtered.filter(s => s.days_since_checkin >= parseInt(daysFilter));
+        }
+
+        // Ordenar
+        if (sortFilter === 'score-asc') {
+            filtered.sort((a, b) => a.health_score - b.health_score);
+        } else if (sortFilter === 'score-desc') {
+            filtered.sort((a, b) => b.health_score - a.health_score);
+        } else if (sortFilter === 'last-checkin') {
+            filtered.sort((a, b) => {
+                // Sort by days_since (ascending means smaller days since = more recent)
+                // But usually we want most recent first? "Último check-in" usually means show recent.
+                // Wait, "last-checkin" sort filter usually implies time.
+                const dateA = a.last_checkin ? new Date(a.last_checkin) : new Date(0);
+                const dateB = b.last_checkin ? new Date(b.last_checkin) : new Date(0);
+                return dateB - dateA; // Descending
+            });
+        }
+
+        return filtered;
+    }
+
+    function applyFilters() {
+        renderStudents();
+    }
+
+    function showActions(studentId, studentName) {
+        $('#modal-student-id').val(studentId);
+        $('#modal-student-name').text(studentName);
+        $('#actionModal').modal('show');
+    }
+
+    async function sendMessage(type) {
+        const studentId = $('#modal-student-id').val();
+
+        try {
+            const response = await fetch('/api/crm/send-message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    student_id: studentId,
+                    message_type: type
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert('Mensagem enviada com sucesso!');
+                $('#actionModal').modal('hide');
+            }
+        } catch (err) {
+            alert('Erro: ' + err.message);
+        }
+    }
+
+    function getScoreColor(score) {
+        if (score >= 70) return 'bg-success';
+        if (score >= 40) return 'bg-warning';
+        return 'bg-danger';
+    }
+
+    function getRiskLabel(level) {
+        const labels = {
+            'LOW': 'Baixo',
+            'MEDIUM': 'Médio',
+            'HIGH': 'Alto',
+            'CRITICAL': 'Crítico'
+        };
+        return labels[level] || level;
+    }
+
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 0) return 'Hoje';
+        if (diffDays === 1) return 'Ontem';
+        if (diffDays < 7) return `${diffDays} dias atrás`;
+        return date.toLocaleDateString('pt-BR');
+    }
+
+    function scheduleCall() {
+        alert('Funcionalidade de agendamento em desenvolvimento.');
+    }
+
+    function offerDiscount() {
+        alert('Funcionalidade de desconto em desenvolvimento.');
+    }
+
+    function viewHistory() {
+        const id = $('#modal-student-id').val();
+        window.location.href = `/admin/users/${id}`;
+    }
+</script>
+{% endblock %}

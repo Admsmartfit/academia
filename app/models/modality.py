@@ -14,6 +14,7 @@ class Modality(db.Model):
     icon = db.Column(db.String(50))  # Emoji ou FontAwesome
     is_active = db.Column(db.Boolean, default=True)
     credits_cost = db.Column(db.Integer, default=1, nullable=False)
+    default_duration = db.Column(db.Integer, default=60, nullable=False) # em minutos
     is_featured = db.Column(db.Boolean, default=False)  # Destaque na landing page
 
     # Segregação por sexo (ex: FES/Eletroestimulação)

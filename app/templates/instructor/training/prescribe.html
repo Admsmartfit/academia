@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}Prescrever Treino - Instrutor{% endblock %}
+
+{% block extra_css %}
+<style>
+    .prescription-step { display: none; }
+    .prescription-step.active { display: block; }
+    .exercise-library-item {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .exercise-library-item:hover {
+        background-color: #e3f2fd;
+        transform: translateX(5px);
+    }
+    .exercise-item {
+        padding: 10px;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        background: #f8f9fa;
+    }
+    .session-card .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    .step-indicator {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+    .step-indicator .step {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #dee2e6;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin: 0 10px;
+        transition: all 0.3s;
+    }
+    .step-indicator .step.active {
+        background: #667eea;
+        color: white;
+    }
+    .step-indicator .step.completed {
+        background: #28a745;
+        color: white;
+    }
+    .step-connector {
+        width: 50px;
+        height: 2px;
+        background: #dee2e6;
+        align-self: center;
+    }
+    .step-connector.completed {
+        background: #28a745;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Step Indicator -->
+    <div class="step-indicator">
+        <div class="step active" id="stepInd1">1</div>
+        <div class="step-connector" id="conn1"></div>
+        <div class="step" id="stepInd2">2</div>
+        <div class="step-connector" id="conn2"></div>
+        <div class="step" id="stepInd3">3</div>
+    </div>
+
+    <div class="row">
+        <!-- Left column: Form -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="fas fa-dumbbell me-2"></i>Nova Prescricao de Treino</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Step 1: Student & Basic Info -->
+                    <div id="step1" class="prescription-step active">
+                        <h5>1. Informacoes Gerais</h5>
+
+                        <div class="mb-3 position-relative">
+                            <label class="form-label">Aluno</label>
+                            <input type="text" id="studentSearch" class="form-control"
+                                   placeholder="Digite o nome do aluno..." autocomplete="off">
+                            <div id="studentResults" class="dropdown-menu w-100" style="display:none;"></div>
+                            <input type="hidden" id="selectedStudentId">
+                            <div id="selectedStudentInfo" class="mt-2" style="display:none;">
+                                <span class="badge bg-primary" id="studentBadge"></span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Objetivo</label>
+                                <select id="goal" class="form-select" required>
+                                    <option value="hypertrophy">Hipertrofia</option>
+                                    <option value="fat_loss">Emagrecimento</option>
+                                    <option value="strength">Forca</option>
+                                    <option value="health" selected>Saude / Bem-estar</option>
+                                    <option value="sport">Esporte</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Validade (dias)</label>
+                                <input type="number" id="validity" class="form-control"
+                                       value="30" min="7" max="180">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Observacoes (opcional)</label>
+                            <textarea id="planNotes" class="form-control" rows="2"
+                                      placeholder="Observacoes gerais sobre o plano..."></textarea>
+                        </div>
+
+                        <button class="btn btn-primary" onclick="goToStep(2)">
+                            Proximo <i class="fas fa-arrow-right ms-1"></i>
+                        </button>
+                    </div>
+
+                    <!-- Step 2: Sessions -->
+                    <div id="step2" class="prescription-step">
+                        <h5>2. Sessoes de Treino</h5>
+
+                        <div id="sessions-container"></div>
+
+                        <button class="btn btn-success mb-3" onclick="addSession()">
+                            <i class="fas fa-plus me-1"></i>Adicionar Sessao
+                        </button>
+
+                        <div>
+                            <button class="btn btn-secondary me-2" onclick="goToStep(1)">
+                                <i class="fas fa-arrow-left me-1"></i>Voltar
+                            </button>
+                            <button class="btn btn-primary" onclick="goToStep(3)">
+                                Proximo <i class="fas fa-arrow-right ms-1"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Add Exercises -->
+                    <div id="step3" class="prescription-step">
+                        <h5>3. Adicionar Exercicios</h5>
+
+                        <div class="mb-3">
+                            <label class="form-label">Sessao de destino</label>
+                            <select id="targetSession" class="form-select">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Grupo Muscular</label>
+                                <select id="muscleFilter" class="form-select">
+                                    <option value="">Todos</option>
+                                    <option value="chest">Peito</option>
+                                    <option value="back">Costas</option>
+                                    <option value="legs">Pernas</option>
+                                    <option value="shoulders">Ombros</option>
+                                    <option value="arms">Bracos</option>
+                                    <option value="core">Core</option>
+                                    <option value="full_body">Corpo Inteiro</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Buscar exercicio</label>
+                                <input type="text" id="exerciseSearch" class="form-control"
+                                       placeholder="Nome do exercicio...">
+                            </div>
+                        </div>
+
+                        <!-- Exercise library -->
+                        <div id="exercises-library" class="mb-3" style="max-height: 400px; overflow-y: auto;">
+                            <p class="text-muted">Carregando exercicios...</p>
+                        </div>
+
+                        <div>
+                            <button class="btn btn-secondary me-2" onclick="goToStep(2)">
+                                <i class="fas fa-arrow-left me-1"></i>Voltar
+                            </button>
+                            <button class="btn btn-success" onclick="savePrescription()" id="saveBtn">
+                                <i class="fas fa-save me-1"></i>Salvar Prescricao
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right column: Preview -->
+        <div class="col-lg-4">
+            <div class="card sticky-top" style="top: 20px;">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-eye me-2"></i>Preview</h5>
+                </div>
+                <div class="card-body">
+                    <div id="prescription-preview">
+                        <p class="text-muted">Selecione um aluno para comecar...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alert container -->
+<div id="prescriptionAlerts" class="position-fixed top-0 end-0 p-3" style="z-index: 1050;"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/training-prescription.js') }}"></script>
+{% endblock %}

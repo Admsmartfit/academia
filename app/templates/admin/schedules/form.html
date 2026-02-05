@@ -17,8 +17,8 @@
                         <select name="modality_id" class="form-select" required>
                             <option value="">Selecione...</option>
                             {% for modality in modalities %}
-                            <option value="{{ modality.id }}"
-                                    {% if schedule and schedule.modality_id == modality.id %}selected{% endif %}>
+                            <option value="{{ modality.id }}" {% if schedule and schedule.modality_id==modality.id
+                                %}selected{% endif %}>
                                 {{ modality.icon or '' }} {{ modality.name }}
                             </option>
                             {% endfor %}
@@ -36,8 +36,8 @@
                         <select name="instructor_id" class="form-select" required>
                             <option value="">Selecione...</option>
                             {% for instructor in instructors %}
-                            <option value="{{ instructor.id }}"
-                                    {% if schedule and schedule.instructor_id == instructor.id %}selected{% endif %}>
+                            <option value="{{ instructor.id }}" {% if schedule and schedule.instructor_id==instructor.id
+                                %}selected{% endif %}>
                                 {{ instructor.name }}
                             </option>
                             {% endfor %}
@@ -51,8 +51,7 @@
                         <!-- Modo edicao: dropdown simples -->
                         <select name="weekday" class="form-select" required>
                             {% for day_num, day_name in weekdays %}
-                            <option value="{{ day_num }}"
-                                    {% if schedule.weekday == day_num %}selected{% endif %}>
+                            <option value="{{ day_num }}" {% if schedule.weekday==day_num %}selected{% endif %}>
                                 {{ day_name }}
                             </option>
                             {% endfor %}
@@ -63,10 +62,9 @@
                             {% for day_num, day_name in weekdays %}
                             <div class="col-6 col-md-4">
                                 <div class="form-check">
-                                    <input class="form-check-input weekday-checkbox" type="checkbox"
-                                           name="weekdays" value="{{ day_num }}"
-                                           id="weekday_{{ day_num }}"
-                                           {% if day_num in [1, 2, 3, 4, 5] %}checked{% endif %}>
+                                    <input class="form-check-input weekday-checkbox" type="checkbox" name="weekdays"
+                                        value="{{ day_num }}" id="weekday_{{ day_num }}" {% if day_num in [1, 2, 3, 4,
+                                        5] %}checked{% endif %}>
                                     <label class="form-check-label" for="weekday_{{ day_num }}">
                                         {{ day_name }}
                                     </label>
@@ -97,14 +95,20 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Horario Inicio *</label>
                             <input type="time" name="start_time" class="form-control"
-                                   value="{{ schedule.start_time.strftime('%H:%M') if schedule else '08:00' }}" required>
+                                value="{{ schedule.start_time.strftime('%H:%M') if schedule else '08:00' }}" required>
                         </div>
 
                         <!-- Horario Fim -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Horario Fim *</label>
                             <input type="time" name="end_time" class="form-control"
-                                   value="{{ schedule.end_time.strftime('%H:%M') if schedule else '09:00' }}" required>
+                                value="{{ schedule.end_time.strftime('%H:%M') if schedule else '09:00' }}" required>
+                        </div>
+                        <div class="col-12 mt-0">
+                            <small class="text-info">
+                                <i class="fas fa-info-circle me-1"></i> O intervalo sera dividido automaticamente em
+                                sessoes baseadas na duracao da modalidade.
+                            </small>
                         </div>
                     </div>
 
@@ -112,8 +116,7 @@
                     <div class="mb-3">
                         <label class="form-label">Capacidade (vagas) *</label>
                         <input type="number" name="capacity" class="form-control"
-                               value="{{ schedule.capacity if schedule else 10 }}"
-                               min="1" max="100" required>
+                            value="{{ schedule.capacity if schedule else 10 }}" min="1" max="100" required>
                         <small class="text-muted">Numero maximo de alunos por aula</small>
                     </div>
 
@@ -135,33 +138,33 @@
 
 {% if not schedule %}
 <script>
-function selectWeekdays() {
-    document.querySelectorAll('.weekday-checkbox').forEach((cb, idx) => {
-        // Dias 1-5 (Segunda a Sexta)
-        cb.checked = [1, 2, 3, 4, 5].includes(parseInt(cb.value));
-    });
-}
-
-function selectAll() {
-    document.querySelectorAll('.weekday-checkbox').forEach(cb => {
-        cb.checked = true;
-    });
-}
-
-function selectNone() {
-    document.querySelectorAll('.weekday-checkbox').forEach(cb => {
-        cb.checked = false;
-    });
-}
-
-// Validar que pelo menos um dia foi selecionado
-document.querySelector('form').addEventListener('submit', function(e) {
-    const checked = document.querySelectorAll('.weekday-checkbox:checked');
-    if (checked.length === 0) {
-        e.preventDefault();
-        alert('Selecione pelo menos um dia da semana.');
+    function selectWeekdays() {
+        document.querySelectorAll('.weekday-checkbox').forEach((cb, idx) => {
+            // Dias 1-5 (Segunda a Sexta)
+            cb.checked = [1, 2, 3, 4, 5].includes(parseInt(cb.value));
+        });
     }
-});
+
+    function selectAll() {
+        document.querySelectorAll('.weekday-checkbox').forEach(cb => {
+            cb.checked = true;
+        });
+    }
+
+    function selectNone() {
+        document.querySelectorAll('.weekday-checkbox').forEach(cb => {
+            cb.checked = false;
+        });
+    }
+
+    // Validar que pelo menos um dia foi selecionado
+    document.querySelector('form').addEventListener('submit', function (e) {
+        const checked = document.querySelectorAll('.weekday-checkbox:checked');
+        if (checked.length === 0) {
+            e.preventDefault();
+            alert('Selecione pelo menos um dia da semana.');
+        }
+    });
 </script>
 {% endif %}
 {% endblock %}

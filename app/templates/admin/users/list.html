@@ -8,11 +8,17 @@
         {% if role_filter == 'student' %}Alunos
         {% elif role_filter == 'instructor' %}Instrutores
         {% elif role_filter == 'admin' %}Administradores
-        {% else %}Todos os Usuários{% endif %}
+        {% elif role_filter == 'totem' %}Terminais de Check-in
+        {% else %}Todos os Usuarios{% endif %}
     </h4>
-    <a href="{{ url_for('admin_users.create_user') }}" class="btn btn-primary">
-        <i class="fas fa-user-plus me-2"></i>Novo Usuário
-    </a>
+    <div class="btn-group">
+        <a href="{{ url_for('admin_users.create_user') }}" class="btn btn-primary">
+            <i class="fas fa-user-plus me-2"></i>Novo Usuario
+        </a>
+        <a href="{{ url_for('admin_users.create_totem_user') }}" class="btn btn-outline-primary">
+            <i class="fas fa-desktop me-2"></i>Novo Terminal
+        </a>
+    </div>
 </div>
 
 <div class="card">
@@ -26,6 +32,8 @@
                 class="btn btn-sm btn-outline-secondary {% if role_filter == 'instructor' %}active{% endif %}">Instrutores</a>
             <a href="{{ url_for('admin_users.list_users', role='admin') }}"
                 class="btn btn-sm btn-outline-secondary {% if role_filter == 'admin' %}active{% endif %}">Admins</a>
+            <a href="{{ url_for('admin_users.list_users', role='totem') }}"
+                class="btn btn-sm btn-outline-secondary {% if role_filter == 'totem' %}active{% endif %}">Terminais</a>
         </div>
 
         {% if users %}
@@ -37,7 +45,7 @@
                         <th>E-mail / Telefone</th>
                         <th>Papel</th>
                         <th>Status</th>
-                        <th style="width: 150px;">Ações</th>
+                        <th style="width: 180px;">Acoes</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -64,6 +72,8 @@
                             <span class="badge bg-danger">Admin</span>
                             {% elif user.role == 'instructor' %}
                             <span class="badge bg-primary">Instrutor</span>
+                            {% elif user.role == 'totem' %}
+                            <span class="badge bg-info">Terminal</span>
                             {% else %}
                             <span class="badge bg-secondary">Aluno</span>
                             {% endif %}
@@ -81,6 +91,13 @@
                                     class="btn btn-sm btn-outline-primary" title="Editar">
                                     <i class="fas fa-edit"></i>
                                 </a>
+                                {% if user.role != 'totem' %}
+                                <a href="{{ url_for('admin_users.face_enrollment', id=user.id) }}"
+                                    class="btn btn-sm btn-outline-{{ 'success' if user.face_encoding else 'secondary' }}"
+                                    title="Cadastro Facial">
+                                    <i class="fas fa-{% if user.face_encoding %}user-check{% else %}user-shield{% endif %}"></i>
+                                </a>
+                                {% endif %}
                                 <form action="{{ url_for('admin_users.toggle_user', id=user.id) }}" method="POST"
                                     class="d-inline">
                                     <button type="submit"

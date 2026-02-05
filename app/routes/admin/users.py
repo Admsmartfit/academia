@@ -1,12 +1,18 @@
 # app/routes/admin/users.py
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from app.models import User
 from app import db
 from app.routes.admin.dashboard import admin_required
 
 users_bp = Blueprint('admin_users', __name__, url_prefix='/admin/users')
+
+
+# =============================================================================
+# Roles disponiveis no sistema
+# =============================================================================
+AVAILABLE_ROLES = ['student', 'instructor', 'admin', 'totem']
 
 @users_bp.route('/')
 @login_required
@@ -86,10 +92,114 @@ def toggle_user(id):
     if user.id == current_user.id:
         flash('Você não pode desativar sua própria conta.', 'warning')
         return redirect(url_for('admin_users.list_users'))
-        
+
     user.is_active = not user.is_active
     db.session.commit()
-    
+
     status = "ativado" if user.is_active else "desativado"
     flash(f'Usuário {user.name} {status}!', 'info')
     return redirect(url_for('admin_users.list_users'))
+
+
+# =============================================================================
+# Cadastro Facial (Admin)
+# =============================================================================
+
+@users_bp.route('/<int:id>/face', methods=['GET'])
+@login_required
+@admin_required
+def face_enrollment(id):
+    """Pagina de cadastro facial para qualquer usuario (admin only)."""
+    user = User.query.get_or_404(id)
+    return render_template('admin/users/face_enrollment.html', user=user)
+
+
+@users_bp.route('/<int:id>/face/enroll', methods=['POST'])
+@login_required
+@admin_required
+def enroll_face_admin(id):
+    """API para admin cadastrar face de qualquer usuario."""
+    from app.services.face_service import FaceRecognitionService
+
+    user = User.query.get_or_404(id)
+    data = request.get_json()
+
+    if not data or 'image' not in data:
+        return jsonify({
+            'success': False,
+            'error': 'Imagem nao fornecida'
+        }), 400
+
+    face_service = FaceRecognitionService(tolerance=0.6)
+    result = face_service.enroll_face(user.id, data['image'])
+
+    if result['success']:
+        return jsonify({
+            'success': True,
+            'message': f'Face de {user.name} cadastrada com sucesso!',
+            'confidence': result['confidence']
+        }), 201
+    else:
+        return jsonify({
+            'success': False,
+            'error': result['message']
+        }), 400
+
+
+@users_bp.route('/<int:id>/face/remove', methods=['POST'])
+@login_required
+@admin_required
+def remove_face_admin(id):
+    """Remove face de um usuario (admin only)."""
+    from app.services.face_service import FaceRecognitionService
+
+    user = User.query.get_or_404(id)
+    face_service = FaceRecognitionService()
+    result = face_service.remove_face(user.id)
+
+    if result['success']:
+        flash(f'Face de {user.name} removida com sucesso!', 'success')
+    else:
+        flash(result['message'], 'warning')
+
+    return redirect(url_for('admin_users.face_enrollment', id=id))
+
+
+# =============================================================================
+# Usuario Totem (Terminal de Check-in)
+# =============================================================================
+
+@users_bp.route('/create-totem', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def create_totem_user():
+    """Cria um usuario especial para terminal de check-in facial."""
+    if request.method == 'POST':
+        name = request.form.get('name', 'Terminal Check-in')
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password')
+
+        if not email or not password:
+            flash('Email e senha sao obrigatorios.', 'danger')
+            return redirect(url_for('admin_users.create_totem_user'))
+
+        if User.query.filter_by(email=email).first():
+            flash('Este e-mail ja esta cadastrado.', 'danger')
+            return redirect(url_for('admin_users.create_totem_user'))
+
+        user = User(
+            name=name,
+            email=email,
+            phone='',
+            role='totem',
+            is_active=True
+        )
+        user.set_password(password)
+
+        db.session.add(user)
+        db.session.commit()
+
+        flash(f'Usuario de terminal "{name}" criado! Use {email} para acessar o totem.', 'success')
+        return redirect(url_for('admin_users.list_users', role='totem'))
+
+    return render_template('admin/users/totem_form.html')

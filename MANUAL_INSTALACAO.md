@@ -9,7 +9,7 @@ Este guia fornece o passo a passo para configurar e rodar o sistema no seu compu
 
 ## Passo a Passo
 
-### 1. Preparar o Ambiente
+### 1. Preparar o Ambpoweiente
 
 Abra o terminal na pasta do projeto (`c:\Users\ralan\academia`) e execute os comandos abaixo na ordem:
 

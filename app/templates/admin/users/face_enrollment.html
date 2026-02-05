@@ -1,0 +1,258 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Cadastro Facial - {{ user.name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb mb-1">
+                                <li class="breadcrumb-item"><a href="{{ url_for('admin_users.list_users') }}">Usuarios</a></li>
+                                <li class="breadcrumb-item"><a href="{{ url_for('admin_users.edit_user', id=user.id) }}">{{ user.name }}</a></li>
+                                <li class="breadcrumb-item active">Cadastro Facial</li>
+                            </ol>
+                        </nav>
+                        <h2 class="h4 mb-0">
+                            <i class="fas fa-user-shield me-2"></i>Cadastro Facial
+                        </h2>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Info do usuario -->
+                <div class="alert alert-info mb-4">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                            <i class="fas fa-user fa-lg"></i>
+                        </div>
+                        <div>
+                            <strong>{{ user.name }}</strong><br>
+                            <small class="text-muted">{{ user.email }} | {{ user.role|capitalize }}</small>
+                        </div>
+                    </div>
+                </div>
+
+                {% if user.face_encoding %}
+                <!-- Face ja cadastrada -->
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Face cadastrada!</strong>
+                    {% if user.face_registered_at %}
+                    em {{ user.face_registered_at.strftime('%d/%m/%Y %H:%M') }}
+                    {% endif %}
+                </div>
+                <div class="text-center mb-4">
+                    <div class="rounded-circle bg-success d-inline-flex align-items-center justify-content-center" style="width: 150px; height: 150px;">
+                        <i class="fas fa-user-check fa-5x text-white"></i>
+                    </div>
+                </div>
+                <form method="POST" action="{{ url_for('admin_users.remove_face_admin', id=user.id) }}">
+                    <button type="submit" class="btn btn-warning w-100" onclick="return confirm('Tem certeza que deseja remover a face cadastrada?')">
+                        <i class="fas fa-trash me-2"></i>Remover Face Cadastrada
+                    </button>
+                </form>
+                <hr class="my-4">
+                <p class="text-center text-muted">Ou cadastrar nova face (substituir):</p>
+                {% endif %}
+
+                <!-- Area de captura -->
+                <div class="text-center mb-4">
+                    <video id="webcam" width="400" height="300" autoplay playsinline style="display:none;" class="img-thumbnail"></video>
+                    <canvas id="canvas" width="400" height="300" style="display:none;"></canvas>
+                    <img id="capturedImage" width="400" height="300" style="display:none;" class="img-thumbnail">
+                    <div id="placeholder" class="border rounded d-inline-flex align-items-center justify-content-center bg-light" style="width: 400px; height: 300px;">
+                        <div class="text-center text-muted">
+                            <i class="fas fa-camera fa-4x mb-3"></i>
+                            <p>Selecione um metodo de captura</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Opcoes de captura -->
+                <div class="btn-group d-flex mb-3" role="group">
+                    <input type="radio" class="btn-check" name="captureMethod" id="methodUpload" value="upload" checked>
+                    <label class="btn btn-outline-primary" for="methodUpload">
+                        <i class="fas fa-upload me-2"></i>Upload de Arquivo
+                    </label>
+                    <input type="radio" class="btn-check" name="captureMethod" id="methodWebcam" value="webcam">
+                    <label class="btn btn-outline-primary" for="methodWebcam">
+                        <i class="fas fa-camera me-2"></i>Webcam
+                    </label>
+                </div>
+
+                <!-- Upload de arquivo -->
+                <div id="uploadSection">
+                    <div class="mb-3">
+                        <input type="file" id="fileInput" accept="image/*" class="form-control">
+                        <small class="form-text text-muted">
+                            Formatos aceitos: JPG, PNG | Tamanho maximo: 5MB | Resolucao minima: 320x240px
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Webcam -->
+                <div id="webcamSection" style="display:none;">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" onclick="startWebcam()" id="startCamBtn">
+                            <i class="fas fa-video me-2"></i>Iniciar Camera
+                        </button>
+                        <button class="btn btn-success" onclick="capturePhoto()" id="captureBtn" disabled>
+                            <i class="fas fa-camera me-2"></i>Capturar Foto
+                        </button>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- Alertas -->
+                <div id="faceAlerts"></div>
+
+                <!-- Botao de cadastrar -->
+                <button class="btn btn-lg btn-primary w-100" onclick="enrollFace()" id="enrollBtn" disabled>
+                    <i class="fas fa-check me-2"></i>Cadastrar Face de {{ user.name }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+var stream = null;
+var capturedImageData = null;
+var userId = {{ user.id }};
+
+// Toggle metodo de captura
+document.querySelectorAll('input[name="captureMethod"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+        if (this.value === 'upload') {
+            document.getElementById('uploadSection').style.display = '';
+            document.getElementById('webcamSection').style.display = 'none';
+            stopWebcam();
+        } else {
+            document.getElementById('uploadSection').style.display = 'none';
+            document.getElementById('webcamSection').style.display = '';
+        }
+    });
+});
+
+// Upload handler
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+        showAlert('Arquivo muito grande! Maximo 5MB.', 'danger');
+        return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+        showAlert('Arquivo deve ser uma imagem.', 'danger');
+        return;
+    }
+
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var img = document.getElementById('capturedImage');
+        img.src = e.target.result;
+        img.style.display = '';
+        document.getElementById('placeholder').style.display = 'none';
+        capturedImageData = e.target.result;
+        document.getElementById('enrollBtn').disabled = false;
+    };
+    reader.readAsDataURL(file);
+});
+
+async function startWebcam() {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 640, height: 480 }
+        });
+        var video = document.getElementById('webcam');
+        video.srcObject = stream;
+        video.style.display = '';
+        document.getElementById('placeholder').style.display = 'none';
+        document.getElementById('captureBtn').disabled = false;
+        document.getElementById('startCamBtn').disabled = true;
+        showAlert('Camera iniciada! Posicione o rosto e clique em Capturar.', 'info');
+    } catch (err) {
+        showAlert('Erro ao acessar camera: ' + err.message, 'danger');
+    }
+}
+
+function stopWebcam() {
+    if (stream) {
+        stream.getTracks().forEach(function(t) { t.stop(); });
+        document.getElementById('webcam').style.display = 'none';
+        stream = null;
+    }
+    document.getElementById('startCamBtn').disabled = false;
+    document.getElementById('captureBtn').disabled = true;
+}
+
+function capturePhoto() {
+    var video = document.getElementById('webcam');
+    var canvas = document.getElementById('canvas');
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, 400, 300);
+    capturedImageData = canvas.toDataURL('image/jpeg');
+
+    var img = document.getElementById('capturedImage');
+    img.src = capturedImageData;
+    img.style.display = '';
+    video.style.display = 'none';
+    stopWebcam();
+    document.getElementById('enrollBtn').disabled = false;
+    showAlert('Foto capturada! Clique em Cadastrar Face.', 'success');
+}
+
+async function enrollFace() {
+    if (!capturedImageData) {
+        showAlert('Nenhuma imagem selecionada!', 'warning');
+        return;
+    }
+
+    var btn = document.getElementById('enrollBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processando...';
+
+    try {
+        var response = await fetch('/admin/users/' + userId + '/face/enroll', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: capturedImageData })
+        });
+
+        var result = await response.json();
+
+        if (result.success) {
+            showAlert(result.message + ' Confianca: ' + result.confidence.toFixed(1) + '%', 'success');
+            setTimeout(function() { location.reload(); }, 2000);
+        } else {
+            showAlert('Erro: ' + result.error, 'danger');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check me-2"></i>Cadastrar Face de {{ user.name }}';
+        }
+    } catch (err) {
+        showAlert('Erro de conexao: ' + err.message, 'danger');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check me-2"></i>Cadastrar Face de {{ user.name }}';
+    }
+}
+
+function showAlert(msg, type) {
+    var container = document.getElementById('faceAlerts');
+    container.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show">' +
+        msg + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+    if (type !== 'danger') {
+        setTimeout(function() {
+            var a = container.querySelector('.alert');
+            if (a) a.remove();
+        }, 5000);
+    }
+}
+</script>
+{% endblock %}

@@ -48,6 +48,13 @@ class User(UserMixin, db.Model):
     xp_available = db.Column(db.Integer, default=0)  # XP disponivel para conversao (janela 3 meses)
     credits_balance = db.Column(db.Integer, default=0)  # Total de creditos ativos (wallets)
 
+    # Reconhecimento Facial
+    face_encoding = db.Column(db.LargeBinary, nullable=True)
+    face_encoding_version = db.Column(db.String(10), default='v1')
+    face_registered_at = db.Column(db.DateTime, nullable=True)
+    face_last_recognized = db.Column(db.DateTime, nullable=True)
+    face_confidence_threshold = db.Column(db.Float, default=0.6)
+
     # Perfil
     photo_url = db.Column(db.String(255))
 

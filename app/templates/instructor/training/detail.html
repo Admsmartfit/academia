@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Detalhe do Treino - {{ plan.user.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3><i class="fas fa-dumbbell me-2"></i>Plano de Treino</h3>
+            <p class="text-muted mb-0">{{ plan.user.name }} | {{ plan.goal_label }}</p>
+        </div>
+        <div>
+            <a href="{{ url_for('instructor.training_list') }}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-arrow-left me-1"></i>Voltar
+            </a>
+            {% if plan.is_active %}
+            <button class="btn btn-outline-danger" onclick="deactivatePlan({{ plan.id }})">
+                <i class="fas fa-ban me-1"></i>Desativar
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Plan info -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>Objetivo:</strong> {{ plan.goal_label }}
+                </div>
+                <div class="col-md-3">
+                    <strong>Validade:</strong> {{ plan.valid_from.strftime('%d/%m/%Y') }} - {{ plan.valid_until.strftime('%d/%m/%Y') }}
+                </div>
+                <div class="col-md-3">
+                    <strong>Status:</strong>
+                    {% if plan.is_valid %}
+                    <span class="badge bg-success">Ativo</span>
+                    {% elif not plan.is_active %}
+                    <span class="badge bg-secondary">Inativo</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark">Expirado</span>
+                    {% endif %}
+                </div>
+                <div class="col-md-3">
+                    <strong>Criado em:</strong> {{ plan.created_at.strftime('%d/%m/%Y %H:%M') }}
+                </div>
+            </div>
+            {% if plan.notes %}
+            <div class="mt-2">
+                <strong>Observacoes:</strong> {{ plan.notes }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Sessions -->
+    {% for session in plan.workout_sessions %}
+    <div class="card mb-3">
+        <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <h5 class="mb-0">
+                {{ session.name }}
+                {% if session.day_of_week is not none %}
+                <small class="ms-2">
+                    ({{ ['Seg','Ter','Qua','Qui','Sex','Sab','Dom'][session.day_of_week] }})
+                </small>
+                {% endif %}
+                {% if session.estimated_duration_minutes %}
+                <small class="ms-2"><i class="fas fa-clock me-1"></i>{{ session.estimated_duration_minutes }}min</small>
+                {% endif %}
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">#</th>
+                            <th>Exercicio</th>
+                            <th>Grupo</th>
+                            <th>Series</th>
+                            <th>Reps</th>
+                            <th>Descanso</th>
+                            <th>Carga</th>
+                            <th>Obs.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for we in session.exercises %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>
+                                <strong>{{ we.exercise.name }}</strong>
+                                {% if we.exercise.video_url %}
+                                <a href="{{ we.exercise.video_url }}" target="_blank" class="ms-1 text-info">
+                                    <i class="fas fa-video"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                            <td><span class="badge bg-secondary">{{ we.exercise.muscle_group_label }}</span></td>
+                            <td>{{ we.sets }}</td>
+                            <td>{{ we.reps_range or '-' }}</td>
+                            <td>{{ we.rest_seconds or 60 }}s</td>
+                            <td>{{ we.weight_suggestion or '-' }}</td>
+                            <td>{{ we.instructor_notes or '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+async function deactivatePlan(planId) {
+    if (!confirm('Desativar este plano de treino?')) return;
+
+    try {
+        var response = await fetch('/api/training/' + planId, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        var result = await response.json();
+        if (result.success) {
+            location.reload();
+        } else {
+            alert('Erro: ' + result.error);
+        }
+    } catch (err) {
+        alert('Erro: ' + err.message);
+    }
+}
+</script>
+{% endblock %}

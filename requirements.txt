@@ -1,11 +1,30 @@
+# Backend Core
 Flask==3.0.0
 Flask-SQLAlchemy==3.1.1
 Flask-Login==0.6.3
 Flask-Migrate==4.0.5
-SQLAlchemy==2.0.23
+SQLAlchemy>=2.0.30
 Werkzeug==3.0.1
-requests==2.31.0
 python-dotenv==1.0.0
 flask-cors==4.0.0
+
+# Tarefas Agendadas
 APScheduler==3.10.4
-psycopg2-binary==2.9.9
+
+# APIs Externas
+requests==2.31.0
+
+# Reconhecimento Facial
+face_recognition==1.3.0
+opencv-python>=4.8.1.78
+numpy>=1.24.3
+Pillow>=10.2.0
+# dlib>=19.24.2  # Requer CMake instalado. Instale manualmente se precisar de rec. facial: pip install cmake dlib
+
+# Testes
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-flask==1.3.0
+
+# Database (producao)
+# psycopg2-binary==2.9.9

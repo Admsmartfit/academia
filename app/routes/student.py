@@ -162,32 +162,32 @@ def schedule():
             status=BookingStatus.CONFIRMED
         ).first()
 
-            # Verificar genero
-            sched.gender_restricted = False
-            sched.slot_gender = None
-            sched.gender_message = None
+        # Verificar genero
+        sched.gender_restricted = False
+        sched.slot_gender = None
+        sched.gender_message = None
 
-            if sched.modality.requires_gender_segregation:
-                can_book, msg = GenderDistributionService.can_user_book_slot(
-                    current_user, sched.id, selected_date
-                )
-                if not can_book:
-                    sched.gender_restricted = True
-                    sched.gender_message = msg
+        if sched.modality.requires_gender_segregation:
+            can_book, msg = GenderDistributionService.can_user_book_slot(
+                current_user, sched.id, selected_date
+            )
+            if not can_book:
+                sched.gender_restricted = True
+                sched.gender_message = msg
 
-                # Obter genero do slot para exibicao
-                slot_gender = ScheduleSlotGender.get_slot_gender(sched.id, selected_date)
-                if slot_gender:
-                    sched.slot_gender = slot_gender
+            # Obter genero do slot para exibicao
+            slot_gender = ScheduleSlotGender.get_slot_gender(sched.id, selected_date)
+            if slot_gender:
+                sched.slot_gender = slot_gender
 
-            # Verificar requisitos de saude (EMS, etc) para exibicao
-            sched.requires_ems = "Eletroestimulacao" in sched.modality.name or "FES" in sched.modality.name or "Eletrolipo" in sched.modality.name
-            
-            if sched.requires_ems:
-                from app.models.health import ScreeningType
-                sched.ems_ok = current_user.has_valid_screening(ScreeningType.EMS)
-            else:
-                sched.ems_ok = True
+        # Verificar requisitos de saude (EMS, etc) para exibicao
+        sched.requires_ems = "Eletroestimulacao" in sched.modality.name or "FES" in sched.modality.name or "Eletrolipo" in sched.modality.name
+
+        if sched.requires_ems:
+            from app.models.health import ScreeningType
+            sched.ems_ok = current_user.has_valid_screening(ScreeningType.EMS)
+        else:
+            sched.ems_ok = True
 
     # Assinaturas ativas para selecao
     active_subscriptions = Subscription.query.filter_by(
@@ -370,6 +370,18 @@ def my_bookings():
         past=past,
         cancellation_hours=cancellation_hours
     )
+
+
+@student_bp.route('/my-training')
+@login_required
+def my_training():
+    """Visualizacao do treino do aluno (mobile-first)."""
+    from app.models.training import TrainingPlan
+    plan = TrainingPlan.query.filter_by(
+        user_id=current_user.id,
+        is_active=True
+    ).order_by(TrainingPlan.created_at.desc()).first()
+    return render_template('student/my_training.html', plan=plan)
 
 
 @student_bp.route('/ranking')

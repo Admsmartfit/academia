@@ -46,6 +46,8 @@ def validate_phone(phone: str) -> str:
 def login():
     """Pagina de login"""
     if current_user.is_authenticated:
+        if current_user.role == 'totem':
+            return redirect(url_for('instructor.totem_view'))
         if current_user.is_admin:
             return redirect(url_for('admin.dashboard'))
         return redirect(url_for('student.dashboard'))
@@ -65,6 +67,10 @@ def login():
             login_user(user, remember=remember)
             user.last_login = datetime.utcnow()
             db.session.commit()
+
+            # Usuario de terminal vai direto para o totem
+            if user.role == 'totem':
+                return redirect(url_for('instructor.totem_view'))
 
             flash(f'Bem-vindo(a), {user.name}!', 'success')
 

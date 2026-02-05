@@ -1,8 +1,10 @@
 # app/routes/webhooks.py
 
+import os
 from flask import Blueprint, request, jsonify, current_app
-from app.models import WhatsAppLog, Payment
+from app.models import WhatsAppLog, Payment, User, Booking, BookingStatus
 from app.models.payment import PaymentStatusEnum
+from app.models.crm import AutomationLog
 from app import db
 from datetime import datetime
 import hmac
@@ -18,17 +20,11 @@ webhooks_bp = Blueprint('webhooks', __name__, url_prefix='/webhooks')
 # NUPAY WEBHOOK
 # ============================================================
 
-def validate_nupay_signature(request):
+def validate_nupay_signature(req):
     """
     Valida HMAC-SHA256 do webhook NuPay.
-
-    A NuPay envia o header X-NuPay-Signature com a assinatura
-    calculada usando o webhook secret configurado.
-
-    Returns:
-        bool: True se válido, False se inválido
     """
-    signature = request.headers.get('X-NuPay-Signature')
+    signature = req.headers.get('X-NuPay-Signature')
 
     if not signature:
         logger.warning("Webhook NuPay recebido sem assinatura")
@@ -37,11 +33,10 @@ def validate_nupay_signature(request):
     secret = current_app.config.get('NUPAY_WEBHOOK_SECRET', '')
 
     if not secret:
-        # Em modo desenvolvimento, aceita sem secret configurado
-        logger.warning("NUPAY_WEBHOOK_SECRET não configurado - aceitando webhook sem validação")
+        logger.warning("NUPAY_WEBHOOK_SECRET nao configurado - aceitando sem validacao")
         return True
 
-    payload = request.get_data()
+    payload = req.get_data()
 
     expected = hmac.new(
         secret.encode(),
@@ -52,7 +47,7 @@ def validate_nupay_signature(request):
     is_valid = hmac.compare_digest(signature, expected)
 
     if not is_valid:
-        logger.warning(f"Assinatura NuPay inválida. Recebida: {signature[:20]}...")
+        logger.warning(f"Assinatura NuPay invalida. Recebida: {signature[:20]}...")
 
     return is_valid
 
@@ -61,27 +56,10 @@ def validate_nupay_signature(request):
 def nupay_callback():
     """
     Recebe callbacks da NuPay sobre status de pagamentos.
-
-    Eventos esperados:
-    - COMPLETED: Pagamento confirmado
-    - FAILED: Pagamento falhou
-    - CANCELLED: Pagamento cancelado
-    - EXPIRED: PIX expirou
-
-    Payload esperado:
-    {
-        "pspReferenceId": "NUPAY_123456789",
-        "merchantReferenceId": "PAYMENT_42",
-        "status": "COMPLETED",
-        "amount": {"value": 199.00, "currency": "BRL"},
-        "paymentMethod": {"type": "nupay"},
-        "timestamp": "2026-01-23T14:30:00Z"
-    }
     """
     try:
-        # 1. Validar assinatura
         if not validate_nupay_signature(request):
-            logger.error("Webhook NuPay: assinatura inválida")
+            logger.error("Webhook NuPay: assinatura invalida")
             return jsonify({"error": "Invalid signature"}), 401
 
         data = request.get_json()
@@ -90,18 +68,15 @@ def nupay_callback():
             logger.error("Webhook NuPay: payload vazio")
             return jsonify({"error": "No data received"}), 400
 
-        # 2. Extrair dados do payload
         merchant_reference = data.get('merchantReferenceId', '')
         psp_reference = data.get('pspReferenceId', '')
         status = data.get('status', '')
 
         logger.info(f"Webhook NuPay recebido: {merchant_reference} - Status: {status}")
 
-        # 3. Buscar payment pelo reference (formato: PAYMENT_42)
         payment = Payment.query.filter_by(nupay_reference_id=merchant_reference).first()
 
         if not payment:
-            # Tentar buscar pelo ID extraído do reference
             try:
                 if merchant_reference.startswith('PAYMENT_'):
                     payment_id = int(merchant_reference.replace('PAYMENT_', ''))
@@ -110,28 +85,21 @@ def nupay_callback():
                 pass
 
         if not payment:
-            logger.warning(f"Webhook NuPay: Payment não encontrado para {merchant_reference}")
+            logger.warning(f"Webhook NuPay: Payment nao encontrado para {merchant_reference}")
             return jsonify({"error": "Payment not found"}), 404
 
-        # 4. Atualizar pspReferenceId se ainda não tiver
         if psp_reference and not payment.nupay_psp_reference_id:
             payment.nupay_psp_reference_id = psp_reference
 
-        # 5. Processar conforme status
         if status == 'COMPLETED':
             _process_payment_completed(payment, data)
-
         elif status == 'FAILED':
             _process_payment_failed(payment, data)
-
         elif status == 'CANCELLED':
             payment.status = PaymentStatusEnum.CANCELLED
             logger.info(f"Payment #{payment.id} marcado como cancelado")
-
         elif status == 'EXPIRED':
-            # PIX expirou, manter como PENDING para nova tentativa
             logger.info(f"Payment #{payment.id}: PIX expirou")
-
         else:
             logger.warning(f"Webhook NuPay: status desconhecido '{status}'")
 
@@ -146,15 +114,7 @@ def nupay_callback():
 
 
 def _process_payment_completed(payment, data):
-    """
-    Processa pagamento confirmado.
-
-    - Marca payment como pago
-    - Desbloqueia subscription se necessário
-    - Aplica bônus XP de boas-vindas
-    - Envia notificação WhatsApp
-    """
-    # Marcar como pago
+    """Processa pagamento confirmado."""
     payment.mark_as_paid()
     logger.info(f"Payment #{payment.id} marcado como PAID")
 
@@ -162,19 +122,16 @@ def _process_payment_completed(payment, data):
     user = subscription.user
     package = subscription.package
 
-    # Desbloquear subscription se estava bloqueada
     if subscription.is_blocked:
         subscription.unblock()
         logger.info(f"Subscription #{subscription.id} desbloqueada")
 
-    # Aplicar bônus XP de boas-vindas (apenas na primeira parcela)
     if payment.installment_number == 1:
         xp_bonus = package.welcome_xp_bonus or 0
         if xp_bonus > 0:
             user.add_xp(xp_bonus)
             logger.info(f"User #{user.id} recebeu {xp_bonus} XP de boas-vindas")
 
-    # Enviar notificação WhatsApp
     try:
         from app.services.megaapi import megaapi
 
@@ -182,29 +139,20 @@ def _process_payment_completed(payment, data):
 
         megaapi.send_custom_message(
             phone=user.phone,
-            message=f"✅ Olá {first_name}! Seu pagamento foi confirmado. "
-                    f"Você tem {subscription.credits_remaining} créditos disponíveis "
-                    f"até {subscription.end_date.strftime('%d/%m/%Y')}. Bora treinar! 💪",
+            message=f"Ola {first_name}! Seu pagamento foi confirmado. "
+                    f"Voce tem {subscription.credits_remaining} creditos disponiveis "
+                    f"ate {subscription.end_date.strftime('%d/%m/%Y')}. Bora treinar!",
             user_id=user.id
         )
-        logger.info(f"WhatsApp de confirmação enviado para {user.phone}")
-
     except Exception as e:
-        # Não falhar o webhook por erro de WhatsApp
-        logger.error(f"Erro ao enviar WhatsApp de confirmação: {str(e)}")
+        logger.error(f"Erro ao enviar WhatsApp de confirmacao: {str(e)}")
 
 
 def _process_payment_failed(payment, data):
-    """
-    Processa pagamento que falhou.
-
-    - Atualiza status do payment
-    - Envia notificação WhatsApp
-    """
-    payment.status = PaymentStatusEnum.PENDING  # Volta para pending para nova tentativa
+    """Processa pagamento que falhou."""
+    payment.status = PaymentStatusEnum.PENDING
     logger.info(f"Payment #{payment.id} marcado como falha - voltou para PENDING")
 
-    # Enviar notificação WhatsApp
     try:
         from app.services.megaapi import megaapi
 
@@ -213,26 +161,17 @@ def _process_payment_failed(payment, data):
 
         megaapi.send_custom_message(
             phone=user.phone,
-            message=f"❌ Olá {first_name}, houve um problema com seu pagamento. "
+            message=f"Ola {first_name}, houve um problema com seu pagamento. "
                     f"Por favor, tente novamente ou entre em contato conosco.",
             user_id=user.id
         )
-        logger.info(f"WhatsApp de falha enviado para {user.phone}")
-
     except Exception as e:
         logger.error(f"Erro ao enviar WhatsApp de falha: {str(e)}")
 
 
 @webhooks_bp.route('/nupay/subscription', methods=['POST'])
 def nupay_subscription_callback():
-    """
-    Recebe callbacks da NuPay sobre assinaturas recorrentes.
-
-    Eventos:
-    - SUBSCRIPTION_RENEWED: Cobrança recorrente realizada
-    - SUBSCRIPTION_CANCELLED: Assinatura cancelada
-    - SUBSCRIPTION_PAUSED: Assinatura pausada
-    """
+    """Recebe callbacks da NuPay sobre assinaturas recorrentes."""
     try:
         if not validate_nupay_signature(request):
             return jsonify({"error": "Invalid signature"}), 401
@@ -254,21 +193,18 @@ def nupay_subscription_callback():
         ).first()
 
         if not subscription:
-            logger.warning(f"Subscription não encontrada: {subscription_id}")
+            logger.warning(f"Subscription nao encontrada: {subscription_id}")
             return jsonify({"error": "Subscription not found"}), 404
 
         if event == 'SUBSCRIPTION_RENEWED':
-            # Criar novo payment e renovar créditos
             _process_subscription_renewed(subscription, data)
-
         elif event == 'SUBSCRIPTION_CANCELLED':
             subscription.recurring_status = 'CANCELLED'
             subscription.is_recurring = False
-            logger.info(f"Subscription #{subscription.id} recorrência cancelada")
-
+            logger.info(f"Subscription #{subscription.id} recorrencia cancelada")
         elif event == 'SUBSCRIPTION_PAUSED':
             subscription.recurring_status = 'PAUSED'
-            logger.info(f"Subscription #{subscription.id} recorrência pausada")
+            logger.info(f"Subscription #{subscription.id} recorrencia pausada")
 
         db.session.commit()
 
@@ -281,20 +217,12 @@ def nupay_subscription_callback():
 
 
 def _process_subscription_renewed(subscription, data):
-    """
-    Processa renovação de assinatura recorrente.
-
-    - Cria novo Payment
-    - Renova créditos
-    - Atualiza datas de billing
-    - Notifica usuário
-    """
+    """Processa renovacao de assinatura recorrente."""
     from datetime import date, timedelta
 
     package = subscription.package
     user = subscription.user
 
-    # Criar novo Payment para esta cobrança
     new_payment = Payment(
         subscription_id=subscription.id,
         installment_number=1,
@@ -308,19 +236,15 @@ def _process_subscription_renewed(subscription, data):
     )
     db.session.add(new_payment)
 
-    # Renovar créditos
     subscription.credits_total += package.credits
     subscription.last_billing_date = date.today()
     subscription.next_billing_date = date.today() + timedelta(
         days=package.recurring_interval_days or 30
     )
-
-    # Estender validade
     subscription.end_date = date.today() + timedelta(days=package.validity_days)
 
-    logger.info(f"Subscription #{subscription.id} renovada: +{package.credits} créditos")
+    logger.info(f"Subscription #{subscription.id} renovada: +{package.credits} creditos")
 
-    # Notificar usuário
     try:
         from app.services.megaapi import megaapi
 
@@ -328,65 +252,101 @@ def _process_subscription_renewed(subscription, data):
 
         megaapi.send_custom_message(
             phone=user.phone,
-            message=f"🔄 Olá {first_name}! Sua assinatura foi renovada automaticamente. "
-                    f"+{package.credits} créditos adicionados! "
-                    f"Total disponível: {subscription.credits_remaining} créditos. 💪",
+            message=f"Ola {first_name}! Sua assinatura foi renovada automaticamente. "
+                    f"+{package.credits} creditos adicionados! "
+                    f"Total disponivel: {subscription.credits_remaining} creditos.",
             user_id=user.id
         )
     except Exception as e:
-        logger.error(f"Erro ao enviar WhatsApp de renovação: {str(e)}")
+        logger.error(f"Erro ao enviar WhatsApp de renovacao: {str(e)}")
+
+
+# ============================================================
+# MEGAAPI WEBHOOK - STATUS DE MENSAGENS
+# ============================================================
+
+def validate_megaapi_signature(req):
+    """
+    Valida HMAC-SHA256 do webhook MegaAPI.
+    Previne webhooks falsificados.
+    """
+    secret = os.getenv('MEGAAPI_WEBHOOK_SECRET', '')
+
+    if not secret:
+        logger.warning("MEGAAPI_WEBHOOK_SECRET nao configurado - aceitando sem validacao")
+        return True
+
+    signature = req.headers.get('X-MegaAPI-Signature')
+    if not signature:
+        return False
+
+    payload = req.get_data()
+    expected = hmac.new(
+        secret.encode(),
+        payload,
+        hashlib.sha256
+    ).hexdigest()
+
+    return hmac.compare_digest(signature, expected)
 
 
 @webhooks_bp.route('/megaapi', methods=['POST'])
 def megaapi_webhook():
     """
-    Recebe callbacks da Megaapi sobre status de mensagens
+    Recebe callbacks da Megaapi sobre status de mensagens.
 
     Eventos:
-    - message_sent: Mensagem enviada
-    - message_delivered: Mensagem entregue
-    - message_read: Mensagem lida
-    - message_failed: Falha no envio
+    - message_sent / message.status(sent)
+    - message_delivered / message.status(delivered)
+    - message_read / message.status(read)
+    - message_failed / message.status(failed)
     """
     try:
+        if not validate_megaapi_signature(request):
+            logger.warning("Webhook MegaAPI com assinatura invalida")
+            return jsonify({'error': 'Invalid signature'}), 401
+
         data = request.get_json()
 
         if not data:
             return jsonify({'error': 'No data received'}), 400
 
-        event_type = data.get('event')
-        message_id = data.get('message_id')
+        # Suportar ambos os formatos de evento
+        event_type = data.get('event') or data.get('type', '')
+        message_id = data.get('message_id') or data.get('messageId')
+        status = data.get('status', '')
 
-        if not message_id:
-            return jsonify({'error': 'No message_id'}), 400
+        if not message_id and not status:
+            return jsonify({'error': 'No message_id or status'}), 400
 
         # Buscar log da mensagem
-        log = WhatsAppLog.query.filter_by(message_id=message_id).first()
+        log = None
+        if message_id:
+            log = WhatsAppLog.query.filter_by(message_id=message_id).first()
 
         if not log:
-            # Log nao encontrado, criar novo
             log = WhatsAppLog(
                 message_id=message_id,
-                phone=data.get('phone', ''),
+                phone=data.get('phone', data.get('from', '')),
                 template_name=data.get('template_name', 'unknown'),
                 status='pending'
             )
             db.session.add(log)
 
-        # Atualizar status baseado no evento
-        if event_type == 'message_sent':
+        # Determinar status final
+        final_status = status or event_type
+        if final_status in ('message_sent', 'sent'):
             log.status = 'sent'
-        elif event_type == 'message_delivered':
+        elif final_status in ('message_delivered', 'delivered'):
             log.status = 'delivered'
             log.delivered_at = datetime.utcnow()
-        elif event_type == 'message_read':
+        elif final_status in ('message_read', 'read'):
             log.status = 'read'
             log.read_at = datetime.utcnow()
-        elif event_type == 'message_failed':
+        elif final_status in ('message_failed', 'failed'):
             log.status = 'failed'
             log.error_message = data.get('error', 'Unknown error')
 
-        # Armazenar dados adicionais
         log.response_json = data
 
         db.session.commit()
@@ -394,91 +354,54 @@ def megaapi_webhook():
         return jsonify({'status': 'ok'}), 200
 
     except Exception as e:
-        print(f"Erro no webhook Megaapi: {e}")
+        logger.error(f"Erro no webhook Megaapi: {e}")
         return jsonify({'error': str(e)}), 500
 
+
+# ============================================================
+# MEGAAPI WEBHOOK - MENSAGENS RECEBIDAS (INTERATIVAS)
+# ============================================================
 
 @webhooks_bp.route('/megaapi/incoming', methods=['POST'])
 def megaapi_incoming():
     """
-    Recebe mensagens de entrada (respostas dos clientes)
-    Inclui processamento de List Messages (botoes interativos)
+    Recebe mensagens de entrada (respostas dos clientes).
+
+    Tipos processados:
+    - buttonsResponseMessage: Clique em botao
+    - listResponseMessage: Selecao em lista
+    - conversation (texto): Mensagem de texto livre
     """
     try:
+        if not validate_megaapi_signature(request):
+            logger.warning("Webhook incoming MegaAPI com assinatura invalida")
+            return jsonify({'error': 'Invalid signature'}), 401
+
         data = request.get_json()
 
         if not data:
             return jsonify({'error': 'No data received'}), 400
 
-        phone = data.get('from')
+        phone = data.get('from', '')
         message = data.get('message', {})
-        message_text = message.get('text', '')
 
-        # Verificar se e resposta de lista (List Message)
-        if 'listResponseMessage' in message:
-            response = message['listResponseMessage']
-            row_id = response.get('singleSelectReply', {}).get('selectedRowId')
+        logger.info(f"Webhook incoming de {phone}: {list(message.keys()) if message else 'vazio'}")
 
-            if row_id:
-                try:
-                    # Parsear "confirm_123" ou "cancel_123"
-                    parts = row_id.split('_')
-                    if len(parts) >= 2:
-                        action = parts[0]
-                        booking_id = int(parts[1])
+        # 1. Resposta de botao (Button Reply)
+        if 'buttonsResponseMessage' in message:
+            _handle_button_reply(phone, message['buttonsResponseMessage'])
 
-                        from app.models import Booking, BookingStatus
-                        from app.services.megaapi import megaapi
+        # 2. Resposta de lista (List Reply)
+        elif 'listResponseMessage' in message:
+            _handle_list_reply(phone, message['listResponseMessage'])
 
-                        booking = Booking.query.get(booking_id)
-
-                        if booking:
-                            if action == 'cancel':
-                                if booking.can_cancel:
-                                    booking.cancel(reason="Cancelado via WhatsApp")
-                                    print(f"[WEBHOOK] Booking {booking_id} cancelado via WhatsApp")
-
-                                    # Enviar confirmacao
-                                    try:
-                                        megaapi.send_custom_message(
-                                            phone=booking.user.phone,
-                                            message="Aula cancelada com sucesso! Seu credito foi estornado.",
-                                            user_id=booking.user_id
-                                        )
-                                    except Exception as msg_error:
-                                        print(f"[WEBHOOK] Erro ao enviar confirmacao: {msg_error}")
-                                else:
-                                    # Nao pode cancelar (menos de 2h)
-                                    try:
-                                        megaapi.send_custom_message(
-                                            phone=booking.user.phone,
-                                            message="Nao e possivel cancelar com menos de 2 horas de antecedencia.",
-                                            user_id=booking.user_id
-                                        )
-                                    except Exception as msg_error:
-                                        print(f"[WEBHOOK] Erro ao enviar aviso: {msg_error}")
-
-                            elif action == 'confirm':
-                                print(f"[WEBHOOK] Booking {booking_id} confirmado via WhatsApp")
-
-                                # Enviar confirmacao
-                                try:
-                                    megaapi.send_custom_message(
-                                        phone=booking.user.phone,
-                                        message=f"Presenca confirmada! Te esperamos as {booking.schedule.start_time.strftime('%H:%M')}.",
-                                        user_id=booking.user_id
-                                    )
-                                except Exception as msg_error:
-                                    print(f"[WEBHOOK] Erro ao enviar confirmacao: {msg_error}")
-                        else:
-                            print(f"[WEBHOOK] Booking {booking_id} nao encontrado")
-
-                except (ValueError, IndexError) as parse_error:
-                    print(f"[WEBHOOK] Erro ao parsear row_id '{row_id}': {parse_error}")
+        # 3. Mensagem de texto livre
+        elif message.get('text') or message.get('conversation'):
+            text = message.get('text', '') or message.get('conversation', '')
+            _handle_text_message(phone, text)
 
         else:
-            # Mensagem de texto normal
-            print(f"[WEBHOOK] Mensagem recebida de {phone}: {message_text[:50]}...")
+            logger.info(f"Tipo de mensagem nao tratado de {phone}")
 
         # Log da mensagem recebida
         log = WhatsAppLog(
@@ -494,15 +417,526 @@ def megaapi_incoming():
         return jsonify({'status': 'ok'}), 200
 
     except Exception as e:
-        print(f"Erro no webhook incoming: {e}")
+        logger.error(f"Erro no webhook incoming: {e}", exc_info=True)
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 
+# ============================================================
+# HANDLERS DE RESPOSTAS INTERATIVAS
+# ============================================================
+
+def _handle_button_reply(phone, button_data):
+    """
+    Processa clique em botao.
+
+    Payload:
+    {
+        "selectedButtonId": "confirm_123",
+        "selectedDisplayText": "Vou comparecer"
+    }
+    """
+    button_id = button_data.get('selectedButtonId', '')
+    logger.info(f"Botao clicado: {button_id} por {phone}")
+
+    if not button_id:
+        return
+
+    # Parse do button_id: action_param
+    parts = button_id.split('_', 1)
+    action = parts[0]
+    param = parts[1] if len(parts) > 1 else ''
+
+    from app.services.megaapi import megaapi, Button
+
+    # --- Acoes de booking ---
+    if action == 'confirm' and param:
+        _confirm_booking_attendance(int(param), phone)
+
+    elif action == 'cancel' and param:
+        _cancel_booking_via_whatsapp(int(param), phone)
+
+    elif action == 'reschedule':
+        _send_available_slots(phone)
+
+    # --- Acoes de retencao ---
+    elif action in ('yes', 'tomorrow') or button_id == 'yes_tomorrow':
+        user = User.query.filter_by(phone=phone).first()
+        if user:
+            megaapi.send_custom_message(
+                phone=phone,
+                message="Que otimo! Te esperamos amanha! Bora treinar!",
+                user_id=user.id
+            )
+            _log_button_interaction(user.id, button_id)
+
+    elif button_id == 'reschedule_me':
+        _send_available_slots(phone)
+
+    elif button_id == 'im_ok':
+        user = User.query.filter_by(phone=phone).first()
+        if user:
+            megaapi.send_custom_message(
+                phone=phone,
+                message="Que bom saber! Quando estiver pronto(a) para voltar, estamos aqui!",
+                user_id=user.id
+            )
+            _log_button_interaction(user.id, button_id)
+
+    elif button_id == 'talk_to_instructor':
+        user = User.query.filter_by(phone=phone).first()
+        if user:
+            megaapi.send_custom_message(
+                phone=phone,
+                message="Vou pedir para seu instrutor entrar em contato com voce. Aguarde!",
+                user_id=user.id
+            )
+            _log_button_interaction(user.id, button_id)
+
+    elif button_id == 'free_personal':
+        user = User.query.filter_by(phone=phone).first()
+        if user:
+            megaapi.send_custom_message(
+                phone=phone,
+                message="Sessao gratis de personal confirmada! "
+                        "Nossa equipe vai entrar em contato para agendar o melhor horario.",
+                user_id=user.id
+            )
+            _log_button_interaction(user.id, button_id)
+
+    elif button_id == 'schedule_now':
+        _send_available_slots(phone)
+
+    elif button_id == 'claim_discount':
+        user = User.query.filter_by(phone=phone).first()
+        if user:
+            megaapi.send_custom_message(
+                phone=phone,
+                message="Desconto de 30% ativado! "
+                        "Nossa equipe vai entrar em contato para finalizar sua renovacao.",
+                user_id=user.id
+            )
+            _log_button_interaction(user.id, button_id)
+
+    elif button_id == 'schedule_call':
+        user = User.query.filter_by(phone=phone).first()
+        if user:
+            megaapi.send_custom_message(
+                phone=phone,
+                message="Ligacao agendada! Nossa equipe vai ligar para voce em breve.",
+                user_id=user.id
+            )
+            _log_button_interaction(user.id, button_id)
+
+    elif button_id == 'cancel_membership':
+        user = User.query.filter_by(phone=phone).first()
+        if user:
+            megaapi.send_custom_message(
+                phone=phone,
+                message="Lamentamos ouvir isso. Um consultor vai entrar em contato "
+                        "para entender melhor e ver como podemos ajudar.",
+                user_id=user.id
+            )
+            _log_button_interaction(user.id, button_id)
+
+    # --- Acoes de boas-vindas ---
+    elif button_id == 'facial_tutorial':
+        user = User.query.filter_by(phone=phone).first()
+        if user:
+            megaapi.send_custom_message(
+                phone=phone,
+                message="Para cadastrar seu rosto:\n"
+                        "1. Acesse seu perfil no app\n"
+                        "2. Clique em 'Cadastrar Face'\n"
+                        "3. Tire uma foto olhando para a camera\n"
+                        "4. Pronto! Agora e so chegar no totem e sorrir!",
+                user_id=user.id
+            )
+
+    elif button_id == 'schedule_evaluation':
+        user = User.query.filter_by(phone=phone).first()
+        if user:
+            megaapi.send_custom_message(
+                phone=phone,
+                message="Para agendar sua avaliacao fisica, fale com a recepcao "
+                        "ou acesse o app e va em 'Agendar Avaliacao'. "
+                        "Te esperamos!",
+                user_id=user.id
+            )
+
+    elif button_id == 'view_training':
+        user = User.query.filter_by(phone=phone).first()
+        if user:
+            megaapi.send_custom_message(
+                phone=phone,
+                message="Acesse seu treino em: /student/my-training\n"
+                        "La voce encontra todos os exercicios do dia com videos!",
+                user_id=user.id
+            )
+
+    # --- Satisfacao ---
+    elif button_id.startswith('satisfaction_') and param:
+        try:
+            rating = int(param)
+            _record_satisfaction_rating(phone, rating)
+        except ValueError:
+            pass
+
+    else:
+        logger.info(f"Acao de botao nao reconhecida: {button_id}")
+
+
+def _handle_list_reply(phone, list_data):
+    """
+    Processa selecao de item em lista.
+
+    Payload:
+    {
+        "singleSelectReply": {
+            "selectedRowId": "slot_5"
+        },
+        "title": "15:00",
+        "description": "Treino Funcional"
+    }
+    """
+    row_id = list_data.get('singleSelectReply', {}).get('selectedRowId', '')
+    if not row_id:
+        row_id = list_data.get('selectedRowId', '')
+
+    logger.info(f"Item de lista selecionado: {row_id} por {phone}")
+
+    if not row_id:
+        return
+
+    parts = row_id.split('_', 1)
+    action = parts[0]
+    param = parts[1] if len(parts) > 1 else ''
+
+    from app.services.megaapi import megaapi
+
+    if action == 'confirm' and param:
+        _confirm_booking_attendance(int(param), phone)
+
+    elif action == 'cancel' and param:
+        _cancel_booking_via_whatsapp(int(param), phone)
+
+    elif action == 'slot' and param:
+        _book_slot_via_whatsapp(int(param), phone)
+
+    elif action == 'satisfaction' and param:
+        try:
+            rating = int(param)
+            _record_satisfaction_rating(phone, rating)
+        except ValueError:
+            pass
+
+    else:
+        logger.info(f"Acao de lista nao reconhecida: {row_id}")
+
+
+def _handle_text_message(phone, text):
+    """
+    Processa mensagem de texto recebida.
+    Chatbot simples com comandos.
+    """
+    text = text.strip().lower()
+    logger.info(f"Mensagem recebida de {phone}: {text}")
+
+    from app.services.megaapi import megaapi, Button
+
+    user = User.query.filter_by(phone=phone).first()
+    user_id = user.id if user else None
+
+    if text in ('oi', 'ola', 'hey', 'bom dia', 'boa tarde', 'boa noite'):
+        _send_welcome_menu(phone, user)
+
+    elif text in ('horarios', 'horario', 'agendar', 'agendar aula'):
+        _send_available_slots(phone)
+
+    elif text in ('meu treino', 'treino', 'ficha'):
+        megaapi.send_custom_message(
+            phone=phone,
+            message="Acesse seu treino personalizado em:\n"
+                    "/student/my-training\n\n"
+                    "La voce encontra todos os exercicios do dia com videos!",
+            user_id=user_id
+        )
+
+    elif text in ('ajuda', 'help', 'menu'):
+        _send_welcome_menu(phone, user)
+
+    elif text in ('creditos', 'credito', 'saldo'):
+        if user:
+            megaapi.send_custom_message(
+                phone=phone,
+                message=f"Ola {user.name.split()[0]}! "
+                        f"Seu saldo atual e de {getattr(user, 'credits', 0)} creditos.",
+                user_id=user_id
+            )
+        else:
+            megaapi.send_custom_message(
+                phone=phone,
+                message="Nao encontrei seu cadastro. "
+                        "Por favor, entre em contato com a recepcao.",
+                user_id=user_id
+            )
+
+    else:
+        logger.info(f"Mensagem nao processada de {phone}: {text[:50]}")
+
+
+# ============================================================
+# ACOES ESPECIFICAS
+# ============================================================
+
+def _confirm_booking_attendance(booking_id, phone):
+    """Confirma presenca em aula via WhatsApp."""
+    from app.services.megaapi import megaapi
+
+    booking = Booking.query.get(booking_id)
+
+    if not booking:
+        logger.error(f"Booking {booking_id} nao encontrado")
+        return
+
+    if booking.user.phone != phone:
+        logger.warning(f"Tentativa de confirmar booking de outro usuario")
+        return
+
+    try:
+        megaapi.send_custom_message(
+            phone=phone,
+            message=f"Presenca confirmada! Te esperamos as {booking.schedule.start_time.strftime('%H:%M')}.",
+            user_id=booking.user_id
+        )
+    except Exception as e:
+        logger.error(f"Erro ao enviar confirmacao: {e}")
+
+    logger.info(f"Booking {booking_id} confirmado por {phone}")
+
+
+def _cancel_booking_via_whatsapp(booking_id, phone):
+    """Cancela booking via WhatsApp."""
+    from app.services.megaapi import megaapi
+
+    booking = Booking.query.get(booking_id)
+
+    if not booking or booking.user.phone != phone:
+        return
+
+    if hasattr(booking, 'can_cancel') and not booking.can_cancel:
+        megaapi.send_custom_message(
+            phone=phone,
+            message="Nao e possivel cancelar com menos de 2 horas de antecedencia. "
+                    "Entre em contato conosco.",
+            user_id=booking.user_id
+        )
+        return
+
+    try:
+        booking.cancel(reason="Cancelado via WhatsApp")
+        logger.info(f"Booking {booking_id} cancelado via WhatsApp")
+
+        megaapi.send_custom_message(
+            phone=phone,
+            message="Aula cancelada com sucesso! Seu credito foi estornado.",
+            user_id=booking.user_id
+        )
+    except Exception as e:
+        logger.error(f"Erro ao cancelar booking {booking_id}: {e}")
+
+
+def _send_available_slots(phone):
+    """Envia lista de horarios disponiveis para reagendamento."""
+    from app.services.megaapi import megaapi
+    from app.models import ClassSchedule
+    from datetime import timedelta
+
+    user = User.query.filter_by(phone=phone).first()
+    if not user:
+        return
+
+    # Buscar aulas disponiveis
+    schedules = ClassSchedule.query.filter(
+        ClassSchedule.is_active == True
+    ).order_by(ClassSchedule.start_time).all()
+
+    if not schedules:
+        megaapi.send_custom_message(
+            phone=phone,
+            message="Nao ha horarios disponiveis no momento. "
+                    "Entre em contato com a recepcao.",
+            user_id=user.id
+        )
+        return
+
+    # Montar lista interativa
+    sections = []
+    rows = []
+    for schedule in schedules[:10]:
+        modality_name = schedule.modality.name if schedule.modality else 'Aula'
+        time_str = schedule.start_time.strftime('%H:%M') if schedule.start_time else '00:00'
+        rows.append({
+            "title": f"{time_str} - {modality_name}",
+            "rowId": f"slot_{schedule.id}",
+            "description": f"com {schedule.instructor.name if schedule.instructor else 'Instrutor'}"
+        })
+
+    if rows:
+        sections.append({
+            "title": "Horarios Disponiveis",
+            "rows": rows
+        })
+
+        megaapi.send_list_message(
+            phone=phone,
+            text="Escolha um horario para sua aula:",
+            button_text="Ver Horarios",
+            sections=sections,
+            user_id=user.id
+        )
+
+
+def _book_slot_via_whatsapp(schedule_id, phone):
+    """Reserva aula via WhatsApp."""
+    from app.services.megaapi import megaapi
+    from app.models import ClassSchedule
+
+    user = User.query.filter_by(phone=phone).first()
+    if not user:
+        return
+
+    schedule = ClassSchedule.query.get(schedule_id)
+    if not schedule:
+        megaapi.send_custom_message(
+            phone=phone,
+            message="Horario nao encontrado. Tente novamente.",
+            user_id=user.id
+        )
+        return
+
+    try:
+        # Criar booking
+        today = datetime.now().date()
+        new_booking = Booking(
+            user_id=user.id,
+            schedule_id=schedule.id,
+            date=today,
+            status=BookingStatus.CONFIRMED
+        )
+        db.session.add(new_booking)
+        db.session.commit()
+
+        modality_name = schedule.modality.name if schedule.modality else 'Aula'
+        time_str = schedule.start_time.strftime('%H:%M') if schedule.start_time else ''
+
+        megaapi.send_custom_message(
+            phone=phone,
+            message=f"Aula agendada com sucesso!\n\n"
+                    f"Modalidade: {modality_name}\n"
+                    f"Horario: {time_str}\n"
+                    f"Data: {today.strftime('%d/%m/%Y')}\n\n"
+                    f"Te esperamos!",
+            user_id=user.id
+        )
+        logger.info(f"Booking criado via WhatsApp: user={user.id} schedule={schedule_id}")
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Erro ao criar booking via WhatsApp: {e}")
+        megaapi.send_custom_message(
+            phone=phone,
+            message="Nao foi possivel agendar. Tente novamente ou entre em contato com a recepcao.",
+            user_id=user.id
+        )
+
+
+def _send_welcome_menu(phone, user=None):
+    """Envia menu de boas-vindas com botoes."""
+    from app.services.megaapi import megaapi, Button
+
+    first_name = user.name.split()[0] if user and user.name else 'voce'
+    user_id = user.id if user else None
+
+    buttons = [
+        Button(id='schedule_now', title='Agendar Aula'),
+        Button(id='view_training', title='Meu Treino'),
+        Button(id='schedule_call', title='Falar Conosco')
+    ]
+
+    megaapi.send_buttons(
+        phone=phone,
+        message=f"Ola {first_name}! Seja bem-vindo(a) a nossa academia!\n\n"
+                f"Como posso ajudar?",
+        buttons=buttons,
+        user_id=user_id
+    )
+
+
+def _record_satisfaction_rating(phone, rating):
+    """Registra avaliacao de satisfacao."""
+    from app.services.megaapi import megaapi
+
+    user = User.query.filter_by(phone=phone).first()
+    if not user:
+        return
+
+    # Registrar no log de automacao
+    log = AutomationLog(
+        user_id=user.id,
+        automation_type=f'SATISFACTION_RATING_{rating}',
+        sent_at=datetime.utcnow()
+    )
+    db.session.add(log)
+    db.session.commit()
+
+    if rating >= 4:
+        megaapi.send_custom_message(
+            phone=phone,
+            message="Obrigado pela avaliacao! Ficamos felizes que esta gostando!",
+            user_id=user.id
+        )
+    elif rating == 3:
+        megaapi.send_custom_message(
+            phone=phone,
+            message="Obrigado pelo feedback! Vamos trabalhar para melhorar sua experiencia.",
+            user_id=user.id
+        )
+    else:
+        megaapi.send_custom_message(
+            phone=phone,
+            message="Lamentamos que sua experiencia nao esteja sendo boa. "
+                    "Um membro da equipe vai entrar em contato para entender melhor.",
+            user_id=user.id
+        )
+        logger.warning(f"Avaliacao baixa ({rating}) de {user.name} (ID: {user.id})")
+
+    logger.info(f"Satisfacao registrada: user={user.id} rating={rating}")
+
+
+def _log_button_interaction(user_id, button_id):
+    """Registra interacao com botao no AutomationLog."""
+    try:
+        log = AutomationLog(
+            user_id=user_id,
+            automation_type=f'BUTTON_CLICK_{button_id}',
+            sent_at=datetime.utcnow(),
+            clicked=True
+        )
+        db.session.add(log)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Erro ao logar interacao de botao: {e}")
+
+
+# ============================================================
+# HEALTH CHECK
+# ============================================================
+
 @webhooks_bp.route('/health', methods=['GET'])
 def health_check():
-    """
-    Health check endpoint para monitoramento
-    """
+    """Health check endpoint para monitoramento."""
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.utcnow().isoformat()

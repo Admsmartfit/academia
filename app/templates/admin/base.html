@@ -100,6 +100,13 @@
             </li>
 
             <li class="nav-item">
+                <a href="{{ url_for('crm.dashboard') }}"
+                    class="nav-link {% if 'crm' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-heartbeat"></i> CRM & Retenção
+                </a>
+            </li>
+
+            <li class="nav-item">
                 <a href="{{ url_for('admin_packages.list_packages') }}"
                     class="nav-link {% if 'packages' in request.endpoint %}active{% endif %}">
                     <i class="fas fa-box"></i> Pacotes

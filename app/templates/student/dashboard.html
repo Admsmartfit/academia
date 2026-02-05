@@ -202,6 +202,94 @@
         </div>
     </div>
 
+    <!-- Reconhecimento Facial -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-shield me-2"></i>Reconhecimento Facial
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if current_user.face_encoding %}
+                    <!-- Estado: Face ja cadastrada -->
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Face cadastrada em {{ current_user.face_registered_at.strftime('%d/%m/%Y %H:%M') if current_user.face_registered_at else 'data desconhecida' }}
+                    </div>
+                    <div class="text-center mb-3">
+                        <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center" style="width: 150px; height: 150px;">
+                            <i class="fas fa-user-check fa-4x text-success"></i>
+                        </div>
+                    </div>
+                    <button class="btn btn-warning w-100" onclick="removeFace()">
+                        <i class="fas fa-trash me-2"></i>Remover Face
+                    </button>
+                    {% else %}
+                    <!-- Estado: Face nao cadastrada -->
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Cadastre sua face para check-in automatico!
+                    </div>
+
+                    <div class="text-center mb-3">
+                        <video id="webcam" width="320" height="240" autoplay playsinline style="display:none;" class="img-thumbnail"></video>
+                        <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+                        <img id="capturedImage" width="320" height="240" style="display:none;" class="img-thumbnail">
+                    </div>
+
+                    <!-- Opcoes de captura -->
+                    <div class="btn-group d-flex mb-3" role="group">
+                        <input type="radio" class="btn-check" name="captureMethod" id="methodUpload" value="upload" checked>
+                        <label class="btn btn-outline-primary" for="methodUpload">
+                            <i class="fas fa-upload me-1"></i>Upload
+                        </label>
+                        <input type="radio" class="btn-check" name="captureMethod" id="methodWebcam" value="webcam">
+                        <label class="btn btn-outline-primary" for="methodWebcam">
+                            <i class="fas fa-camera me-1"></i>Webcam
+                        </label>
+                    </div>
+
+                    <!-- Upload de arquivo -->
+                    <div id="uploadSection">
+                        <input type="file" id="fileInput" accept="image/*" class="form-control">
+                        <small class="form-text text-muted">
+                            Formatos: JPG, PNG | Tamanho max: 5MB | Min. 320x240px
+                        </small>
+                    </div>
+
+                    <!-- Captura via webcam -->
+                    <div id="webcamSection" style="display:none;">
+                        <button class="btn btn-primary w-100 mb-2" onclick="startWebcam()">
+                            <i class="fas fa-video me-2"></i>Iniciar Camera
+                        </button>
+                        <button class="btn btn-success w-100" onclick="capturePhoto()" id="captureBtn" disabled>
+                            <i class="fas fa-camera me-2"></i>Capturar Foto
+                        </button>
+                    </div>
+
+                    <!-- Termo de consentimento -->
+                    <div class="form-check mt-3 mb-3">
+                        <input type="checkbox" class="form-check-input" id="consentCheck">
+                        <label class="form-check-label" for="consentCheck" style="font-size: 0.9em;">
+                            Li e concordo com o Termo de Consentimento de Dados Biometricos (LGPD)
+                        </label>
+                    </div>
+
+                    <!-- Botao de envio -->
+                    <button class="btn btn-lg btn-primary w-100" onclick="enrollFace()" id="enrollBtn" disabled>
+                        <i class="fas fa-check me-2"></i>Cadastrar Face
+                    </button>
+                    {% endif %}
+
+                    <!-- Area de alertas -->
+                    <div id="faceAlerts" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Conquistas -->
     <div class="row mt-4">
         <div class="col-12">
@@ -250,4 +338,5 @@
         });
     });
 </script>
+<script src="{{ url_for('static', filename='js/face-enrollment.js') }}"></script>
 {% endblock %}

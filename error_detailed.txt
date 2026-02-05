@@ -1,0 +1,150 @@
+Traceback (most recent call last):
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: Cannot add a NOT NULL column with default value NULL
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\ralan\academia\run_upgrade.py", line 5, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\flask\cli.py", line 1064, in main
+    cli.main()
+    ~~~~~~~~^^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\click\core.py", line 1406, in main
+    rv = self.invoke(ctx)
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\click\core.py", line 1873, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\click\core.py", line 1873, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\click\core.py", line 1269, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\click\core.py", line 824, in invoke
+    return callback(*args, **kwargs)
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\click\decorators.py", line 34, in new_func
+    return f(get_current_context(), *args, **kwargs)
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\flask\cli.py", line 358, in decorator
+    return __ctx.invoke(f, *args, **kwargs)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\click\core.py", line 824, in invoke
+    return callback(*args, **kwargs)
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\flask_migrate\cli.py", line 150, in upgrade
+    _upgrade(directory, revision, sql, tag, x_arg)
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\flask_migrate\__init__.py", line 111, in wrapped
+    f(*args, **kwargs)
+    ~^^^^^^^^^^^^^^^^^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\flask_migrate\__init__.py", line 200, in upgrade
+    command.upgrade(config, revision, sql=sql, tag=tag)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\alembic\command.py", line 483, in upgrade
+    script.run_env()
+    ~~~~~~~~~~~~~~^^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\alembic\script\base.py", line 545, in run_env
+    util.load_python_file(self.dir, "env.py")
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\alembic\util\pyfiles.py", line 116, in load_python_file
+    module = load_module_py(module_id, path)
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\alembic\util\pyfiles.py", line 136, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 1027, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "C:\Users\ralan\academia\migrations\env.py", line 113, in <module>
+    run_migrations_online()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\ralan\academia\migrations\env.py", line 107, in run_migrations_online
+    context.run_migrations()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 8, in run_migrations
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\alembic\runtime\environment.py", line 969, in run_migrations
+    self.get_context().run_migrations(**kw)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\alembic\runtime\migration.py", line 626, in run_migrations
+    step.migration_fn(**kw)
+    ~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\ralan\academia\migrations\versions\9c64e6536c84_add_default_duration_to_modality.py", line 21, in upgrade
+    with op.batch_alter_table('modalities', schema=None) as batch_op:
+         ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ralan\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 148, in __exit__
+    next(self.gen)
+    ~~~~^^^^^^^^^^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\alembic\operations\base.py", line 410, in batch_alter_table
+    impl.flush()
+    ~~~~~~~~~~^^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\alembic\operations\batch.py", line 115, in flush
+    fn(*arg, **kw)
+    ~~^^^^^^^^^^^^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\alembic\ddl\impl.py", line 388, in add_column
+    self._exec(
+    ~~~~~~~~~~^
+        base.AddColumn(
+        ^^^^^^^^^^^^^^^
+    ...<4 lines>...
+        )
+        ^
+    )
+    ^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\alembic\ddl\impl.py", line 256, in _exec
+    return conn.execute(construct, params)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\sqlalchemy\sql\ddl.py", line 187, in _execute_on_connection
+    return connection._execute_ddl(
+           ~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1530, in _execute_ddl
+    ret = self._execute_context(
+        dialect,
+    ...<4 lines>...
+        compiled,
+    )
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\ralan\academia\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) Cannot add a NOT NULL column with default value NULL
+[SQL: ALTER TABLE modalities ADD COLUMN default_duration INTEGER NOT NULL]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)

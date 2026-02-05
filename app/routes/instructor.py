@@ -17,6 +17,19 @@ def instructor_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+
+def instructor_or_totem_required(f):
+    """Permite acesso para instrutores ou usuarios de terminal (totem)."""
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            abort(403)
+        if current_user.role not in ('instructor', 'totem', 'admin'):
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
+
 @instructor_bp.route('/')
 @instructor_bp.route('/dashboard')
 @login_required
@@ -201,6 +214,46 @@ def log_ems_session(booking_id):
     
     flash(f'Sessão de {booking.user.name} registrada com sucesso!', 'success')
     return redirect(request.referrer or url_for('instructor.dashboard'))
+
+@instructor_bp.route('/totem')
+@login_required
+@instructor_or_totem_required
+def totem_view():
+    """Interface do totem de reconhecimento facial (modo kiosk)."""
+    return render_template('instructor/totem.html')
+
+
+@instructor_bp.route('/training/prescribe')
+@login_required
+@instructor_required
+def training_prescribe():
+    """Interface de prescricao de treino para instrutor."""
+    return render_template('instructor/training/prescribe.html')
+
+
+@instructor_bp.route('/training/list')
+@login_required
+@instructor_required
+def training_list():
+    """Lista de prescricoes de treino do instrutor."""
+    from app.models.training import TrainingPlan
+    plans = TrainingPlan.query.filter_by(
+        instructor_id=current_user.id
+    ).order_by(TrainingPlan.created_at.desc()).all()
+    return render_template('instructor/training/list.html', plans=plans)
+
+
+@instructor_bp.route('/training/<int:plan_id>')
+@login_required
+@instructor_required
+def training_detail(plan_id):
+    """Visualizacao detalhada de um plano de treino."""
+    from app.models.training import TrainingPlan
+    plan = TrainingPlan.query.get_or_404(plan_id)
+    if plan.instructor_id != current_user.id and current_user.role != 'admin':
+        abort(403)
+    return render_template('instructor/training/detail.html', plan=plan)
+
 
 @instructor_bp.route('/validate-checklist/<int:booking_id>', methods=['POST'])
 @login_required

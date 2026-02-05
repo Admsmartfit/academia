@@ -6,7 +6,7 @@ from app.models import ClassSchedule, Modality, User, ScheduleSlotGender, Gender
 from app import db
 from app.routes.admin.dashboard import admin_required
 from app.services.gender_distribution_service import GenderDistributionService
-from datetime import time, datetime, timedelta
+from datetime import time, datetime, timedelta, date
 
 schedules_bp = Blueprint('admin_schedules', __name__, url_prefix='/admin/schedules')
 
@@ -58,24 +58,38 @@ def create_schedule():
             flash('Selecione pelo menos um dia da semana.', 'danger')
             return redirect(url_for('admin_schedules.create_schedule'))
 
-        modality_id = int(request.form['modality_id'])
+        modality = Modality.query.get_or_404(int(request.form['modality_id']))
         instructor_id = int(request.form['instructor_id'])
         capacity = int(request.form['capacity'])
+        duration = modality.default_duration
 
-        # Criar um registro para cada dia selecionado
+        # Criar registros para cada dia selecionado
         created_count = 0
-        for weekday in weekdays_selected:
-            schedule = ClassSchedule(
-                modality_id=modality_id,
-                instructor_id=instructor_id,
-                weekday=int(weekday),
-                start_time=start_time,
-                end_time=end_time,
-                capacity=capacity,
-                is_active=True
-            )
-            db.session.add(schedule)
-            created_count += 1
+        
+        # Converter horários para datetime para cálculos de intervalo
+        dummy_date = date.today()
+        dt_start = datetime.combine(dummy_date, start_time)
+        dt_end = datetime.combine(dummy_date, end_time)
+        
+        # Calcular slots baseados na duração da modalidade
+        current_time = dt_start
+        while current_time + timedelta(minutes=duration) <= dt_end:
+            slot_start = current_time.time()
+            current_time += timedelta(minutes=duration)
+            slot_end = current_time.time()
+            
+            for weekday in weekdays_selected:
+                schedule = ClassSchedule(
+                    modality_id=modality.id,
+                    instructor_id=instructor_id,
+                    weekday=int(weekday),
+                    start_time=slot_start,
+                    end_time=slot_end,
+                    capacity=capacity,
+                    is_active=True
+                )
+                db.session.add(schedule)
+                created_count += 1
 
         db.session.commit()
 

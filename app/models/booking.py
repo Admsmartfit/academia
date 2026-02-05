@@ -85,7 +85,7 @@ class Booking(db.Model):
 
         db.session.commit()
 
-    def checkin(self):
+    def checkin(self, method='manual'):
         """Realiza check-in"""
         self.status = BookingStatus.COMPLETED
         self.checkin_at = datetime.utcnow()
@@ -95,6 +95,76 @@ class Booking(db.Model):
         self.user.xp += self.xp_earned
 
         db.session.commit()
+
+    @staticmethod
+    def auto_checkin_by_face(user_id, recognized_at=None):
+        """
+        Realiza check-in automatico baseado em reconhecimento facial.
+
+        Args:
+            user_id: ID do usuario reconhecido
+            recognized_at: Timestamp do reconhecimento (padrao: now)
+
+        Returns:
+            dict com success, booking, message, xp_earned
+        """
+        from app.models.user import User
+
+        if recognized_at is None:
+            recognized_at = datetime.utcnow()
+
+        user = User.query.get(user_id)
+        if not user:
+            return {
+                'success': False,
+                'booking': None,
+                'message': 'Usuario nao encontrado',
+                'xp_earned': 0
+            }
+
+        today = recognized_at.date() if hasattr(recognized_at, 'date') else recognized_at
+
+        # Buscar booking ativo para hoje
+        booking = Booking.query.filter(
+            Booking.user_id == user_id,
+            Booking.date == today,
+            Booking.status == BookingStatus.CONFIRMED
+        ).first()
+
+        if not booking:
+            return {
+                'success': False,
+                'booking': None,
+                'message': 'Nenhuma aula agendada para hoje',
+                'xp_earned': 0
+            }
+
+        # Verificar se ja fez check-in
+        if booking.status == BookingStatus.COMPLETED:
+            return {
+                'success': False,
+                'booking': booking,
+                'message': 'Check-in ja realizado para esta aula',
+                'xp_earned': 0
+            }
+
+        # Realizar check-in
+        booking.status = BookingStatus.COMPLETED
+        booking.checkin_at = recognized_at
+        booking.xp_earned = 10
+
+        # Atribuir XP
+        user.xp += 10
+        user.face_last_recognized = recognized_at
+
+        db.session.commit()
+
+        return {
+            'success': True,
+            'booking': booking,
+            'message': 'Check-in realizado com sucesso!',
+            'xp_earned': 10
+        }
 
     @staticmethod
     def validate_booking(user, schedule, date, subscription=None):

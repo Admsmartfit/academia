@@ -408,6 +408,32 @@ Instrutor: {instructor_name}"""
             
             db.session.commit()
 
+    # Calcular Health Score (diario as 4h da manha)
+    @scheduler.scheduled_job(CronTrigger(hour=4, minute=0))
+    def calculate_health_scores():
+        with app.app_context():
+            print("[SCHEDULER] Calculando Health Scores...")
+            from app.services.health_score_calculator import HealthScoreCalculator
+            try:
+                calculator = HealthScoreCalculator()
+                results = calculator.calculate_all_students()
+                print(f"[SCHEDULER] Health Scores calculados: {results}")
+            except Exception as e:
+                print(f"[SCHEDULER] Erro ao calcular Health Scores: {e}")
+
+    # Automações de Retenção (diario as 10h da manha)
+    @scheduler.scheduled_job(CronTrigger(hour=10, minute=0))
+    def run_retention_automations():
+        with app.app_context():
+            print("[SCHEDULER] Executando Automações de Retenção...")
+            from app.services.retention_automation import RetentionAutomation
+            try:
+                automation = RetentionAutomation()
+                results = automation.run_daily_automations()
+                print(f"[SCHEDULER] Automações concluídas: {results}")
+            except Exception as e:
+                print(f"[SCHEDULER] Erro nas automações de retenção: {e}")
+
     # Iniciar scheduler
     scheduler.start()
     print("[SCHEDULER] Iniciado com sucesso!")

@@ -23,6 +23,21 @@ from app.models.xp_ledger import XPLedger, XPSourceType
 # Health Screening System
 from app.models.health import HealthScreening, EMSSessionLog, ScreeningType, ScreeningStatus
 
+# Face Recognition
+from app.models.face_recognition import FaceRecognitionLog
+
+# Training / Prescricao de Treino
+from app.models.training import (
+    Exercise, TrainingPlan, WorkoutSession, WorkoutExercise, TrainingSession,
+    MuscleGroup, DifficultyLevel, TrainingGoal
+)
+
+# CRM e Retencao
+from app.models.crm import (
+    Lead, StudentHealthScore, AutomationLog,
+    LeadSource, LeadStatus, RiskLevel
+)
+
 __all__ = [
     'User',
     'Gender',
@@ -59,4 +74,22 @@ __all__ = [
     'EMSSessionLog',
     'ScreeningType',
     'ScreeningStatus',
+    # Face Recognition
+    'FaceRecognitionLog',
+    # Training
+    'Exercise',
+    'TrainingPlan',
+    'WorkoutSession',
+    'WorkoutExercise',
+    'TrainingSession',
+    'MuscleGroup',
+    'DifficultyLevel',
+    'TrainingGoal',
+    # CRM
+    'Lead',
+    'StudentHealthScore',
+    'AutomationLog',
+    'LeadSource',
+    'LeadStatus',
+    'RiskLevel',
 ]

@@ -30,12 +30,19 @@
                             required>
                     </div>
 
-                    <!-- Custo (Creditos) -->
-                    <div class="mb-3">
-                        <label class="form-label">Custo em Creditos (por aula) *</label>
-                        <input type="number" name="credits_cost" class="form-control"
-                            value="{{ modality.credits_cost if modality else 10 }}" min="1" required>
-                        <small class="text-muted">Ex: Musculacao=10, Eletro=30</small>
+                    <!-- Custo e Duração -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Custo em Creditos *</label>
+                            <input type="number" name="credits_cost" class="form-control"
+                                value="{{ modality.credits_cost if modality else 10 }}" min="1" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Duracao Padrao (minutos) *</label>
+                            <input type="number" name="default_duration" class="form-control"
+                                value="{{ modality.default_duration if modality else 60 }}" min="1" required>
+                            <small class="text-muted">Ex: Musculacao=60, Lipo=90</small>
+                        </div>
                     </div>
 
                     <!-- Descricao -->
@@ -76,8 +83,9 @@
                         </div>
                         <div class="col-md-6">
                             <div class="form-check form-switch">
-                                <input type="checkbox" name="requires_gender_segregation" class="form-check-input" id="requires_gender_segregation"
-                                    {{ 'checked' if modality and modality.requires_gender_segregation else '' }}>
+                                <input type="checkbox" name="requires_gender_segregation" class="form-check-input"
+                                    id="requires_gender_segregation" {{ 'checked' if modality and
+                                    modality.requires_gender_segregation else '' }}>
                                 <label class="form-check-label" for="requires_gender_segregation">
                                     <i class="fas fa-venus-mars text-info me-1"></i> Segregacao por Sexo
                                 </label>

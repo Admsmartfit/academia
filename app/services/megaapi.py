@@ -7,6 +7,31 @@ from datetime import datetime
 from app import db
 
 
+from dataclasses import dataclass, field
+
+
+@dataclass
+class Button:
+    """Botao de acao rapida (ate 3 por mensagem)"""
+    id: str
+    title: str  # Max 20 caracteres
+
+
+@dataclass
+class ListSection:
+    """Secao de uma lista interativa"""
+    title: str
+    rows: List[Dict]  # [{'id': '', 'title': '', 'description': ''}]
+
+
+@dataclass
+class ListMessage:
+    """Mensagem com lista (ate 10 opcoes no total)"""
+    body: str
+    button_text: str
+    sections: List[ListSection] = field(default_factory=list)
+
+
 class MegapiService:
     """
     Servico completo de integracao com Megaapi (WhatsApp Business)
@@ -161,6 +186,70 @@ class MegapiService:
             )
 
             raise Exception(f"Erro ao enviar mensagem: {str(e)}")
+
+    def send_buttons(
+        self,
+        phone: str,
+        message: str,
+        buttons: List[Button],
+        user_id: Optional[int] = None
+    ) -> Dict:
+        """
+        Envia mensagem com botoes de acao rapida (max 3)
+        """
+        if len(buttons) > 3:
+            raise ValueError("Maximo de 3 botoes permitido")
+
+        phone = self._format_phone(phone)
+
+        # Formato esperado pela MegaAPI v1 para botoes
+        # Nota: Adaptando conforme o esperado pelo backend da academia
+        payload = {
+            "messageData": {
+                "to": phone,
+                "text": message,
+                "buttons": [
+                    {"buttonId": btn.id, "buttonText": {"displayText": btn.title}, "type": 1}
+                    for btn in buttons
+                ],
+                "headerType": 1
+            }
+        }
+
+        try:
+            url = f"{self.base_url}/sendMessage/{self.instance_key}/buttonsMessage"
+
+            response = requests.post(
+                url,
+                headers=self.headers,
+                json=payload,
+                timeout=30
+            )
+            response.raise_for_status()
+
+            result = response.json()
+
+            self._log_message(
+                phone=phone,
+                template_name='button_message',
+                user_id=user_id,
+                status='sent',
+                message_id=result.get('id'),
+                response_json=result
+            )
+
+            return result
+
+        except requests.exceptions.RequestException as e:
+            self._log_message(
+                phone=phone,
+                template_name='button_message',
+                user_id=user_id,
+                status='failed',
+                error_message=str(e)
+            )
+
+            raise Exception(f"Erro ao enviar button message: {str(e)}")
 
     def send_list_message(
         self,
@@ -330,6 +419,82 @@ class MegapiService:
 
         except:
             return 'unknown'
+
+    def send_template(
+        self,
+        phone: str,
+        template_name: str,
+        language: str = "pt_BR",
+        components: Optional[List[Dict]] = None,
+        user_id: Optional[int] = None
+    ) -> Dict:
+        """
+        Envia template pre-aprovado pelo Meta (formato v2).
+
+        Args:
+            phone: Numero com DDI (ex: 5527999999999)
+            template_name: Nome do template cadastrado no Meta
+            language: Codigo do idioma (padrao: pt_BR)
+            components: Parametros do template
+            user_id: ID do usuario (para log)
+
+        Example:
+            components = [
+                {
+                    "type": "body",
+                    "parameters": [
+                        {"type": "text", "text": "Joao"},
+                        {"type": "text", "text": "15/02/2026"}
+                    ]
+                }
+            ]
+        """
+        phone = self._format_phone(phone)
+
+        payload = {
+            "messageData": {
+                "to": phone,
+                "template": {
+                    "name": template_name,
+                    "language": {"code": language},
+                    "components": components or []
+                }
+            }
+        }
+
+        try:
+            url = f"{self.base_url}/sendMessage/{self.instance_key}/templateMessage"
+
+            response = requests.post(
+                url,
+                headers=self.headers,
+                json=payload,
+                timeout=30
+            )
+            response.raise_for_status()
+
+            result = response.json()
+
+            self._log_message(
+                phone=phone,
+                template_name=template_name,
+                user_id=user_id,
+                status='sent',
+                message_id=result.get('id'),
+                response_json=result
+            )
+
+            return {'success': True, 'message_id': result.get('id'), 'data': result}
+
+        except requests.exceptions.RequestException as e:
+            self._log_message(
+                phone=phone,
+                template_name=template_name,
+                user_id=user_id,
+                status='failed',
+                error_message=str(e)
+            )
+            return {'success': False, 'error': str(e)}
 
     def _format_phone(self, phone: str) -> str:
         """

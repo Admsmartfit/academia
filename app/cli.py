@@ -201,3 +201,99 @@ def register_cli_commands(app):
 
         except Exception as e:
             click.echo(f"Erro: {e}")
+
+    @app.cli.command('seed-exercises')
+    @with_appcontext
+    def seed_exercises():
+        """Popula banco com exercicios basicos"""
+        from app import db
+        from app.models.training import Exercise, MuscleGroup, DifficultyLevel
+
+        exercises_data = [
+            # Peito
+            {'name': 'Supino Reto com Barra', 'muscle_group': MuscleGroup.CHEST,
+             'difficulty_level': DifficultyLevel.INTERMEDIATE, 'equipment_needed': 'Barra, Banco reto',
+             'description': 'Deite no banco reto, segure a barra na largura dos ombros e empurre para cima.'},
+            {'name': 'Supino Inclinado com Halteres', 'muscle_group': MuscleGroup.CHEST,
+             'difficulty_level': DifficultyLevel.INTERMEDIATE, 'equipment_needed': 'Halteres, Banco inclinado',
+             'description': 'Deite no banco inclinado (45 graus) e empurre os halteres para cima.'},
+            {'name': 'Crucifixo com Halteres', 'muscle_group': MuscleGroup.CHEST,
+             'difficulty_level': DifficultyLevel.BEGINNER, 'equipment_needed': 'Halteres, Banco reto',
+             'description': 'Deite no banco, abra os bracos lateralmente com os halteres e junte no alto.'},
+            # Costas
+            {'name': 'Puxada Frontal', 'muscle_group': MuscleGroup.BACK,
+             'difficulty_level': DifficultyLevel.BEGINNER, 'equipment_needed': 'Pulley',
+             'description': 'Segure a barra do pulley com pegada aberta e puxe ate o peito.'},
+            {'name': 'Remada Curvada com Barra', 'muscle_group': MuscleGroup.BACK,
+             'difficulty_level': DifficultyLevel.INTERMEDIATE, 'equipment_needed': 'Barra',
+             'description': 'Incline o tronco, segure a barra e puxe em direcao ao abdomen.'},
+            # Pernas
+            {'name': 'Agachamento Livre', 'muscle_group': MuscleGroup.LEGS,
+             'difficulty_level': DifficultyLevel.INTERMEDIATE, 'equipment_needed': 'Barra, Suporte',
+             'description': 'Posicione a barra nos ombros e agache ate as coxas ficarem paralelas ao chao.'},
+            {'name': 'Leg Press 45', 'muscle_group': MuscleGroup.LEGS,
+             'difficulty_level': DifficultyLevel.BEGINNER, 'equipment_needed': 'Leg Press',
+             'description': 'Sente na maquina, posicione os pes na plataforma e empurre.'},
+            {'name': 'Cadeira Extensora', 'muscle_group': MuscleGroup.LEGS,
+             'difficulty_level': DifficultyLevel.BEGINNER, 'equipment_needed': 'Cadeira Extensora',
+             'description': 'Sente na maquina e estenda as pernas completamente.'},
+            # Ombros
+            {'name': 'Desenvolvimento com Halteres', 'muscle_group': MuscleGroup.SHOULDERS,
+             'difficulty_level': DifficultyLevel.INTERMEDIATE, 'equipment_needed': 'Halteres',
+             'description': 'Sentado, empurre os halteres acima da cabeca.'},
+            {'name': 'Elevacao Lateral', 'muscle_group': MuscleGroup.SHOULDERS,
+             'difficulty_level': DifficultyLevel.BEGINNER, 'equipment_needed': 'Halteres',
+             'description': 'Em pe, eleve os halteres lateralmente ate a altura dos ombros.'},
+            # Bracos
+            {'name': 'Rosca Direta com Barra', 'muscle_group': MuscleGroup.ARMS,
+             'difficulty_level': DifficultyLevel.BEGINNER, 'equipment_needed': 'Barra',
+             'description': 'Em pe, segure a barra com pegada supinada e flexione os cotovelos.'},
+            {'name': 'Triceps Pulley', 'muscle_group': MuscleGroup.ARMS,
+             'difficulty_level': DifficultyLevel.BEGINNER, 'equipment_needed': 'Pulley, Barra reta',
+             'description': 'No pulley, empurre a barra para baixo estendendo os cotovelos.'},
+            # Core
+            {'name': 'Abdominal Crunch', 'muscle_group': MuscleGroup.CORE,
+             'difficulty_level': DifficultyLevel.BEGINNER, 'equipment_needed': 'Colchonete',
+             'description': 'Deite com joelhos flexionados e eleve o tronco em direcao aos joelhos.'},
+            {'name': 'Prancha Isometrica', 'muscle_group': MuscleGroup.CORE,
+             'difficulty_level': DifficultyLevel.BEGINNER, 'equipment_needed': 'Colchonete',
+             'description': 'Apoie-se nos antebracos e pontas dos pes, mantendo o corpo reto.'},
+            # Corpo Inteiro
+            {'name': 'Burpee', 'muscle_group': MuscleGroup.FULL_BODY,
+             'difficulty_level': DifficultyLevel.ADVANCED, 'equipment_needed': 'Nenhum',
+             'description': 'Agache, coloque as maos no chao, pule para posicao de flexao, volte e salte.'},
+        ]
+
+        created = 0
+        skipped = 0
+        for data in exercises_data:
+            existing = Exercise.query.filter_by(name=data['name']).first()
+            if existing:
+                skipped += 1
+                continue
+            exercise = Exercise(**data)
+            db.session.add(exercise)
+            created += 1
+
+        db.session.commit()
+        click.echo(f"Seed concluido: {created} exercicios criados, {skipped} ja existiam.")
+
+    @app.cli.command('calculate-scores')
+    @with_appcontext
+    def calculate_scores():
+        """Calcula health scores de todos os alunos"""
+        from app.services.health_score_calculator import HealthScoreCalculator
+        click.echo("Iniciando cálculo de health scores...")
+        calculator = HealthScoreCalculator()
+        results = calculator.calculate_all_students()
+        click.echo(f"Concluído: {results['total']} processados, {results['updated']} atualizados, {results['critical']} críticos, {results['high_risk']} alto risco.")
+
+    @app.cli.command('run-automations')
+    @with_appcontext
+    def run_automations():
+        """Executa réguas de relacionamento/automações de retenção"""
+        from app.services.retention_automation import RetentionAutomation
+        click.echo("Executando automações de retenção...")
+        automation = RetentionAutomation()
+        results = automation.run_daily_automations()
+        click.echo(f"Concluído: {results}")

@@ -35,7 +35,13 @@ class GenderDistributionService:
         ).count()
 
         if total == 0:
-            return {'male': 0.5, 'female': 0.5, 'total': 0}
+            return {
+                'male': 0.5, 
+                'female': 0.5, 
+                'total': 0,
+                'male_count': 0,
+                'female_count': 0
+            }
 
         male_count = User.query.filter(
             User.role == 'student',

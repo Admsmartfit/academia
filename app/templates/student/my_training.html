@@ -1,0 +1,356 @@
+{% extends "base.html" %}
+
+{% block title %}Meu Treino - Academia{% endblock %}
+
+{% block extra_css %}
+<style>
+    .training-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 0 0 20px 20px;
+        margin: -12px -12px 20px -12px;
+    }
+
+    .student-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .avatar-sm {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .streak-badge {
+        font-size: 1.3em;
+        font-weight: bold;
+    }
+
+    .session-selector {
+        display: flex;
+        overflow-x: auto;
+        gap: 10px;
+        padding: 15px 0;
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 15px;
+    }
+
+    .session-btn {
+        flex-shrink: 0;
+        padding: 8px 20px;
+        border: 2px solid #dee2e6;
+        background: white;
+        border-radius: 20px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s;
+        color: #495057;
+    }
+
+    .session-btn:hover {
+        border-color: #667eea;
+        color: #667eea;
+    }
+
+    .session-btn.active {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+
+    .exercise-card {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        border: 1px solid #eee;
+    }
+
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .exercise-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #667eea;
+        color: white;
+        font-size: 0.85em;
+        font-weight: bold;
+        margin-right: 8px;
+    }
+
+    .exercise-name {
+        font-size: 1.1em;
+        font-weight: bold;
+    }
+
+    .video-thumb-btn {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        border: 2px solid #667eea;
+        background: #e3f2fd;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #667eea;
+        font-size: 1.2em;
+    }
+
+    .video-thumb-btn:hover {
+        background: #667eea;
+        color: white;
+    }
+
+    .exercise-details {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+    }
+
+    .detail-item {
+        flex: 1;
+        text-align: center;
+        padding: 10px 5px;
+        background: #f8f9fa;
+        border-radius: 10px;
+    }
+
+    .detail-label {
+        font-size: 0.75em;
+        color: #6c757d;
+        display: block;
+        text-transform: uppercase;
+    }
+
+    .detail-value {
+        font-size: 1.3em;
+        font-weight: bold;
+        color: #495057;
+    }
+
+    .exercise-notes {
+        margin-top: 8px;
+        padding: 8px 12px;
+        background: #fff3cd;
+        border-radius: 8px;
+        font-size: 0.9em;
+    }
+
+    .no-plan-container {
+        text-align: center;
+        padding: 60px 20px;
+    }
+
+    .no-plan-container i {
+        font-size: 4em;
+        color: #dee2e6;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+    {% if plan %}
+    <!-- Training Header -->
+    <div class="training-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="student-info">
+                <div class="avatar-sm">
+                    <i class="fas fa-user fa-lg"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0">{{ current_user.name }}</h6>
+                    <small style="opacity: 0.8;">{{ plan.goal_label }} | Valido ate {{ plan.valid_until.strftime('%d/%m/%Y') }}</small>
+                </div>
+            </div>
+        </div>
+        {% if plan.instructor %}
+        <div class="mt-2">
+            <small style="opacity: 0.7;">
+                <i class="fas fa-user-tie me-1"></i>Instrutor: {{ plan.instructor.name }}
+            </small>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Session Selector -->
+    {% if plan.workout_sessions|length > 1 %}
+    <div class="session-selector">
+        {% for session in plan.workout_sessions %}
+        <button class="session-btn {% if loop.first %}active{% endif %}"
+                data-session-id="{{ session.id }}"
+                onclick="selectSession(this, {{ session.id }})">
+            {{ session.name }}
+        </button>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Exercises Container -->
+    <div id="exercises-container">
+        {% for session in plan.workout_sessions %}
+        <div class="session-exercises" data-session-id="{{ session.id }}"
+             {% if not loop.first %}style="display:none;"{% endif %}>
+            {% for we in session.exercises %}
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <div>
+                        <span class="exercise-number">{{ loop.index }}</span>
+                        <span class="exercise-name">{{ we.exercise.name }}</span>
+                    </div>
+                    {% if we.exercise.video_url %}
+                    <div class="video-thumb-btn"
+                         onclick="showVideo('{{ we.exercise.video_url }}', '{{ we.exercise.name }}')">
+                        <i class="fas fa-play"></i>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="exercise-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Series</span>
+                        <span class="detail-value">{{ we.sets }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Reps</span>
+                        <span class="detail-value">{{ we.reps_range or '-' }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Desc.</span>
+                        <span class="detail-value">{{ we.rest_seconds or 60 }}s</span>
+                    </div>
+                    {% if we.weight_suggestion %}
+                    <div class="detail-item">
+                        <span class="detail-label">Carga</span>
+                        <span class="detail-value" style="font-size:1em;">{{ we.weight_suggestion }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if we.instructor_notes %}
+                <div class="exercise-notes">
+                    <i class="fas fa-info-circle me-1 text-warning"></i>{{ we.instructor_notes }}
+                </div>
+                {% endif %}
+
+                {% if we.exercise.description %}
+                <div class="mt-2">
+                    <small class="text-muted">{{ we.exercise.description }}</small>
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <p class="text-muted">Nenhum exercicio nesta sessao.</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if plan.notes %}
+    <div class="card mt-3">
+        <div class="card-body">
+            <h6><i class="fas fa-sticky-note me-2"></i>Observacoes do Instrutor</h6>
+            <p class="mb-0 text-muted">{{ plan.notes }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- No active plan -->
+    <div class="no-plan-container">
+        <i class="fas fa-dumbbell"></i>
+        <h4>Nenhum treino prescrito</h4>
+        <p class="text-muted">Seu instrutor ainda nao prescreveu um plano de treino para voce.</p>
+        <a href="{{ url_for('student.dashboard') }}" class="btn btn-primary">
+            <i class="fas fa-home me-2"></i>Voltar ao Dashboard
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Video Modal -->
+<div class="modal fade" id="videoModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="videoTitle">Exercicio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="ratio ratio-16x9">
+                    <iframe id="videoFrame" src="" allowfullscreen></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function selectSession(btn, sessionId) {
+    // Update buttons
+    document.querySelectorAll('.session-btn').forEach(function(b) {
+        b.classList.remove('active');
+    });
+    btn.classList.add('active');
+
+    // Show/hide exercise sections
+    document.querySelectorAll('.session-exercises').forEach(function(el) {
+        el.style.display = 'none';
+    });
+    var target = document.querySelector('.session-exercises[data-session-id="' + sessionId + '"]');
+    if (target) target.style.display = '';
+}
+
+function showVideo(url, title) {
+    var embedUrl = url;
+    // Convert YouTube watch URL to embed
+    if (url.indexOf('youtube.com/watch') !== -1) {
+        var videoId = url.split('v=')[1];
+        if (videoId) {
+            var ampPos = videoId.indexOf('&');
+            if (ampPos !== -1) videoId = videoId.substring(0, ampPos);
+            embedUrl = 'https://www.youtube.com/embed/' + videoId;
+        }
+    } else if (url.indexOf('youtu.be/') !== -1) {
+        var videoId = url.split('youtu.be/')[1];
+        if (videoId) {
+            var ampPos = videoId.indexOf('?');
+            if (ampPos !== -1) videoId = videoId.substring(0, ampPos);
+            embedUrl = 'https://www.youtube.com/embed/' + videoId;
+        }
+    }
+
+    document.getElementById('videoFrame').src = embedUrl;
+    document.getElementById('videoTitle').textContent = title;
+    var modal = new bootstrap.Modal(document.getElementById('videoModal'));
+    modal.show();
+}
+
+// Stop video when modal closes
+document.getElementById('videoModal').addEventListener('hidden.bs.modal', function() {
+    document.getElementById('videoFrame').src = '';
+});
+</script>
+{% endblock %}
