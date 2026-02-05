@@ -173,7 +173,14 @@
         <div>FPS: <span id="fps">0</span></div>
         <div>Ultima captura: <span id="last-capture">--</span></div>
         <div>Status: <span id="connection-status">Conectado</span></div>
-        <button class="btn btn-sm btn-danger mt-2" onclick="exitTotem()">Sair</button>
+        <div class="mt-3 d-flex gap-2">
+            <button class="btn btn-sm btn-secondary" onclick="exitTotem()">
+                <i class="fas fa-compress me-1"></i>Sair Tela Cheia
+            </button>
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-danger">
+                <i class="fas fa-sign-out-alt me-1"></i>Logout
+            </a>
+        </div>
     </div>
 
     <script src="{{ url_for('static', filename='js/totem.js') }}"></script>
