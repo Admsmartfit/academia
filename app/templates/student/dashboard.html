@@ -276,6 +276,81 @@
         color: #FF6B35;
     }
 
+    /* Streak Widget */
+    .streak-widget {
+        background: linear-gradient(135deg, #1E293B, rgba(255, 107, 53, 0.15));
+        border: 1px solid rgba(255, 107, 53, 0.25);
+        border-radius: 14px;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 24px;
+    }
+
+    .streak-fire {
+        font-size: 3rem;
+        line-height: 1;
+        margin-bottom: 8px;
+        filter: drop-shadow(0 0 8px rgba(255, 107, 53, 0.5));
+    }
+
+    .streak-count {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #FF6B35;
+    }
+
+    .streak-label {
+        font-size: 0.85rem;
+        color: #94a3b8;
+    }
+
+    .streak-milestone {
+        display: inline-block;
+        margin-top: 8px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        background: rgba(139, 92, 246, 0.15);
+        color: #a78bfa;
+        border: 1px solid rgba(139, 92, 246, 0.2);
+    }
+
+    /* XP Tip Badge */
+    .xp-tip-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(139, 92, 246, 0.1);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #a78bfa;
+        white-space: nowrap;
+    }
+
+    /* Penalty Alert */
+    .penalty-alert {
+        background: rgba(244, 63, 94, 0.08);
+        border: 1px solid rgba(244, 63, 94, 0.2);
+        border-radius: 10px;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+        font-size: 0.85rem;
+        color: #fda4af;
+    }
+
+    .penalty-alert i {
+        color: #F43F5E;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+
     /* Booking list item */
     .booking-item {
         display: flex;
@@ -395,6 +470,20 @@
                 next_booking.schedule.instructor else 'TBD' }}</span>
             <span class="ms-3"><i class="fas fa-calendar"></i> {{ next_booking.date.strftime('%d/%m') }}</span>
         </div>
+    </div>
+    {% endif %}
+
+    <!-- Streak Widget -->
+    {% if streak and streak > 0 %}
+    <div class="streak-widget">
+        <div class="streak-fire">🔥</div>
+        <div class="streak-count">{{ streak }}</div>
+        <div class="streak-label">{{ 'dia consecutivo' if streak == 1 else 'dias consecutivos' }} treinando!</div>
+        {% if streak >= 7 %}
+        <div class="streak-milestone"><i class="fas fa-bolt me-1"></i>+100 XP de bonus de ofensiva!</div>
+        {% elif streak >= 3 %}
+        <div class="streak-milestone"><i class="fas fa-bolt me-1"></i>+30 XP de bonus de ofensiva!</div>
+        {% endif %}
     </div>
     {% endif %}
 
@@ -522,6 +611,17 @@
                         style="background: #FF6B35; color: white;">Agendar</a>
                 </div>
                 <div class="card-body">
+                    <!-- XP Early Morning Tip -->
+                    <div class="xp-tip-badge mb-3">
+                        <i class="fas fa-sun"></i> Ganhe +13 XP vindo antes das 07:00!
+                    </div>
+
+                    <!-- Penalty Warning -->
+                    <div class="penalty-alert">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span>Faltas sem cancelamento previo reduzem <strong>50 XP</strong>. Cancele com antecedencia!</span>
+                    </div>
+
                     {% if upcoming_bookings %}
                     {% for booking in upcoming_bookings %}
                     <div class="booking-item">

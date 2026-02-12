@@ -84,6 +84,59 @@
                 </div>
             </div>
         </div>
+
+        <!-- Convide um Amigo -->
+        <div class="col-md-8 col-lg-6 mt-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0 text-success"><i class="fas fa-user-plus me-2"></i>Convide um Amigo</h5>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted mb-3">
+                        Compartilhe seu codigo de indicacao e ganhe <strong class="text-success">100 XP</strong> por cada amigo que se cadastrar e ativar um plano!
+                    </p>
+
+                    {% if current_user.referral_code %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase text-muted">Seu codigo de indicacao</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-ticket-alt"></i></span>
+                            <input type="text" class="form-control fw-bold text-center" id="referralCode"
+                                value="{{ current_user.referral_code }}" readonly
+                                style="font-size: 1.1rem; letter-spacing: 2px;">
+                            <button class="btn btn-outline-primary" type="button" id="copyCodeBtn"
+                                onclick="copyReferralCode()">
+                                <i class="fas fa-copy me-1"></i>Copiar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase text-muted">Link de convite</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control form-control-sm" id="referralLink"
+                                value="{{ url_for('auth.register', ref=current_user.referral_code, _external=True) }}" readonly>
+                            <button class="btn btn-success btn-sm" type="button" onclick="copyReferralLink()">
+                                <i class="fas fa-link me-1"></i>Copiar link
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-success mb-0 py-2">
+                        <small>
+                            <i class="fas fa-gift me-1"></i>
+                            Voce ganha <strong>100 XP</strong> por cada indicacao convertida (amigo ativa um plano).
+                        </small>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Complete seu perfil para gerar seu codigo de indicacao.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -104,5 +157,29 @@
             });
         }
     });
+
+    function copyReferralCode() {
+        var input = document.getElementById('referralCode');
+        navigator.clipboard.writeText(input.value).then(function () {
+            var btn = document.getElementById('copyCodeBtn');
+            btn.innerHTML = '<i class="fas fa-check me-1"></i>Copiado!';
+            btn.classList.replace('btn-outline-primary', 'btn-success');
+            setTimeout(function () {
+                btn.innerHTML = '<i class="fas fa-copy me-1"></i>Copiar';
+                btn.classList.replace('btn-success', 'btn-outline-primary');
+            }, 2000);
+        });
+    }
+
+    function copyReferralLink() {
+        var input = document.getElementById('referralLink');
+        navigator.clipboard.writeText(input.value).then(function () {
+            var btn = input.nextElementSibling;
+            btn.innerHTML = '<i class="fas fa-check me-1"></i>Copiado!';
+            setTimeout(function () {
+                btn.innerHTML = '<i class="fas fa-link me-1"></i>Copiar link';
+            }, 2000);
+        });
+    }
 </script>
 {% endblock %}

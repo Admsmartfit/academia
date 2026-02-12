@@ -6,6 +6,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import enum
 import re
+import uuid
 
 
 class UserRole(enum.Enum):
@@ -65,6 +66,9 @@ class User(UserMixin, db.Model):
     # Perfil
     photo_url = db.Column(db.String(255))
 
+    # Indicacao (Referral)
+    referral_code = db.Column(db.String(12), unique=True, nullable=True)
+
     # =========================================================================
     # Campos para Colaboradores (Split Bancario)
     # =========================================================================
@@ -82,6 +86,11 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = db.Column(db.DateTime)
+
+    def generate_referral_code(self):
+        """Gera um codigo de indicacao unico para o usuario"""
+        if not self.referral_code:
+            self.referral_code = uuid.uuid4().hex[:8].upper()
 
     def set_password(self, password):
         """Define a senha do usuario"""

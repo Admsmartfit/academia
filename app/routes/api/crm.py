@@ -218,3 +218,49 @@ def student_history(student_id):
             'clicked': a.clicked
         } for a in automations]
     })
+
+
+@crm_api_bp.route('/nps/average')
+@login_required
+def nps_average():
+    """Retorna a media NPS baseada nos logs de automacao NPS"""
+    if not current_user.is_admin and current_user.role != 'manager':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    # Buscar respostas NPS dos ultimos 90 dias
+    cutoff = datetime.utcnow() - timedelta(days=90)
+    nps_logs = AutomationLog.query.filter(
+        AutomationLog.automation_type == 'NPS_SURVEY',
+        AutomationLog.sent_at >= cutoff,
+        AutomationLog.clicked == True
+    ).all()
+
+    # Mapear respostas para scores (Excelente=10, Boa=8, Regular=5, Ruim=2)
+    score_map = {
+        'nps_excelente': 10,
+        'nps_boa': 8,
+        'nps_regular': 5,
+        'nps_ruim': 2
+    }
+
+    scores = []
+    for log in nps_logs:
+        response = getattr(log, 'response_data', None)
+        if response and response in score_map:
+            scores.append(score_map[response])
+        elif log.clicked:
+            scores.append(7)  # Default para clicados sem resposta especifica
+
+    avg_nps = round(sum(scores) / len(scores), 1) if scores else 0
+    total_responses = len(scores)
+    total_sent = AutomationLog.query.filter(
+        AutomationLog.automation_type == 'NPS_SURVEY',
+        AutomationLog.sent_at >= cutoff
+    ).count()
+
+    return jsonify({
+        'avg_nps': avg_nps,
+        'total_responses': total_responses,
+        'total_sent': total_sent,
+        'response_rate': round(total_responses / total_sent * 100, 1) if total_sent > 0 else 0
+    })

@@ -163,9 +163,30 @@
             </li>
 
             <li class="nav-item">
+                <a href="{{ url_for('admin_split.dashboard') }}"
+                    class="nav-link {% if 'split' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-file-invoice-dollar"></i> Split Bancario
+                </a>
+            </li>
+
+            <li class="nav-item">
                 <a href="{{ url_for('admin_whatsapp.list_templates') }}"
-                    class="nav-link {% if 'whatsapp' in request.endpoint and 'megaapi' not in request.endpoint %}active{% endif %}">
+                    class="nav-link {% if 'whatsapp' in request.endpoint and 'megaapi' not in request.endpoint and request.endpoint != 'admin_whatsapp.list_logs' %}active{% endif %}">
                     <i class="fab fa-whatsapp"></i> WhatsApp
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="{{ url_for('admin_whatsapp.list_logs') }}"
+                    class="nav-link {% if request.endpoint == 'admin_whatsapp.list_logs' %}active{% endif %}">
+                    <i class="fas fa-robot"></i> Logs de Automacao
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="{{ url_for('admin_schedules.gender_management') }}"
+                    class="nav-link {% if request.endpoint == 'admin_schedules.gender_management' %}active{% endif %}">
+                    <i class="fas fa-venus-mars"></i> Gestao de Sexo
                 </a>
             </li>
 

@@ -207,6 +207,54 @@
         background: #D1FAE5; color: #059669; font-weight: 600;
     }
 
+    /* Automation Toggles */
+    .automation-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        margin-bottom: 24px;
+    }
+    .automation-panel h6 { font-weight: 700; margin-bottom: 16px; font-size: 0.95rem; }
+    .automation-toggles { display: flex; gap: 16px; flex-wrap: wrap; }
+    .auto-toggle-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        background: #F8FAFC;
+        border-radius: 10px;
+        border: 1px solid #E2E8F0;
+        flex: 1;
+        min-width: 200px;
+    }
+    .auto-toggle-item .toggle-info { flex: 1; }
+    .auto-toggle-item .toggle-label { font-weight: 600; font-size: 0.85rem; }
+    .auto-toggle-item .toggle-desc { font-size: 0.72rem; color: #94A3B8; }
+    .auto-toggle-item .form-check-input { width: 40px; height: 20px; cursor: pointer; }
+    .auto-toggle-item .form-check-input:checked { background-color: #10B981; border-color: #10B981; }
+
+    /* NPS Card */
+    .nps-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        position: relative;
+        overflow: hidden;
+        text-align: center;
+    }
+    .nps-card::after {
+        content: '';
+        position: absolute;
+        top: 0; left: 0;
+        width: 4px; height: 100%;
+        background: #8B5CF6;
+    }
+    .nps-value { font-size: 2.5rem; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+    .nps-label { font-size: 0.8rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.03em; }
+    .nps-detail { font-size: 0.75rem; color: #94A3B8; margin-top: 8px; }
+
     /* Toast notification */
     .crm-toast {
         position: fixed; bottom: 24px; right: 24px; z-index: 2000;
@@ -219,6 +267,10 @@
     .crm-toast.show { opacity: 1; transform: translateY(0); }
     .crm-toast.success { border-left: 4px solid #10B981; }
     .crm-toast.error { border-left: 4px solid #F43F5E; }
+
+    @media (max-width: 992px) {
+        .automation-toggles { flex-direction: column; }
+    }
 
     @media (max-width: 768px) {
         .kpi-grid { grid-template-columns: repeat(2, 1fr); }
@@ -243,8 +295,45 @@
         </div>
     </div>
 
-    <!-- KPI Cards -->
-    <div class="kpi-grid">
+    <!-- Automation Toggles -->
+    <div class="automation-panel">
+        <h6><i class="fas fa-robot me-2" style="color: #8B5CF6;"></i>Reguas de Automacao</h6>
+        <div class="automation-toggles">
+            <div class="auto-toggle-item">
+                <div class="toggle-info">
+                    <div class="toggle-label"><i class="fas fa-hand-sparkles me-1" style="color: #10B981;"></i>Boas-vindas</div>
+                    <div class="toggle-desc">D+1 novos alunos</div>
+                </div>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="toggleWelcome" checked
+                        onchange="toggleAutomation('welcome', this.checked)">
+                </div>
+            </div>
+            <div class="auto-toggle-item">
+                <div class="toggle-info">
+                    <div class="toggle-label"><i class="fas fa-heart-broken me-1" style="color: #F59E0B;"></i>Recuperacao</div>
+                    <div class="toggle-desc">D+5 / D+10 / D+20 ausentes</div>
+                </div>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="toggleRecovery" checked
+                        onchange="toggleAutomation('recovery', this.checked)">
+                </div>
+            </div>
+            <div class="auto-toggle-item">
+                <div class="toggle-info">
+                    <div class="toggle-label"><i class="fas fa-star me-1" style="color: #06B6D4;"></i>NPS</div>
+                    <div class="toggle-desc">Pesquisa mensal de satisfacao</div>
+                </div>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="toggleNPS" checked
+                        onchange="toggleAutomation('nps', this.checked)">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Cards + NPS -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px;">
         <div class="kpi-card green">
             <i class="fas fa-users kpi-icon"></i>
             <div class="kpi-value" id="kpi-total">-</div>
@@ -264,6 +353,12 @@
             <i class="fas fa-heartbeat kpi-icon"></i>
             <div class="kpi-value" id="kpi-avg" style="color: #06B6D4;">-</div>
             <div class="kpi-label">Score Medio</div>
+        </div>
+        <div class="nps-card">
+            <i class="fas fa-chart-line kpi-icon" style="color: #8B5CF6;"></i>
+            <div class="nps-value" id="nps-avg" style="color: #8B5CF6;">-</div>
+            <div class="nps-label">Media NPS</div>
+            <div class="nps-detail" id="nps-detail">Carregando...</div>
         </div>
     </div>
 
@@ -421,11 +516,14 @@
     document.addEventListener('DOMContentLoaded', function() {
         loadDashboard();
         loadStudents();
+        loadNPS();
+        loadAutomationToggles();
     });
 
     function refreshAll() {
         loadDashboard();
         loadStudents();
+        loadNPS();
     }
 
     // Load KPIs
@@ -686,6 +784,43 @@
         toast.textContent = msg;
         toast.className = 'crm-toast ' + type + ' show';
         setTimeout(function() { toast.classList.remove('show'); }, 4000);
+    }
+
+    // NPS Average
+    function loadNPS() {
+        fetch('/api/crm/nps/average')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var avgEl = document.getElementById('nps-avg');
+                var detailEl = document.getElementById('nps-detail');
+                avgEl.textContent = data.avg_nps > 0 ? data.avg_nps.toFixed(1) : '-';
+                if (data.total_sent > 0) {
+                    detailEl.textContent = data.total_responses + '/' + data.total_sent + ' respostas (' + data.response_rate + '%)';
+                } else {
+                    detailEl.textContent = 'Nenhuma pesquisa enviada';
+                }
+            })
+            .catch(function() {
+                document.getElementById('nps-detail').textContent = 'Erro ao carregar';
+            });
+    }
+
+    // Automation Toggles (persisted in localStorage)
+    function loadAutomationToggles() {
+        var mapping = { welcome: 'toggleWelcome', recovery: 'toggleRecovery', nps: 'toggleNPS' };
+        Object.keys(mapping).forEach(function(key) {
+            var saved = localStorage.getItem('automation_' + key);
+            var el = document.getElementById(mapping[key]);
+            if (el && saved !== null) {
+                el.checked = saved === 'true';
+            }
+        });
+    }
+
+    function toggleAutomation(type, enabled) {
+        localStorage.setItem('automation_' + type, enabled);
+        var label = { welcome: 'Boas-vindas', recovery: 'Recuperacao', nps: 'NPS' }[type] || type;
+        showToast(label + (enabled ? ' ativada' : ' desativada'), 'success');
     }
 </script>
 {% endblock %}

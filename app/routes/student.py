@@ -797,14 +797,23 @@ def profile():
             if gender_str:
                 current_user.gender = Gender.MALE if gender_str == 'male' else Gender.FEMALE
             
+            # Gerar referral_code se ainda nao existe
+            if not current_user.referral_code:
+                current_user.generate_referral_code()
+
             db.session.commit()
             flash('Perfil atualizado com sucesso.', 'success')
         except Exception as e:
             db.session.rollback()
             flash(f'Erro ao atualizar perfil: {str(e)}', 'danger')
-            
+
         return redirect(url_for('student.profile'))
-        
+
+    # Gerar referral_code na primeira visita ao perfil
+    if not current_user.referral_code:
+        current_user.generate_referral_code()
+        db.session.commit()
+
     return render_template('student/profile.html')
 
 
