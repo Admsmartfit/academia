@@ -114,6 +114,45 @@
     </div>
 </header>
 
+<div class="container-fluid bg-light border-bottom mb-4 py-2">
+    <div class="container">
+        <div class="row g-2">
+            <div class="col-md-2">
+                <a href="{{ url_for('instructor.dashboard') }}"
+                    class="btn w-100 {{ 'btn-primary' if request.endpoint == 'instructor.dashboard' else 'btn-outline-dark' }} border-0">
+                    <i class="fas fa-calendar-alt me-1"></i>Agenda
+                </a>
+            </div>
+            <div class="col-md-2">
+                <a href="{{ url_for('instructor.list_students') }}"
+                    class="btn w-100 {{ 'btn-primary' if 'students' in request.endpoint else 'btn-outline-dark' }} border-0">
+                    <i class="fas fa-users me-1"></i>Alunos
+                </a>
+            </div>
+            <div class="col-md-2">
+                <a href="{{ url_for('instructor.list_templates') }}" class="btn w-100 btn-outline-dark border-0">
+                    <i class="fas fa-copy me-1"></i>Modelos
+                </a>
+            </div>
+            <div class="col-md-2">
+                <a href="{{ url_for('instructor.training_prescribe') }}" class="btn w-100 btn-outline-dark border-0">
+                    <i class="fas fa-dumbbell me-1"></i>Prescrever
+                </a>
+            </div>
+            <div class="col-md-2">
+                <a href="{{ url_for('instructor.training_list') }}" class="btn w-100 btn-outline-dark border-0">
+                    <i class="fas fa-list me-1"></i>Historico
+                </a>
+            </div>
+            <div class="col-md-2">
+                <a href="{{ url_for('instructor.totem_view') }}" class="btn w-100 btn-outline-warning border-0">
+                    <i class="fas fa-camera me-1"></i>Totem
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
 <main class="container mb-5">
     <!-- Navegação de Data -->
     <div class="date-nav mb-4">
@@ -201,6 +240,37 @@
                                             class="mb-0 fw-bold {{ 'text-muted text-decoration-line-through' if booking.status.name == 'NO_SHOW' else '' }}">
                                             {{ booking.user.name }}
                                         </p>
+                                        <div class="d-flex gap-1 mt-1">
+                                            {% if booking.user.parq_status %}
+                                            {% if booking.user.parq_status.name == 'APTO' %}
+                                            <span class="badge bg-success" style="font-size: 0.6rem;">PAR-Q OK</span>
+                                            {% elif booking.user.parq_status.name == 'PENDENTE_MEDICO' %}
+                                            <span class="badge bg-warning text-dark" style="font-size: 0.6rem;">PAR-Q:
+                                                ATENTADO PENDENTE</span>
+                                            {% else %}
+                                            <span class="badge bg-danger" style="font-size: 0.6rem;">PAR-Q
+                                                BLOQUEADO</span>
+                                            {% endif %}
+                                            {% else %}
+                                            <span class="badge bg-secondary" style="font-size: 0.6rem;">SEM PAR-Q</span>
+                                            {% endif %}
+
+                                            {% if "FES" in sched.modality.name or "EMS" in sched.modality.name %}
+                                            {% if booking.user.ems_status %}
+                                            {% if booking.user.ems_status.name == 'APTO' %}
+                                            <span class="badge bg-success" style="font-size: 0.6rem;">EMS OK</span>
+                                            {% elif booking.user.ems_status.name == 'BLOQUEADO' %}
+                                            <span class="badge bg-danger" style="font-size: 0.6rem;">EMS
+                                                BLOQUEADO</span>
+                                            {% else %}
+                                            <span class="badge bg-warning text-dark" style="font-size: 0.6rem;">EMS
+                                                PENDENTE</span>
+                                            {% endif %}
+                                            {% else %}
+                                            <span class="badge bg-secondary" style="font-size: 0.6rem;">SEM EMS</span>
+                                            {% endif %}
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 </div>
 

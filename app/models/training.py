@@ -189,3 +189,68 @@ class TrainingSession(db.Model):
 
     def __repr__(self):
         return f'<TrainingSession user={self.user_id} viewed={self.viewed_at}>'
+
+
+# =============================================================================
+# MODELOS DE TEMPLATE (MODELOS DE TREINO)
+# =============================================================================
+
+class TrainingTemplate(db.Model):
+    """Modelo de treino reutilizavel (Template)"""
+    __tablename__ = 'training_templates'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    goal = db.Column(db.Enum(TrainingGoal), default=TrainingGoal.HEALTH)
+    instructor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    is_public = db.Column(db.Boolean, default=True)  # Se outros instrutores podem ver
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relacionamentos
+    instructor = db.relationship('User', foreign_keys=[instructor_id], backref='templates_created')
+    sessions = db.relationship('TemplateSession', backref='template',
+                               cascade='all, delete-orphan',
+                               order_by='TemplateSession.order_in_template')
+
+    def __repr__(self):
+        return f'<TrainingTemplate {self.name}>'
+
+
+class TemplateSession(db.Model):
+    """Sessao dentro de um template (Ex: Treino A)"""
+    __tablename__ = 'template_sessions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    template_id = db.Column(db.Integer, db.ForeignKey('training_templates.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    order_in_template = db.Column(db.Integer, nullable=False, default=1)
+
+    # Relacionamentos
+    exercises = db.relationship('TemplateExercise', backref='session',
+                                cascade='all, delete-orphan',
+                                order_by='TemplateExercise.order_in_session')
+
+    def __repr__(self):
+        return f'<TemplateSession {self.name}>'
+
+
+class TemplateExercise(db.Model):
+    """Exercicio dentro de uma sessao de template"""
+    __tablename__ = 'template_exercises'
+
+    id = db.Column(db.Integer, primary_key=True)
+    template_session_id = db.Column(db.Integer, db.ForeignKey('template_sessions.id'), nullable=False)
+    exercise_id = db.Column(db.Integer, db.ForeignKey('exercises.id'), nullable=False)
+    sets = db.Column(db.Integer, nullable=False, default=3)
+    reps_range = db.Column(db.String(20), nullable=True, default='10-12')
+    rest_seconds = db.Column(db.Integer, nullable=True, default=60)
+    weight_suggestion = db.Column(db.String(50), nullable=True)
+    order_in_session = db.Column(db.Integer, nullable=False, default=1)
+    notes = db.Column(db.Text, nullable=True)
+
+    # Relacionamentos
+    exercise = db.relationship('Exercise')
+
+    def __repr__(self):
+        return f'<TemplateExercise ex={self.exercise_id} sets={self.sets}>'

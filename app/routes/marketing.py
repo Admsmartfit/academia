@@ -50,11 +50,16 @@ def index():
         })
     
     return render_template(
-        'marketing/index.html', 
-        packages=packages, 
+        'marketing/index.html',
+        packages=packages,
         packages_json=packages_json,
-        modalities=modalities, 
+        modalities=modalities,
         top_users=top_users,
         total_xp=total_xp,
         anonymize_name=anonymize_name
     )
+
+
+@marketing_bp.route('/offline')
+def offline():
+    return render_template('offline.html')

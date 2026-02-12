@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline - Biohacking Studio</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0F172A;
+            color: #E2E8F0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+        }
+        .offline-container { max-width: 420px; }
+        .offline-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 2rem;
+            background: #1E293B;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        .offline-icon svg {
+            width: 60px;
+            height: 60px;
+            fill: #FF6B35;
+        }
+        h1 {
+            font-size: 1.75rem;
+            margin-bottom: 1rem;
+            color: #FF6B35;
+        }
+        p {
+            color: #94A3B8;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+        .retry-btn {
+            display: inline-block;
+            padding: 12px 32px;
+            background: #FF6B35;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .retry-btn:hover { background: #e55a2b; }
+        .tips {
+            margin-top: 2.5rem;
+            padding: 1.5rem;
+            background: #1E293B;
+            border-radius: 12px;
+            text-align: left;
+        }
+        .tips h3 {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748B;
+            margin-bottom: 0.75rem;
+        }
+        .tips li {
+            color: #94A3B8;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            list-style: none;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+        .tips li::before {
+            content: "⚡";
+            position: absolute;
+            left: 0;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">
+            <svg viewBox="0 0 24 24">
+                <path d="M19.35 10.04A7.49 7.49 0 0012 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 000 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4s1.79-4 4-4h.71C7.37 7.69 9.48 6 12 6a5.5 5.5 0 015.35 4.16l.34 1.34H19c1.66 0 3 1.34 3 3s-1.34 3-3 3z"/>
+                <path d="M2 2L22 22" stroke="#FF6B35" stroke-width="2" stroke-linecap="round" fill="none"/>
+            </svg>
+        </div>
+
+        <h1>Voce esta offline</h1>
+        <p>Parece que sua conexao caiu. Verifique seu Wi-Fi ou dados moveis e tente novamente.</p>
+
+        <button class="retry-btn" onclick="window.location.reload()">
+            Tentar Novamente
+        </button>
+
+        <div class="tips">
+            <h3>Enquanto isso</h3>
+            <ul>
+                <li>Verifique se o Wi-Fi esta ligado</li>
+                <li>Tente desligar e religar os dados moveis</li>
+                <li>Paginas visitadas antes podem estar em cache</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

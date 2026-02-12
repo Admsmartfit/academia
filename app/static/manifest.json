@@ -1,0 +1,84 @@
+{
+    "name": "Biohacking Studio",
+    "short_name": "BioStudio",
+    "description": "Plataforma de treino com tecnologia FES - Agende aulas, acompanhe XP e conquistas",
+    "start_url": "/student/dashboard",
+    "display": "standalone",
+    "background_color": "#0F172A",
+    "theme_color": "#FF6B35",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/static/icons/icon-72x72.png",
+            "sizes": "72x72",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/static/icons/icon-96x96.png",
+            "sizes": "96x96",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/static/icons/icon-128x128.png",
+            "sizes": "128x128",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/static/icons/icon-144x144.png",
+            "sizes": "144x144",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/static/icons/icon-152x152.png",
+            "sizes": "152x152",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/static/icons/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/static/icons/icon-384x384.png",
+            "sizes": "384x384",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/static/icons/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": ["fitness", "health", "lifestyle"],
+    "shortcuts": [
+        {
+            "name": "Agendar Aula",
+            "short_name": "Agendar",
+            "description": "Agende sua proxima aula",
+            "url": "/student/book",
+            "icons": [{"src": "/static/icons/icon-96x96.png", "sizes": "96x96"}]
+        },
+        {
+            "name": "Meu Treino",
+            "short_name": "Treino",
+            "description": "Ver prescricao de treino",
+            "url": "/student/training",
+            "icons": [{"src": "/static/icons/icon-96x96.png", "sizes": "96x96"}]
+        },
+        {
+            "name": "XP e Creditos",
+            "short_name": "XP",
+            "description": "Ver XP e converter creditos",
+            "url": "/student/xp-credits",
+            "icons": [{"src": "/static/icons/icon-96x96.png", "sizes": "96x96"}]
+        }
+    ]
+}

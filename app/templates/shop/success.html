@@ -2,143 +2,168 @@
 
 {% block title %}Pagamento Confirmado{% endblock %}
 
+{% block extra_css %}
+<style>
+    body.dark-checkout {
+        background-color: #0F172A !important;
+        color: #f1f5f9;
+    }
+    body.dark-checkout .navbar, body.dark-checkout nav {
+        background-color: #1E293B !important;
+    }
+    body.dark-checkout .card {
+        background-color: #1E293B;
+        border: 1px solid rgba(255,255,255,0.06);
+        color: #f1f5f9;
+    }
+
+    .success-hero { text-align: center; padding: 40px 0 20px; }
+    .success-icon {
+        width: 100px; height: 100px; border-radius: 50%;
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 20px;
+        animation: successBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes successBounce {
+        0% { transform: scale(0); opacity: 0; }
+        60% { transform: scale(1.15); }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    .next-step {
+        display: flex; align-items: flex-start; gap: 14px;
+        padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .next-step:last-child { border-bottom: none; }
+    .next-step .step-num {
+        width: 32px; height: 32px; border-radius: 50%;
+        background: rgba(255,107,53,0.15); color: #FF6B35;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.8rem; font-weight: 700; flex-shrink: 0;
+    }
+    .action-btn {
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        padding: 14px; border-radius: 12px; font-weight: 600;
+        text-decoration: none; transition: all 0.2s; font-size: 0.95rem;
+    }
+    .action-btn.primary {
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white;
+    }
+    .action-btn.primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(16,185,129,0.3); }
+    .action-btn.secondary {
+        background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #f1f5f9;
+    }
+    .action-btn.secondary:hover { background: rgba(255,255,255,0.08); color: #f1f5f9; }
+    .summary-row {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .summary-row:last-child { border-bottom: none; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-5">
+<div class="container py-4">
     <div class="row justify-content-center">
-        <div class="col-lg-6 text-center">
-            <!-- Success Animation -->
-            <div class="mb-4">
-                <div class="success-checkmark">
-                    <i class="fas fa-check-circle text-success" style="font-size: 80px;"></i>
+        <div class="col-lg-5 col-md-8">
+            <div class="success-hero">
+                <div class="success-icon">
+                    <i class="fas fa-check" style="font-size: 48px; color: white;"></i>
                 </div>
+                <h2 style="font-weight: 800; color: #10B981; margin-bottom: 8px;">Pagamento Confirmado!</h2>
+                <p style="color: #94A3B8;">
+                    {% if subscription %}Seus creditos ja estao disponiveis!{% else %}Seu pagamento foi processado com sucesso.{% endif %}
+                </p>
             </div>
 
-            <h1 class="h2 text-success mb-3">Pagamento Confirmado!</h1>
-            <p class="lead text-muted mb-4">
-                Seu pagamento foi processado com sucesso.
-                {% if subscription %}
-                Seus creditos ja estao disponiveis!
-                {% endif %}
-            </p>
-
             {% if subscription %}
-            <!-- Resumo da Compra -->
-            <div class="card mb-4 text-start">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0"><i class="fas fa-receipt me-2"></i>Resumo da Compra</h5>
-                </div>
+            <div class="card mb-3">
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-6 mb-3">
-                            <small class="text-muted d-block">Pacote</small>
-                            <strong>{{ subscription.package.name }}</strong>
-                        </div>
-                        <div class="col-6 mb-3">
-                            <small class="text-muted d-block">Valor</small>
-                            <strong>R$ {{ "%.2f"|format(subscription.package.price) }}</strong>
-                        </div>
-                        <div class="col-6 mb-3">
-                            <small class="text-muted d-block">Creditos</small>
-                            <strong class="text-success">
-                                <i class="fas fa-ticket-alt me-1"></i>
-                                {{ subscription.credits_remaining }} aulas
-                            </strong>
-                        </div>
-                        <div class="col-6 mb-3">
-                            <small class="text-muted d-block">Validade</small>
-                            <strong>{{ subscription.end_date.strftime('%d/%m/%Y') }}</strong>
-                        </div>
+                    <div style="font-size: 0.75rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">
+                        <i class="fas fa-receipt me-1"></i>Resumo da Compra
                     </div>
-
+                    <div class="summary-row">
+                        <span style="color: #64748B; font-size: 0.85rem;">Pacote</span>
+                        <span style="font-weight: 600;">{{ subscription.package.name }}</span>
+                    </div>
+                    <div class="summary-row">
+                        <span style="color: #64748B; font-size: 0.85rem;">Valor</span>
+                        <span style="font-weight: 600;">R$ {{ "%.2f"|format(subscription.package.price) }}</span>
+                    </div>
+                    <div class="summary-row">
+                        <span style="color: #64748B; font-size: 0.85rem;">Creditos</span>
+                        <span style="font-weight: 600; color: #10B981;"><i class="fas fa-ticket-alt me-1"></i>{{ subscription.credits_remaining }} aulas</span>
+                    </div>
+                    <div class="summary-row">
+                        <span style="color: #64748B; font-size: 0.85rem;">Validade</span>
+                        <span style="font-weight: 600;">{{ subscription.end_date.strftime('%d/%m/%Y') }}</span>
+                    </div>
                     {% if subscription.package.welcome_xp_bonus and subscription.package.welcome_xp_bonus > 0 %}
-                    <hr>
-                    <div class="alert alert-warning mb-0">
-                        <i class="fas fa-star me-2"></i>
-                        <strong>Bonus de Boas-vindas:</strong>
-                        Voce ganhou {{ subscription.package.welcome_xp_bonus }} XP!
+                    <div style="margin-top: 12px; background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2); border-radius: 8px; padding: 12px; text-align: center;">
+                        <i class="fas fa-star" style="color: #8B5CF6;"></i>
+                        <strong style="color: #8B5CF6;">Bonus:</strong>
+                        <span>+{{ subscription.package.welcome_xp_bonus }} XP!</span>
                     </div>
                     {% endif %}
                 </div>
             </div>
 
-            <!-- Proximos Passos -->
-            <div class="card mb-4 text-start">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-route me-2"></i>Proximos Passos</h5>
-                </div>
+            <div class="card mb-3">
                 <div class="card-body">
-                    <div class="d-flex mb-3">
-                        <div class="flex-shrink-0">
-                            <span class="badge bg-primary rounded-circle p-2">1</span>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <strong>Agende sua primeira aula</strong>
-                            <p class="text-muted small mb-0">Escolha a modalidade e horario que preferir</p>
+                    <div style="font-size: 0.75rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+                        <i class="fas fa-route me-1"></i>Proximos Passos
+                    </div>
+                    <div class="next-step">
+                        <div class="step-num">1</div>
+                        <div>
+                            <strong style="display: block; margin-bottom: 2px;">Agende sua primeira aula</strong>
+                            <span style="color: #64748B; font-size: 0.8rem;">Escolha a modalidade e horario que preferir</span>
                         </div>
                     </div>
-                    <div class="d-flex mb-3">
-                        <div class="flex-shrink-0">
-                            <span class="badge bg-primary rounded-circle p-2">2</span>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <strong>Receba a confirmacao via WhatsApp</strong>
-                            <p class="text-muted small mb-0">Enviaremos lembretes automaticos</p>
+                    <div class="next-step">
+                        <div class="step-num">2</div>
+                        <div>
+                            <strong style="display: block; margin-bottom: 2px;">Receba confirmacao via WhatsApp</strong>
+                            <span style="color: #64748B; font-size: 0.8rem;">Enviaremos lembretes automaticos</span>
                         </div>
                     </div>
-                    <div class="d-flex">
-                        <div class="flex-shrink-0">
-                            <span class="badge bg-primary rounded-circle p-2">3</span>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <strong>Venha treinar!</strong>
-                            <p class="text-muted small mb-0">Chegue 10 minutos antes da sua aula</p>
+                    <div class="next-step">
+                        <div class="step-num">3</div>
+                        <div>
+                            <strong style="display: block; margin-bottom: 2px;">Venha treinar!</strong>
+                            <span style="color: #64748B; font-size: 0.8rem;">Chegue 10 minutos antes da sua aula</span>
                         </div>
                     </div>
                 </div>
             </div>
             {% endif %}
 
-            <!-- Botoes de Acao -->
-            <div class="d-grid gap-2">
-                <a href="{{ url_for('student.book_class') }}" class="btn btn-success btn-lg">
-                    <i class="fas fa-calendar-plus me-2"></i>Agendar Aula Agora
+            <div class="d-grid gap-2 mb-4">
+                <a href="{{ url_for('student.book_class') }}" class="action-btn primary">
+                    <i class="fas fa-calendar-plus"></i>Agendar Aula Agora
                 </a>
-                <a href="{{ url_for('student.my_subscriptions') }}" class="btn btn-outline-primary">
-                    <i class="fas fa-ticket-alt me-2"></i>Ver Minhas Assinaturas
+                <a href="{{ url_for('student.my_subscriptions') }}" class="action-btn secondary">
+                    <i class="fas fa-ticket-alt"></i>Ver Minhas Assinaturas
                 </a>
-                <a href="{{ url_for('student.dashboard') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-home me-2"></i>Ir para o Painel
+                <a href="{{ url_for('student.dashboard') }}" class="action-btn secondary">
+                    <i class="fas fa-home"></i>Ir para o Painel
                 </a>
             </div>
 
-            <!-- Suporte -->
-            <div class="mt-4">
-                <p class="text-muted small">
-                    <i class="fas fa-question-circle me-1"></i>
-                    Duvidas? Entre em contato pelo WhatsApp ou email
-                </p>
+            <div class="text-center" style="color: #475569; font-size: 0.8rem;">
+                <i class="fas fa-question-circle me-1"></i>
+                Duvidas? Entre em contato pelo WhatsApp ou email
             </div>
         </div>
     </div>
 </div>
 
-<style>
-    .success-checkmark {
-        animation: checkmark 0.5s ease-in-out;
-    }
-
-    @keyframes checkmark {
-        0% {
-            transform: scale(0);
-            opacity: 0;
+<script>
+    document.body.classList.add('dark-checkout');
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof showPaymentConfetti === 'function') {
+            setTimeout(showPaymentConfetti, 500);
         }
-        50% {
-            transform: scale(1.2);
-        }
-        100% {
-            transform: scale(1);
-            opacity: 1;
-        }
-    }
-</style>
+    });
+</script>
 {% endblock %}

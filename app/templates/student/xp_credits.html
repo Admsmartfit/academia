@@ -128,8 +128,8 @@
                                     <td class="text-center">
                                         {% if rule.is_available %}
                                         <form action="{{ url_for('student.convert_xp', rule_id=rule.rule_id) }}" method="POST"
-                                              onsubmit="return confirm('Converter {{ rule.xp_required }} XP em {{ rule.credits_granted }} creditos?')">
-                                            <button type="submit" class="btn btn-primary btn-sm">
+                                              onsubmit="return handleXPConvert(this, '{{ rule.xp_required }}', '{{ rule.credits_granted }}')">
+                                            <button type="submit" class="btn btn-primary btn-sm xp-convert-btn">
                                                 <i class="fas fa-exchange-alt me-1"></i>Converter
                                             </button>
                                         </form>
@@ -281,4 +281,20 @@
         </div>
     </div>
 </div>
+
+<script>
+function handleXPConvert(form, xpRequired, creditsGranted) {
+    if (!confirm('Converter ' + xpRequired + ' XP em ' + creditsGranted + ' creditos?')) {
+        return false;
+    }
+    var btn = form.querySelector('.xp-convert-btn');
+    if (typeof showXPConversionAnimation === 'function') {
+        showXPConversionAnimation(btn);
+    }
+    setTimeout(function() {
+        form.submit();
+    }, 1800);
+    return false;
+}
+</script>
 {% endblock %}

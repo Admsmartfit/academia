@@ -19,6 +19,13 @@ class Gender(enum.Enum):
     FEMALE = "female"
 
 
+class ProfessionalType(enum.Enum):
+    """Tipo de profissional para regras de comissao no split."""
+    INSTRUCTOR = "instructor"      # Professor - recebe em No-Show
+    TECHNICIAN = "technician"      # Tecnica de estetica - recebe em No-Show
+    NUTRITIONIST = "nutritionist"  # Nutricionista - NAO recebe em No-Show
+
+
 class User(UserMixin, db.Model):
     """
     Modelo de usuario do sistema
@@ -57,6 +64,16 @@ class User(UserMixin, db.Model):
 
     # Perfil
     photo_url = db.Column(db.String(255))
+
+    # =========================================================================
+    # Campos para Colaboradores (Split Bancario)
+    # =========================================================================
+    # Tipo de profissional (para regras de comissao)
+    professional_type = db.Column(db.Enum(ProfessionalType), nullable=True)
+
+    # Taxa de comissao base do colaborador (override individual)
+    # Se NULL, usa a configuracao do sistema (SplitSettings)
+    base_commission_rate = db.Column(db.Numeric(5, 2), nullable=True)
 
     # Status
     is_active = db.Column(db.Boolean, default=True)

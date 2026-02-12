@@ -1,0 +1,180 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Configuracoes de Split{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>Configuracoes de Split Bancario
+                    </h5>
+                    <a href="{{ url_for('admin_split.dashboard') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-arrow-left me-2"></i>Voltar
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <!-- Valor do Credito -->
+                    <div class="mb-4">
+                        <h6 class="text-primary"><i class="fas fa-coins me-2"></i>Valor do Credito</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">Valor em Reais (R$)</label>
+                                <input type="number" step="0.01" name="credit_value_reais"
+                                       class="form-control" value="{{ settings.credit_value_reais }}" required>
+                                <small class="text-muted">Valor base de cada credito para calculo de comissao</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Splits por Demanda -->
+                    <div class="mb-4">
+                        <h6 class="text-primary"><i class="fas fa-chart-line me-2"></i>Splits por Nivel de Demanda</h6>
+
+                        <!-- Alta Demanda -->
+                        <div class="card bg-danger bg-opacity-10 mb-3">
+                            <div class="card-body">
+                                <h6 class="text-danger"><i class="fas fa-fire me-2"></i>Alta Demanda (Pico)</h6>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Threshold (>)</label>
+                                        <div class="input-group">
+                                            <input type="number" step="0.01" name="high_demand_threshold"
+                                                   class="form-control" value="{{ settings.high_demand_threshold }}" required>
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">% Academia</label>
+                                        <div class="input-group">
+                                            <input type="number" step="0.01" name="high_demand_academy_pct"
+                                                   class="form-control" value="{{ settings.high_demand_academy_pct }}" required>
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">% Colaborador</label>
+                                        <div class="input-group">
+                                            <input type="number" step="0.01" class="form-control"
+                                                   value="{{ settings.high_demand_professional_pct }}" disabled>
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                        <small class="text-muted">Calculado automaticamente</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Demanda Padrao -->
+                        <div class="card bg-warning bg-opacity-10 mb-3">
+                            <div class="card-body">
+                                <h6 class="text-warning"><i class="fas fa-equals me-2"></i>Demanda Padrao</h6>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Faixa</label>
+                                        <input type="text" class="form-control"
+                                               value="{{ settings.low_demand_threshold }}% - {{ settings.high_demand_threshold }}%" disabled>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">% Academia</label>
+                                        <div class="input-group">
+                                            <input type="number" step="0.01" name="standard_demand_academy_pct"
+                                                   class="form-control" value="{{ settings.standard_demand_academy_pct }}" required>
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">% Colaborador</label>
+                                        <div class="input-group">
+                                            <input type="number" step="0.01" class="form-control"
+                                                   value="{{ settings.standard_demand_professional_pct }}" disabled>
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Baixa Demanda -->
+                        <div class="card bg-success bg-opacity-10 mb-3">
+                            <div class="card-body">
+                                <h6 class="text-success"><i class="fas fa-leaf me-2"></i>Baixa Demanda (Ocioso)</h6>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Threshold (<)</label>
+                                        <div class="input-group">
+                                            <input type="number" step="0.01" name="low_demand_threshold"
+                                                   class="form-control" value="{{ settings.low_demand_threshold }}" required>
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">% Academia</label>
+                                        <div class="input-group">
+                                            <input type="number" step="0.01" name="low_demand_academy_pct"
+                                                   class="form-control" value="{{ settings.low_demand_academy_pct }}" required>
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">% Colaborador</label>
+                                        <div class="input-group">
+                                            <input type="number" step="0.01" class="form-control"
+                                                   value="{{ settings.low_demand_professional_pct }}" disabled>
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Job de Sugestao -->
+                    <div class="mb-4">
+                        <h6 class="text-primary"><i class="fas fa-robot me-2"></i>Algoritmo de Sugestao</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="suggestion_job_enabled"
+                                           id="suggestionEnabled" {{ 'checked' if settings.suggestion_job_enabled }}>
+                                    <label class="form-check-label" for="suggestionEnabled">
+                                        Job de sugestao habilitado
+                                    </label>
+                                </div>
+                                <small class="text-muted">Executa todo domingo a noite</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Dias de Analise (Lookback)</label>
+                                <div class="input-group">
+                                    <input type="number" name="suggestion_lookback_days"
+                                           class="form-control" value="{{ settings.suggestion_lookback_days }}" required>
+                                    <span class="input-group-text">dias</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin_split.dashboard') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Salvar Configuracoes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

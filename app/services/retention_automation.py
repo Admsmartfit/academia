@@ -10,13 +10,15 @@ logger = logging.getLogger(__name__)
 class RetentionAutomation:
     """
     Automações de retenção baseadas em réguas de relacionamento.
-    
+
     Réguas implementadas:
     1. Boas-vindas (D+1)
     2. Engajamento (D+15)
     3. Recuperação Leve (Ausente 5 dias)
-    4. Recuperação Crítica (Ausente 10 dias)
+    4. Recuperação Crítica (Ausente 10 dias) - PRD D+10
     5. Última Tentativa (Ausente 20 dias)
+    6. Renovação de Plano (3 dias antes) - PRD
+    7. Pesquisa NPS Mensal - PRD
     """
     
     def __init__(self):
@@ -35,24 +37,32 @@ class RetentionAutomation:
             'engagement_sent': 0,
             'recovery_light_sent': 0,
             'recovery_critical_sent': 0,
-            'last_attempt_sent': 0
+            'last_attempt_sent': 0,
+            'plan_renewal_sent': 0,
+            'nps_sent': 0
         }
-        
+
         # 1. Boas-vindas (usuários cadastrados ontem)
         results['welcome_sent'] = self.send_welcome_messages()
-        
+
         # 2. Engajamento (usuários com 15 dias)
         results['engagement_sent'] = self.send_engagement_survey()
-        
+
         # 3. Recuperação leve (5 dias sem check-in)
         results['recovery_light_sent'] = self.send_light_recovery()
-        
-        # 4. Recuperação crítica (10 dias sem check-in)
+
+        # 4. Recuperação crítica (10 dias sem check-in) - PRD D+10
         results['recovery_critical_sent'] = self.send_critical_recovery()
-        
+
         # 5. Última tentativa (20 dias sem check-in)
         results['last_attempt_sent'] = self.send_last_attempt()
-        
+
+        # 6. Renovação de Plano (3 dias antes) - PRD
+        results['plan_renewal_sent'] = self.send_plan_renewal()
+
+        # 7. Pesquisa NPS Mensal - PRD
+        results['nps_sent'] = self.send_nps_survey()
+
         logger.info(f"Automações concluídas: {results}")
         return results
     
@@ -235,64 +245,58 @@ Quando podemos te esperar?
         return sent_count
     
     def send_critical_recovery(self) -> int:
-        """Recuperação crítica: 10 dias sem check-in."""
-        ten_days_ago = datetime.utcnow() - timedelta(days=10)
-        
+        """Recuperação crítica D+10: PRD botões [Agendar aula agora] [Preciso de ajuda] [Pausar meu plano]."""
         students_critical = db.session.query(User).filter(
             User.role == 'student',
             User.is_active == True,
             User.phone.isnot(None)
         ).all()
-        
+
         sent_count = 0
-        
+
         for student in students_critical:
             from app.models.booking import Booking
             last_booking = Booking.query.filter(
                 Booking.user_id == student.id,
                 Booking.status == 'COMPLETED'
             ).order_by(Booking.checked_in_at.desc()).first()
-            
+
             if not last_booking or not last_booking.checked_in_at:
                 continue
-                
+
             days_absent = (datetime.utcnow() - last_booking.checked_in_at).days
-            
+
             if days_absent == 10:
                 if self._sent_recovery_recently(student.id, days=5):
                     continue
-                
+
                 try:
                     buttons = [
-                        Button(id='talk_to_instructor', title='💬 Falar com instrutor'),
-                        Button(id='free_personal', title='🎁 Sessão grátis'),
-                        Button(id='schedule_now', title='📅 Agendar agora')
+                        Button(id='schedule_now', title='Agendar aula agora'),
+                        Button(id='need_help', title='Preciso de ajuda'),
+                        Button(id='pause_plan', title='Pausar meu plano')
                     ]
-                    
-                    message = f"""
-{student.name.split()[0]}, aqui é da equipe da academia! 
 
-Notei que você não está vindo treinar. Tudo bem com você?
+                    first_name = student.name.split()[0]
+                    message = (f"Oi {first_name}, tudo bem? Notamos que você "
+                               f"não treinou esta semana.\n\n"
+                               f"Estamos aqui para ajudar você a voltar "
+                               f"aos treinos! Escolha uma opção:")
 
-Quero te ajudar a voltar com tudo! Que tal uma sessão gratuita de personal para te motivar?
-
-Conte conosco! 💪❤️
-                    """.strip()
-                    
                     result = megaapi.send_buttons(
                         phone=student.phone,
                         message=message,
                         buttons=buttons,
                         user_id=student.id
                     )
-                    
+
                     if result.get('success'):
                         self._log_automation('RECOVERY_CRITICAL', student.id)
                         sent_count += 1
-                        
+
                 except Exception as e:
                     logger.error(f"Erro em recuperação crítica para {student.id}: {e}")
-        
+
         return sent_count
     
     def send_last_attempt(self) -> int:
@@ -357,6 +361,128 @@ Sua saúde e bem-estar são nossa prioridade! Volte a treinar hoje mesmo! 💪
         
         return sent_count
     
+    def send_plan_renewal(self) -> int:
+        """PRD: Renovação de Plano (3 dias antes do vencimento).
+        Botões: [Renovar agora via PIX] [Falar com consultor] [Lembrar amanhã]
+        """
+        from app.models.subscription import Subscription
+
+        three_days = datetime.utcnow() + timedelta(days=3)
+        target_start = three_days.replace(hour=0, minute=0, second=0)
+        target_end = three_days.replace(hour=23, minute=59, second=59)
+
+        expiring_subs = Subscription.query.filter(
+            Subscription.is_active == True,
+            Subscription.end_date >= target_start,
+            Subscription.end_date <= target_end
+        ).all()
+
+        sent_count = 0
+
+        for sub in expiring_subs:
+            user = sub.user
+            if not user or not user.phone or not user.is_active:
+                continue
+
+            # Evitar duplicatas
+            existing = AutomationLog.query.filter(
+                AutomationLog.user_id == user.id,
+                AutomationLog.automation_type == 'PLAN_RENEWAL',
+                AutomationLog.sent_at >= datetime.utcnow() - timedelta(days=7)
+            ).first()
+            if existing:
+                continue
+
+            try:
+                buttons = [
+                    Button(id='renew_pix', title='Renovar via PIX'),
+                    Button(id='talk_consultant', title='Falar com consultor'),
+                    Button(id='remind_tomorrow', title='Lembrar amanhã')
+                ]
+
+                first_name = user.name.split()[0]
+                message = (f"Olá {first_name}! Seu plano vence em 3 dias. "
+                           f"Renove e continue evoluindo!\n\n"
+                           f"Não perca seu progresso e seus créditos!")
+
+                result = megaapi.send_buttons(
+                    phone=user.phone,
+                    message=message,
+                    buttons=buttons,
+                    user_id=user.id
+                )
+
+                if result.get('success'):
+                    self._log_automation('PLAN_RENEWAL', user.id)
+                    sent_count += 1
+
+            except Exception as e:
+                logger.error(f"Erro em renovação de plano para {user.id}: {e}")
+
+        return sent_count
+
+    def send_nps_survey(self) -> int:
+        """PRD: Pesquisa NPS mensal.
+        Lista: Excelente / Boa / Regular / Ruim
+        Ruim aciona alerta para gerente.
+        """
+        # Enviar NPS para alunos ativos há pelo menos 30 dias
+        # e que não responderam nos últimos 30 dias
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+
+        students = User.query.filter(
+            User.role == 'student',
+            User.is_active == True,
+            User.phone.isnot(None),
+            User.created_at <= thirty_days_ago
+        ).all()
+
+        sent_count = 0
+
+        for student in students:
+            # Verifica se já enviou NPS nos últimos 30 dias
+            existing = AutomationLog.query.filter(
+                AutomationLog.user_id == student.id,
+                AutomationLog.automation_type == 'NPS_SURVEY',
+                AutomationLog.sent_at >= thirty_days_ago
+            ).first()
+            if existing:
+                continue
+
+            try:
+                sections = [
+                    {
+                        "title": "Sua Avaliação",
+                        "rows": [
+                            {'id': 'nps_excelente', 'title': 'Excelente', 'description': 'Estou adorando!'},
+                            {'id': 'nps_boa', 'title': 'Boa', 'description': 'Estou gostando'},
+                            {'id': 'nps_regular', 'title': 'Regular', 'description': 'Pode melhorar'},
+                            {'id': 'nps_ruim', 'title': 'Ruim', 'description': 'Não estou satisfeito'}
+                        ]
+                    }
+                ]
+
+                first_name = student.name.split()[0]
+                text = (f"Olá {first_name}! Como você avalia sua "
+                        f"experiência este mês no studio?")
+
+                result = megaapi.send_list_message(
+                    phone=student.phone,
+                    text=text,
+                    button_text="Avaliar",
+                    sections=sections,
+                    user_id=student.id
+                )
+
+                if result.get('success'):
+                    self._log_automation('NPS_SURVEY', student.id)
+                    sent_count += 1
+
+            except Exception as e:
+                logger.error(f"Erro ao enviar NPS para {student.id}: {e}")
+
+        return sent_count
+
     # ================= MÉTODOS AUXILIARES =================
     
     def _log_automation(self, automation_type: str, user_id: int):

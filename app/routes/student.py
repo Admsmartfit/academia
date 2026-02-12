@@ -8,6 +8,7 @@ from app.models import (
     PaymentStatusEnum, ClassSchedule, User, RecurringBooking, FrequencyType,
     ConversionRule, CreditWallet, ScheduleSlotGender, Gender, ScreeningType
 )
+from app.models.crm import StudentHealthScore
 from app.models.xp_ledger import XPLedger
 from app.services.credit_service import CreditService
 from app.services.gender_distribution_service import GenderDistributionService
@@ -75,6 +76,31 @@ def dashboard():
     # Status da triagem de saúde
     screening_status = current_user.get_screening_status(ScreeningType.PARQ)
 
+    # Health Score
+    health_score = StudentHealthScore.query.filter_by(
+        user_id=current_user.id
+    ).order_by(StudentHealthScore.calculated_at.desc()).first()
+
+    # Streak de dias consecutivos
+    streak = 0
+    if total_classes > 0:
+        recent_bookings = Booking.query.filter(
+            Booking.user_id == current_user.id,
+            Booking.status == BookingStatus.COMPLETED
+        ).order_by(Booking.date.desc()).limit(60).all()
+
+        if recent_bookings:
+            dates = sorted(set(b.date for b in recent_bookings), reverse=True)
+            if dates:
+                current_date = datetime.now().date()
+                for d in dates:
+                    diff = (current_date - d).days
+                    if diff <= 1:
+                        streak += 1
+                        current_date = d
+                    else:
+                        break
+
     return render_template('student/dashboard.html',
                          active_subscriptions=active_subscriptions,
                          total_credits=total_credits,
@@ -86,7 +112,9 @@ def dashboard():
                          pending_payments=pending_payments,
                          user_rank=user_rank,
                          total_classes=total_classes,
-                         screening_status=screening_status)
+                         screening_status=screening_status,
+                         health_score=health_score,
+                         streak=streak)
 
 
 @student_bp.route('/subscriptions')
@@ -377,11 +405,73 @@ def my_bookings():
 def my_training():
     """Visualizacao do treino do aluno (mobile-first)."""
     from app.models.training import TrainingPlan
+
     plan = TrainingPlan.query.filter_by(
         user_id=current_user.id,
         is_active=True
     ).order_by(TrainingPlan.created_at.desc()).first()
-    return render_template('student/my_training.html', plan=plan)
+
+    # Histórico dos últimos 7 treinos (check-ins completados)
+    recent_completed = Booking.query.filter(
+        Booking.user_id == current_user.id,
+        Booking.status == BookingStatus.COMPLETED
+    ).order_by(Booking.date.desc()).limit(7).all()
+
+    # Streak de treinos consecutivos
+    training_streak = 0
+    if recent_completed:
+        dates = sorted(set(b.date for b in recent_completed), reverse=True)
+        current_date = datetime.now().date()
+        for d in dates:
+            diff = (current_date - d).days
+            if diff <= 1:
+                training_streak += 1
+                current_date = d
+            else:
+                break
+
+    return render_template('student/my_training.html',
+                         plan=plan,
+                         recent_completed=recent_completed,
+                         training_streak=training_streak)
+
+
+@student_bp.route('/report-pain', methods=['POST'])
+@login_required
+def report_pain():
+    """Reportar dor/desconforto - notifica instrutor."""
+    from app.models.training import TrainingPlan
+
+    body_part = request.form.get('body_part', 'Não especificado')
+    pain_level = request.form.get('pain_level', '5')
+    description = request.form.get('description', '')
+
+    # Find active plan to get instructor
+    plan = TrainingPlan.query.filter_by(
+        user_id=current_user.id,
+        is_active=True
+    ).first()
+
+    instructor_name = plan.instructor.name if plan and plan.instructor else 'Instrutor'
+
+    # Try to notify instructor via WhatsApp
+    try:
+        from app.services.whatsapp_service import send_whatsapp_message
+        if plan and plan.instructor and plan.instructor.phone:
+            msg = (
+                f"⚠️ *Alerta de Dor/Desconforto*\n\n"
+                f"Aluno: {current_user.name}\n"
+                f"Local: {body_part}\n"
+                f"Intensidade: {pain_level}/10\n"
+                f"Descrição: {description or 'Sem descrição'}\n\n"
+                f"Por favor, entre em contato com o aluno."
+            )
+            send_whatsapp_message(plan.instructor.phone, msg)
+    except Exception:
+        pass  # WhatsApp notification is best-effort
+
+    flash(f'Relato enviado com sucesso! {instructor_name} será notificado.', 'success')
+    return redirect(url_for('student.my_training'))
 
 
 @student_bp.route('/ranking')

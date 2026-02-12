@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastro Facial - {{ student.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-1">
+                            <li class="breadcrumb-item"><a href="{{ url_for('instructor.list_students') }}">Alunos</a>
+                            </li>
+                            <li class="breadcrumb-item"><a
+                                    href="{{ url_for('instructor.student_detail', id=student.id) }}">{{ student.name
+                                    }}</a></li>
+                            <li class="breadcrumb-item active">Cadastro Facial</li>
+                        </ol>
+                    </nav>
+                    <h4 class="mb-0"><i class="fas fa-camera me-2"></i>Cadastro Facial</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-4">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3"
+                                style="width: 50px; height: 50px;">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div>
+                                <strong>{{ student.name }}</strong><br>
+                                <small class="text-muted">{{ student.email }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if student.face_encoding %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i><strong>Face ja cadastrada!</strong>
+                    </div>
+                    {% endif %}
+
+                    <!-- Capture Area -->
+                    <div class="text-center mb-4">
+                        <video id="webcam" width="400" height="300" autoplay playsinline style="display:none;"
+                            class="img-thumbnail"></video>
+                        <canvas id="canvas" width="400" height="300" style="display:none;"></canvas>
+                        <img id="capturedImage" width="400" height="300" style="display:none;" class="img-thumbnail">
+                        <div id="placeholder"
+                            class="border rounded d-inline-flex align-items-center justify-content-center bg-light w-100"
+                            style="max-width: 400px; height: 300px;">
+                            <div class="text-center text-muted">
+                                <i class="fas fa-camera fa-4x mb-3"></i>
+                                <p>Inicie a camera ou escolha um arquivo</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <button class="btn btn-outline-primary w-100"
+                                onclick="document.getElementById('fileInput').click()">
+                                <i class="fas fa-upload me-2"></i>Upload
+                            </button>
+                            <input type="file" id="fileInput" accept="image/*" style="display:none;">
+                        </div>
+                        <div class="col-6">
+                            <button class="btn btn-primary w-100" id="startCamBtn" onclick="startWebcam()">
+                                <i class="fas fa-video me-2"></i>Camera
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="webcamControls" style="display:none;" class="mb-3">
+                        <button class="btn btn-success w-100" onclick="capturePhoto()">
+                            <i class="fas fa-camera me-2"></i>Capturar Agora
+                        </button>
+                    </div>
+
+                    <div id="faceAlerts"></div>
+
+                    <button class="btn btn-lg btn-primary w-100" id="enrollBtn" disabled onclick="enrollFace()">
+                        <i class="fas fa-id-card me-2"></i>Finalizar Cadastro
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let stream = null;
+    let capturedImageData = null;
+    const studentId = {{ student.id }};
+
+    async function startWebcam() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+            const video = document.getElementById('webcam');
+            video.srcObject = stream;
+            video.style.display = 'inline-block';
+            document.getElementById('placeholder').style.display = 'none';
+            document.getElementById('webcamControls').style.display = 'block';
+            document.getElementById('startCamBtn').disabled = true;
+        } catch (err) {
+            alert('Erro ao acessar camera: ' + err.message);
+        }
+    }
+
+    function capturePhoto() {
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, 400, 300);
+        capturedImageData = canvas.toDataURL('image/jpeg');
+
+        const img = document.getElementById('capturedImage');
+        img.src = capturedImageData;
+        img.style.display = 'inline-block';
+        video.style.display = 'none';
+
+        if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+        }
+        document.getElementById('webcamControls').style.display = 'none';
+        document.getElementById('enrollBtn').disabled = false;
+    }
+
+    document.getElementById('fileInput').addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            capturedImageData = e.target.result;
+            const img = document.getElementById('capturedImage');
+            img.src = capturedImageData;
+            img.style.display = 'inline-block';
+            document.getElementById('placeholder').style.display = 'none';
+            document.getElementById('enrollBtn').disabled = false;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    async function enrollFace() {
+        const btn = document.getElementById('enrollBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enviando...';
+
+        try {
+            const response = await fetch(`/instructor/student/${studentId}/face/enroll`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: capturedImageData })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                alert('Sucesso: ' + result.message);
+                window.location.href = `/instructor/student/${studentId}`;
+            } else {
+                alert('Erro: ' + result.error);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-id-card me-2"></i>Finalizar Cadastro';
+            }
+        } catch (err) {
+            alert('Erro de conexao: ' + err.message);
+            btn.disabled = false;
+        }
+    }
+</script>
+{% endblock %}

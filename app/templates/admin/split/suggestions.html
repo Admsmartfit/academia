@@ -1,0 +1,128 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Sugestoes de Split{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="fas fa-lightbulb me-2"></i>Sugestoes de Ajuste de Split
+    </h4>
+    <div class="btn-group">
+        <form method="POST" action="{{ url_for('admin_split.generate_suggestions') }}" class="d-inline">
+            <button type="submit" class="btn btn-outline-primary">
+                <i class="fas fa-sync me-2"></i>Recalcular Sugestoes
+            </button>
+        </form>
+        {% if suggestions %}
+        <form method="POST" action="{{ url_for('admin_split.apply_all_suggestions') }}" class="d-inline">
+            <button type="submit" class="btn btn-success"
+                    onclick="return confirm('Aplicar todas as {{ suggestions|length }} sugestoes?')">
+                <i class="fas fa-check-double me-2"></i>Aplicar Todas
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="alert alert-info">
+    <i class="fas fa-info-circle me-2"></i>
+    O algoritmo analisa a <strong>taxa de ocupacao</strong> dos ultimos 30 dias de cada horario
+    e sugere ajustes de split para otimizar receita e ocupacao.
+</div>
+
+{% if suggestions %}
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Horario</th>
+                        <th>Modalidade</th>
+                        <th>Instrutor</th>
+                        <th>Ocupacao</th>
+                        <th>Split Atual</th>
+                        <th>Split Sugerido</th>
+                        <th>Acoes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in suggestions %}
+                    <tr>
+                        <td>
+                            <strong>{{ s.schedule_info.weekday }}</strong><br>
+                            <small class="text-muted">{{ s.schedule_info.time }}</small>
+                        </td>
+                        <td>{{ s.schedule_info.modality }}</td>
+                        <td>{{ s.schedule_info.instructor }}</td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar
+                                    {% if s.occupancy_rate > 80 %}bg-danger
+                                    {% elif s.occupancy_rate > 40 %}bg-warning
+                                    {% else %}bg-success{% endif %}"
+                                    style="width: {{ s.occupancy_rate }}%">
+                                    {{ "%.0f"|format(s.occupancy_rate) }}%
+                                </div>
+                            </div>
+                            <small class="text-muted">
+                                {% if s.suggested_split.demand_level == 'high' %}
+                                <span class="badge bg-danger">Alta Demanda</span>
+                                {% elif s.suggested_split.demand_level == 'low' %}
+                                <span class="badge bg-success">Baixa Demanda</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">Padrao</span>
+                                {% endif %}
+                            </small>
+                        </td>
+                        <td>
+                            <span class="text-muted">{{ s.current_split.academy_pct|int }}%</span> /
+                            <strong>{{ s.current_split.professional_pct|int }}%</strong>
+                        </td>
+                        <td>
+                            <span class="text-muted">{{ s.suggested_split.academy_pct|int }}%</span> /
+                            <strong class="text-success">{{ s.suggested_split.professional_pct|int }}%</strong>
+                            {% if s.suggested_split.professional_pct > s.current_split.professional_pct %}
+                            <i class="fas fa-arrow-up text-success"></i>
+                            {% elif s.suggested_split.professional_pct < s.current_split.professional_pct %}
+                            <i class="fas fa-arrow-down text-danger"></i>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <form method="POST" action="{{ url_for('admin_split.apply_suggestion', config_id=s.config_id) }}" class="d-inline">
+                                    <button type="submit" class="btn btn-success" title="Aplicar">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('admin_split.reject_suggestion', config_id=s.config_id) }}" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-danger" title="Rejeitar">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </form>
+                                <a href="{{ url_for('admin_split.edit_schedule_split', schedule_id=s.schedule_id) }}"
+                                   class="btn btn-outline-secondary" title="Editar Manualmente">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+        <h5>Nenhuma sugestao pendente</h5>
+        <p class="text-muted">Todos os horarios estao com split otimizado ou definido manualmente.</p>
+        <a href="{{ url_for('admin_split.schedules') }}" class="btn btn-primary">
+            <i class="fas fa-calendar-alt me-2"></i>Ver Horarios
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

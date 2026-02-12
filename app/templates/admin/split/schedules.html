@@ -1,0 +1,87 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Horarios - Split{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="fas fa-calendar-alt me-2"></i>Configuracao de Split por Horario
+    </h4>
+    <a href="{{ url_for('admin_split.dashboard') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Voltar
+    </a>
+</div>
+
+<div class="alert alert-info">
+    <i class="fas fa-info-circle me-2"></i>
+    O split define a divisao de receita entre academia e colaborador.
+    <strong>Exemplo:</strong> Split 40/60 = 40% academia, 60% colaborador.
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if schedules %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Dia</th>
+                        <th>Horario</th>
+                        <th>Modalidade</th>
+                        <th>Instrutor</th>
+                        <th>Ocupacao Media</th>
+                        <th>Split Atual</th>
+                        <th>Acoes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in schedules %}
+                    <tr>
+                        <td><strong>{{ s.schedule.weekday_name }}</strong></td>
+                        <td>{{ s.schedule.start_time.strftime('%H:%M') }} - {{ s.schedule.end_time.strftime('%H:%M') }}</td>
+                        <td>{{ s.schedule.modality.name if s.schedule.modality else 'N/A' }}</td>
+                        <td>{{ s.schedule.instructor.name if s.schedule.instructor else 'N/A' }}</td>
+                        <td>
+                            <div class="progress" style="height: 20px; width: 100px;">
+                                <div class="progress-bar
+                                    {% if s.occupancy > 80 %}bg-danger
+                                    {% elif s.occupancy > 40 %}bg-warning
+                                    {% else %}bg-success{% endif %}"
+                                    style="width: {{ s.occupancy }}%">
+                                    {{ s.occupancy|int }}%
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ (100 - s.split_rate)|int }}%</span>
+                            <span class="badge bg-primary">{{ s.split_rate|int }}%</span>
+                            {% if s.config and s.config.is_manual_override %}
+                            <i class="fas fa-hand-paper text-warning" title="Override manual"></i>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('admin_split.edit_schedule_split', schedule_id=s.schedule.id) }}"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+            <h5>Nenhum horario cadastrado</h5>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="mt-3">
+    <small class="text-muted">
+        <i class="fas fa-hand-paper text-warning"></i> = Split definido manualmente (nao sera alterado pelo algoritmo)
+    </small>
+</div>
+{% endblock %}

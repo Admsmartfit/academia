@@ -133,15 +133,22 @@ def _process_payment_completed(payment, data):
             logger.info(f"User #{user.id} recebeu {xp_bonus} XP de boas-vindas")
 
     try:
-        from app.services.megaapi import megaapi
+        from app.services.megaapi import megaapi, Button
 
         first_name = user.name.split()[0] if user.name else 'Cliente'
+        credits = subscription.credits_remaining
+        validade = subscription.end_date.strftime('%d/%m/%Y')
 
-        megaapi.send_custom_message(
+        buttons = [
+            Button(id='view_schedule', title='Ver horários'),
+            Button(id='book_first_class', title='Agendar primeira aula')
+        ]
+
+        megaapi.send_buttons(
             phone=user.phone,
-            message=f"Ola {first_name}! Seu pagamento foi confirmado. "
-                    f"Voce tem {subscription.credits_remaining} creditos disponiveis "
-                    f"ate {subscription.end_date.strftime('%d/%m/%Y')}. Bora treinar!",
+            message=(f"Pagamento confirmado! Você tem *{credits}* créditos "
+                     f"até *{validade}*. Bora treinar!"),
+            buttons=buttons,
             user_id=user.id
         )
     except Exception as e:
@@ -574,6 +581,82 @@ def _handle_button_reply(phone, button_data):
                 user_id=user.id
             )
 
+    # --- PRD: Recuperação D+10 ---
+    elif button_id == 'need_help':
+        user = User.query.filter_by(phone=phone).first()
+        if user:
+            megaapi.send_custom_message(
+                phone=phone,
+                message="Entendemos! Um instrutor vai entrar em contato "
+                        "para te ajudar a montar um plano que funcione "
+                        "na sua rotina. Aguarde!",
+                user_id=user.id
+            )
+            _log_button_interaction(user.id, button_id)
+
+    elif button_id == 'pause_plan':
+        user = User.query.filter_by(phone=phone).first()
+        if user:
+            megaapi.send_custom_message(
+                phone=phone,
+                message="Pedido de pausa recebido. Um consultor vai entrar "
+                        "em contato para formalizar a pausa do seu plano.",
+                user_id=user.id
+            )
+            _log_button_interaction(user.id, button_id)
+
+    # --- PRD: Renovação de Plano ---
+    elif button_id == 'renew_pix':
+        user = User.query.filter_by(phone=phone).first()
+        if user:
+            megaapi.send_custom_message(
+                phone=phone,
+                message="Acesse a loja para renovar seu plano via PIX:\n"
+                        "/shop/packages\n\n"
+                        "É rápido e seus créditos são liberados na hora!",
+                user_id=user.id
+            )
+            _log_button_interaction(user.id, button_id)
+
+    elif button_id == 'talk_consultant':
+        user = User.query.filter_by(phone=phone).first()
+        if user:
+            megaapi.send_custom_message(
+                phone=phone,
+                message="Um consultor vai entrar em contato em breve "
+                        "para te ajudar com a renovação!",
+                user_id=user.id
+            )
+            _log_button_interaction(user.id, button_id)
+
+    elif button_id == 'remind_tomorrow':
+        user = User.query.filter_by(phone=phone).first()
+        if user:
+            megaapi.send_custom_message(
+                phone=phone,
+                message="Ok! Vamos te lembrar amanhã sobre a renovação.",
+                user_id=user.id
+            )
+            _log_button_interaction(user.id, button_id)
+
+    # --- PRD: Pagamento Confirmado ---
+    elif button_id == 'view_schedule':
+        _send_available_slots(phone)
+
+    elif button_id == 'book_first_class':
+        _send_available_slots(phone)
+
+    # --- PRD: Lembrete 2h - confirm_attendance ---
+    elif button_id == 'confirm_attendance':
+        user = User.query.filter_by(phone=phone).first()
+        if user:
+            megaapi.send_custom_message(
+                phone=phone,
+                message="Presença confirmada! Te esperamos na aula!",
+                user_id=user.id
+            )
+            _log_button_interaction(user.id, button_id)
+
     # --- Satisfacao ---
     elif button_id.startswith('satisfaction_') and param:
         try:
@@ -629,6 +712,10 @@ def _handle_list_reply(phone, list_data):
             _record_satisfaction_rating(phone, rating)
         except ValueError:
             pass
+
+    # PRD NPS responses
+    elif action == 'nps' and param:
+        _handle_nps_response(phone, param)
 
     else:
         logger.info(f"Acao de lista nao reconhecida: {row_id}")
@@ -912,6 +999,64 @@ def _record_satisfaction_rating(phone, rating):
         logger.warning(f"Avaliacao baixa ({rating}) de {user.name} (ID: {user.id})")
 
     logger.info(f"Satisfacao registrada: user={user.id} rating={rating}")
+
+
+def _handle_nps_response(phone, nps_value):
+    """PRD: Processa resposta NPS. Ruim aciona alerta para gerente."""
+    from app.services.megaapi import megaapi
+
+    user = User.query.filter_by(phone=phone).first()
+    if not user:
+        return
+
+    # Registrar NPS
+    log = AutomationLog(
+        user_id=user.id,
+        automation_type=f'NPS_RESPONSE_{nps_value.upper()}',
+        sent_at=datetime.utcnow()
+    )
+    db.session.add(log)
+    db.session.commit()
+
+    nps_map = {
+        'excelente': ('Obrigado! Ficamos muito felizes que está adorando!', False),
+        'boa': ('Obrigado pelo feedback positivo! Vamos continuar melhorando.', False),
+        'regular': ('Agradecemos o feedback! Vamos trabalhar para melhorar sua experiência.', True),
+        'ruim': ('Lamentamos muito. Um gerente vai entrar em contato em até 24h para entender melhor.', True),
+    }
+
+    response_msg, alert_manager = nps_map.get(nps_value, ('Obrigado pelo feedback!', False))
+
+    megaapi.send_custom_message(
+        phone=phone,
+        message=response_msg,
+        user_id=user.id
+    )
+
+    # PRD: Ruim aciona alerta para gerente
+    if alert_manager:
+        try:
+            manager = User.query.filter(
+                User.role.in_(['admin', 'manager']),
+                User.is_active == True,
+                User.phone.isnot(None)
+            ).first()
+
+            if manager:
+                megaapi.send_custom_message(
+                    phone=manager.phone,
+                    message=(f"⚠️ *Alerta NPS*\n\n"
+                             f"Aluno: {user.name}\n"
+                             f"Avaliação: {nps_value.upper()}\n"
+                             f"Telefone: {user.phone}\n\n"
+                             f"Recomendação: agendar ligação em até 24h."),
+                    user_id=manager.id
+                )
+                logger.warning(f"NPS {nps_value} de {user.name} - alerta enviado ao gerente")
+        except Exception as e:
+            logger.error(f"Erro ao alertar gerente sobre NPS: {e}")
+
+    logger.info(f"NPS registrado: user={user.id} valor={nps_value}")
 
 
 def _log_button_interaction(user_id, button_id):

@@ -32,6 +32,17 @@ def create_app(config_name='default'):
         from app.models.user import User
         return User.query.get(int(user_id))
 
+    # Security headers
+    @app.after_request
+    def set_security_headers(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        if not app.debug:
+            response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        return response
+
     # Context processor para templates
     @app.context_processor
     def utility_processor():
@@ -62,9 +73,11 @@ def create_app(config_name='default'):
     from app.routes.health import health_bp
     from app.routes.admin.health import admin_health_bp
     from app.routes.admin.crm import crm_bp
+    from app.routes.admin.split import split_bp
     from app.routes.api.face import face_api_bp
     from app.routes.api.training import training_api_bp
     from app.routes.api.crm import crm_api_bp
+    from app.routes.admin.metrics import metrics_bp
 
     app.register_blueprint(marketing_bp)
     app.register_blueprint(auth_bp)
@@ -87,9 +100,11 @@ def create_app(config_name='default'):
     app.register_blueprint(health_bp)
     app.register_blueprint(admin_health_bp)
     app.register_blueprint(crm_bp)
+    app.register_blueprint(split_bp)
     app.register_blueprint(face_api_bp)
     app.register_blueprint(training_api_bp)
     app.register_blueprint(crm_api_bp)
+    app.register_blueprint(metrics_bp)
 
     # Iniciar scheduler
     if not app.debug or os.getenv('WERKZEUG_RUN_MAIN') == 'true':

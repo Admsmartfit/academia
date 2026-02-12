@@ -1,0 +1,117 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Comissoes{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="fas fa-receipt me-2"></i>Historico de Comissoes
+    </h4>
+    <div class="btn-group">
+        <form method="POST" action="{{ url_for('admin_split.process_commissions') }}" class="d-inline">
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-sync me-2"></i>Processar Pendentes
+            </button>
+        </form>
+        <a href="{{ url_for('admin_split.dashboard') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Voltar
+        </a>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="pending" {{ 'selected' if current_status == 'pending' }}>Pendente</option>
+                    <option value="approved" {{ 'selected' if current_status == 'approved' }}>Aprovada</option>
+                    <option value="paid" {{ 'selected' if current_status == 'paid' }}>Paga</option>
+                    <option value="cancelled" {{ 'selected' if current_status == 'cancelled' }}>Cancelada</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Colaborador</label>
+                <select name="professional_id" class="form-select">
+                    <option value="">Todos</option>
+                    {% for p in professionals %}
+                    <option value="{{ p.id }}" {{ 'selected' if current_professional == p.id }}>{{ p.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter me-2"></i>Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Lista de Comissoes -->
+<div class="card">
+    <div class="card-body">
+        {% if commissions %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Data</th>
+                        <th>Colaborador</th>
+                        <th>Cliente</th>
+                        <th>Status Booking</th>
+                        <th>Valor Bruto</th>
+                        <th>Split</th>
+                        <th>Valor Liquido</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in commissions %}
+                    <tr>
+                        <td>#{{ c.id }}</td>
+                        <td>{{ c.processed_at.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ c.professional.name }}</td>
+                        <td>{{ c.booking.user.name if c.booking and c.booking.user else 'N/A' }}</td>
+                        <td>
+                            {% if c.booking_status == 'COMPLETED' %}
+                            <span class="badge bg-success">Realizado</span>
+                            {% elif c.booking_status == 'NO_SHOW' %}
+                            <span class="badge bg-warning text-dark">No-Show</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ c.booking_status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>R$ {{ "%.2f"|format(c.credit_value) }}</td>
+                        <td>{{ c.academy_percentage|int }}/{{ c.professional_percentage|int }}</td>
+                        <td class="fw-bold">R$ {{ "%.2f"|format(c.amount_professional) }}</td>
+                        <td>
+                            {% if c.status.value == 'pending' %}
+                            <span class="badge bg-warning text-dark">Pendente</span>
+                            {% elif c.status.value == 'approved' %}
+                            <span class="badge bg-info">Aprovada</span>
+                            {% elif c.status.value == 'paid' %}
+                            <span class="badge bg-success">Paga</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ c.status.value }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+            <h5>Nenhuma comissao encontrada</h5>
+            <p class="text-muted">Ajuste os filtros ou processe os bookings pendentes.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

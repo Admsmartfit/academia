@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+
+{% block title %}Metricas Estrategicas - Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .metrics-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .metrics-header h3 { margin: 0; font-weight: 700; }
+
+    /* KPI Grid */
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+
+    .kpi-card {
+        background: white; border-radius: 14px; padding: 18px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        position: relative; overflow: hidden;
+        transition: box-shadow 0.2s;
+    }
+    .kpi-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+
+    .kpi-card .kpi-icon {
+        width: 36px; height: 36px; border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.95rem; color: white; margin-bottom: 10px;
+    }
+    .kpi-card .kpi-label { font-size: 0.72rem; font-weight: 600; color: #64748B; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+    .kpi-card .kpi-value { font-size: 1.8rem; font-weight: 800; color: #0F172A; line-height: 1; }
+    .kpi-card .kpi-unit { font-size: 0.8rem; font-weight: 600; color: #94A3B8; }
+    .kpi-card .kpi-trend {
+        font-size: 0.7rem; font-weight: 700; padding: 2px 8px;
+        border-radius: 10px; display: inline-flex; align-items: center; gap: 3px;
+        margin-top: 6px;
+    }
+    .kpi-card .kpi-trend.positive { background: #D1FAE5; color: #059669; }
+    .kpi-card .kpi-trend.negative { background: #FEE2E2; color: #DC2626; }
+    .kpi-card .kpi-trend.neutral { background: #F1F5F9; color: #64748B; }
+
+    /* Progress bar vs target */
+    .kpi-progress { margin-top: 10px; }
+    .kpi-progress .progress-labels {
+        display: flex; justify-content: space-between;
+        font-size: 0.62rem; color: #94A3B8; margin-bottom: 3px;
+    }
+    .kpi-progress .progress-bar-bg {
+        height: 5px; background: #F1F5F9; border-radius: 3px; overflow: hidden;
+    }
+    .kpi-progress .progress-bar-fill {
+        height: 100%; border-radius: 3px; transition: width 0.6s ease;
+    }
+
+    /* Charts section */
+    .charts-row { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .chart-card {
+        background: white; border-radius: 14px; padding: 20px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .chart-card h5 { font-size: 0.85rem; font-weight: 700; margin-bottom: 16px; color: #1E293B; }
+
+    /* Target table */
+    .target-table { width: 100%; font-size: 0.78rem; }
+    .target-table th { padding: 8px 10px; color: #64748B; font-weight: 600; border-bottom: 1px solid #F1F5F9; text-align: left; }
+    .target-table td { padding: 8px 10px; border-bottom: 1px solid #F8FAFC; }
+    .target-table .metric-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .target-table .baseline { color: #94A3B8; }
+    .target-table .target { font-weight: 700; }
+    .target-table .achieved { color: #10B981; }
+    .target-table .not-achieved { color: #F43F5E; }
+
+    /* Loading state */
+    .loading-overlay {
+        position: absolute; inset: 0; background: rgba(255,255,255,0.8);
+        display: flex; align-items: center; justify-content: center;
+        z-index: 10;
+    }
+    .spinner { width: 24px; height: 24px; border: 3px solid #F1F5F9; border-top-color: #FF6B35; border-radius: 50%; animation: spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 991px) {
+        .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+        .charts-row { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="metrics-header">
+        <div>
+            <h3><i class="fas fa-chart-line me-2" style="color: #FF6B35;"></i>Metricas Estrategicas</h3>
+            <small style="color: #94A3B8;">PRD v3 - 8 KPIs de impacto com metas e tendencias</small>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+            </a>
+            <button class="btn btn-sm" style="background: #FF6B35; color: white;" onclick="loadKPIs()">
+                <i class="fas fa-sync-alt me-1"></i>Atualizar
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Grid -->
+    <div class="kpi-grid" id="kpiGrid">
+        <!-- Populated by JS -->
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-row">
+        <div class="chart-card">
+            <h5><i class="fas fa-chart-area me-2" style="color: #06B6D4;"></i>Tendencia Mensal (6 meses)</h5>
+            <canvas id="trendChart" height="260"></canvas>
+        </div>
+
+        <div class="chart-card">
+            <h5><i class="fas fa-bullseye me-2" style="color: #FF6B35;"></i>Metas vs Atual</h5>
+            <table class="target-table" id="targetTable">
+                <thead>
+                    <tr>
+                        <th>Metrica</th>
+                        <th>Baseline</th>
+                        <th>Meta 3m</th>
+                        <th>Atual</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Revenue + Conversion Chart -->
+    <div class="charts-row">
+        <div class="chart-card">
+            <h5><i class="fas fa-dollar-sign me-2" style="color: #10B981;"></i>Revenue Mensal</h5>
+            <canvas id="revenueChart" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+            <h5><i class="fas fa-exchange-alt me-2" style="color: #8B5CF6;"></i>Conversao Lead > Aluno</h5>
+            <canvas id="conversionChart" height="200"></canvas>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+var trendChart = null;
+var revenueChart = null;
+var conversionChart = null;
+
+function loadKPIs() {
+    fetch('{{ url_for("admin_metrics.get_kpis") }}')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        renderKPICards(data.kpis);
+        renderTargetTable(data.kpis);
+    });
+
+    fetch('{{ url_for("admin_metrics.get_trends") }}')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        renderTrendChart(data.months);
+        renderRevenueChart(data.months);
+        renderConversionChart(data.months);
+    });
+}
+
+function renderKPICards(kpis) {
+    var grid = document.getElementById('kpiGrid');
+    var html = '';
+
+    kpis.forEach(function(kpi) {
+        var trendClass = 'neutral';
+        var trendIcon = 'fas fa-minus';
+        var trendVal = kpi.trend || 0;
+
+        if (trendVal !== 0) {
+            if (kpi.lower_is_better) {
+                trendClass = trendVal > 0 ? 'positive' : 'negative';
+            } else {
+                trendClass = trendVal > 0 ? 'positive' : 'negative';
+            }
+            trendIcon = trendVal > 0 ? 'fas fa-arrow-up' : 'fas fa-arrow-down';
+        }
+
+        // Progress vs target (3 month)
+        var progressPct = 0;
+        if (kpi.lower_is_better) {
+            if (kpi.baseline > kpi.target_3m) {
+                progressPct = Math.min(100, Math.max(0, ((kpi.baseline - kpi.value) / (kpi.baseline - kpi.target_3m)) * 100));
+            }
+        } else {
+            if (kpi.target_3m > kpi.baseline) {
+                progressPct = Math.min(100, Math.max(0, ((kpi.value - kpi.baseline) / (kpi.target_3m - kpi.baseline)) * 100));
+            } else {
+                progressPct = kpi.value > 0 ? 100 : 0;
+            }
+        }
+
+        html += '<div class="kpi-card">' +
+            '<div class="kpi-icon" style="background:' + kpi.color + ';">' +
+                '<i class="' + kpi.icon + '"></i>' +
+            '</div>' +
+            '<div class="kpi-label">' + kpi.label + '</div>' +
+            '<div>' +
+                '<span class="kpi-value">' + kpi.value + '</span>' +
+                '<span class="kpi-unit">' + kpi.unit + '</span>' +
+            '</div>' +
+            (trendVal !== 0 ? '<span class="kpi-trend ' + trendClass + '">' +
+                '<i class="' + trendIcon + '"></i> ' +
+                Math.abs(trendVal) + kpi.unit +
+            '</span>' : '') +
+            '<div class="kpi-progress">' +
+                '<div class="progress-labels">' +
+                    '<span>Baseline: ' + kpi.baseline + kpi.unit + '</span>' +
+                    '<span>Meta 3m: ' + kpi.target_3m + kpi.unit + '</span>' +
+                '</div>' +
+                '<div class="progress-bar-bg">' +
+                    '<div class="progress-bar-fill" style="width:' + progressPct + '%;background:' + kpi.color + ';"></div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    });
+
+    grid.innerHTML = html;
+}
+
+function renderTargetTable(kpis) {
+    var tbody = document.querySelector('#targetTable tbody');
+    var html = '';
+
+    kpis.forEach(function(kpi) {
+        var achieved = kpi.lower_is_better
+            ? kpi.value <= kpi.target_3m
+            : kpi.value >= kpi.target_3m;
+
+        html += '<tr>' +
+            '<td><span class="metric-dot" style="background:' + kpi.color + ';"></span>' + kpi.label + '</td>' +
+            '<td class="baseline">' + kpi.baseline + kpi.unit + '</td>' +
+            '<td class="target">' + kpi.target_3m + kpi.unit + '</td>' +
+            '<td class="' + (achieved ? 'achieved' : 'not-achieved') + '">' +
+                '<strong>' + kpi.value + kpi.unit + '</strong> ' +
+                (achieved ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-times-circle"></i>') +
+            '</td>' +
+        '</tr>';
+    });
+
+    tbody.innerHTML = html;
+}
+
+function renderTrendChart(months) {
+    var ctx = document.getElementById('trendChart').getContext('2d');
+    if (trendChart) trendChart.destroy();
+
+    trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: months.map(function(m) { return m.label; }),
+            datasets: [
+                {
+                    label: 'Novos Alunos',
+                    data: months.map(function(m) { return m.new_students; }),
+                    borderColor: '#06B6D4',
+                    backgroundColor: 'rgba(6,182,212,0.08)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#06B6D4'
+                },
+                {
+                    label: 'Leads Convertidos',
+                    data: months.map(function(m) { return m.leads_won; }),
+                    borderColor: '#10B981',
+                    backgroundColor: 'rgba(16,185,129,0.08)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#10B981'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { font: { size: 11 } } }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#F1F5F9' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+}
+
+function renderRevenueChart(months) {
+    var ctx = document.getElementById('revenueChart').getContext('2d');
+    if (revenueChart) revenueChart.destroy();
+
+    revenueChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: months.map(function(m) { return m.label; }),
+            datasets: [{
+                label: 'Revenue (R$)',
+                data: months.map(function(m) { return m.revenue; }),
+                backgroundColor: '#10B981',
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            return 'R$ ' + ctx.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#F1F5F9' },
+                    ticks: { callback: function(v) { return 'R$ ' + (v/1000).toFixed(0) + 'k'; } }
+                },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+}
+
+function renderConversionChart(months) {
+    var ctx = document.getElementById('conversionChart').getContext('2d');
+    if (conversionChart) conversionChart.destroy();
+
+    conversionChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: months.map(function(m) { return m.label; }),
+            datasets: [{
+                label: 'Conversao (%)',
+                data: months.map(function(m) { return m.conversion; }),
+                borderColor: '#8B5CF6',
+                backgroundColor: 'rgba(139,92,246,0.1)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 5,
+                pointBackgroundColor: '#8B5CF6'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true, max: 100, grid: { color: '#F1F5F9' }, ticks: { callback: function(v) { return v + '%'; } } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+}
+
+// Load on page ready
+document.addEventListener('DOMContentLoaded', loadKPIs);
+</script>
+{% endblock %}

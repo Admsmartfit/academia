@@ -38,6 +38,15 @@ from app.models.crm import (
     LeadSource, LeadStatus, RiskLevel
 )
 
+# Split Bancario / Comissoes
+from app.models.commission import (
+    CommissionEntry, CommissionStatus,
+    SplitConfiguration, SplitSettings,
+    PayoutBatch, PayoutStatus,
+    CollaboratorBankInfo, DemandLevel,
+    ProfessionalType as CommissionProfessionalType
+)
+
 __all__ = [
     'User',
     'Gender',
@@ -92,4 +101,14 @@ __all__ = [
     'LeadSource',
     'LeadStatus',
     'RiskLevel',
+    # Split Bancario / Comissoes
+    'CommissionEntry',
+    'CommissionStatus',
+    'SplitConfiguration',
+    'SplitSettings',
+    'PayoutBatch',
+    'PayoutStatus',
+    'CollaboratorBankInfo',
+    'DemandLevel',
+    'CommissionProfessionalType',
 ]

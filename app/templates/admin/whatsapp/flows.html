@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Fluxos Interativos WhatsApp - Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .flows-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .flows-header h3 { margin: 0; font-weight: 700; }
+
+    .flow-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 16px; }
+
+    .flow-card {
+        background: white;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        transition: box-shadow 0.2s;
+    }
+    .flow-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+    .flow-card.inactive { opacity: 0.6; }
+
+    .flow-top {
+        padding: 16px 20px;
+        display: flex; justify-content: space-between; align-items: flex-start;
+        border-bottom: 1px solid #F1F5F9;
+    }
+    .flow-top .flow-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 2px; }
+    .flow-top .flow-trigger { font-size: 0.75rem; color: #64748B; }
+
+    .flow-status {
+        font-size: 0.7rem; font-weight: 700; padding: 3px 10px;
+        border-radius: 20px; text-transform: uppercase; letter-spacing: 0.03em;
+    }
+    .flow-status.active { background: #D1FAE5; color: #059669; }
+    .flow-status.inactive { background: #FEE2E2; color: #DC2626; }
+
+    .flow-body { padding: 16px 20px; }
+
+    .flow-preview {
+        background: #F0FDF4; border-left: 3px solid #22C55E;
+        padding: 10px 14px; border-radius: 0 8px 8px 0;
+        font-size: 0.82rem; color: #1E293B; margin-bottom: 12px;
+        font-style: italic;
+    }
+
+    .flow-type-badge {
+        display: inline-flex; align-items: center; gap: 4px;
+        font-size: 0.7rem; font-weight: 600; padding: 3px 8px;
+        border-radius: 6px; margin-bottom: 10px;
+    }
+    .flow-type-badge.buttons { background: #DBEAFE; color: #2563EB; }
+    .flow-type-badge.list { background: #EDE9FE; color: #7C3AED; }
+    .flow-type-badge.text { background: #FEF3C7; color: #D97706; }
+
+    .flow-buttons {
+        display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;
+    }
+    .flow-btn-preview {
+        font-size: 0.72rem; padding: 4px 10px;
+        border: 1px solid #22C55E; border-radius: 20px;
+        color: #059669; background: white;
+    }
+
+    .flow-footer {
+        padding: 12px 20px;
+        border-top: 1px solid #F1F5F9;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .flow-sends { font-size: 0.75rem; color: #94A3B8; }
+    .flow-sends strong { color: #1E293B; }
+
+    .toggle-btn {
+        padding: 5px 14px; border-radius: 8px; border: none;
+        font-size: 0.75rem; font-weight: 600; cursor: pointer;
+        transition: all 0.15s;
+    }
+    .toggle-btn.activate { background: #D1FAE5; color: #059669; }
+    .toggle-btn.activate:hover { background: #A7F3D0; }
+    .toggle-btn.deactivate { background: #FEE2E2; color: #DC2626; }
+    .toggle-btn.deactivate:hover { background: #FECACA; }
+
+    .prd-badge {
+        font-size: 0.6rem; font-weight: 700; padding: 2px 6px;
+        border-radius: 4px; background: #FF6B35; color: white;
+        text-transform: uppercase; letter-spacing: 0.05em;
+    }
+
+    .seed-alert {
+        background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+        border-radius: 12px; padding: 16px 20px;
+        margin-bottom: 20px; display: flex; align-items: center; gap: 12px;
+    }
+    .seed-alert i { color: #D97706; font-size: 1.2rem; }
+    .seed-alert p { margin: 0; font-size: 0.85rem; color: #92400E; }
+    .seed-alert code { background: #FEF3C7; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="flows-header">
+        <div>
+            <h3><i class="fab fa-whatsapp me-2" style="color: #25D366;"></i>Fluxos Interativos PRD</h3>
+            <small style="color: #94A3B8;">6 fluxos pre-configurados com botoes e listas interativas</small>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('admin_whatsapp.list_templates') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-file-alt me-1"></i>Templates
+            </a>
+            <a href="{{ url_for('admin_whatsapp.list_logs') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-history me-1"></i>Logs
+            </a>
+        </div>
+    </div>
+
+    {% if not flows %}
+    <div class="seed-alert">
+        <i class="fas fa-exclamation-triangle"></i>
+        <div>
+            <p><strong>Fluxos ainda nao configurados.</strong> Execute o comando de seed para criar os 6 fluxos PRD:</p>
+            <p class="mt-1"><code>flask seed-whatsapp-flows</code></p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Flow Grid -->
+    <div class="flow-grid">
+        {% for flow in flows %}
+        <div class="flow-card {{ 'inactive' if not flow.is_active }}">
+            <div class="flow-top">
+                <div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="flow-name">{{ flow.name }}</span>
+                        <span class="prd-badge">PRD</span>
+                    </div>
+                    <div class="flow-trigger">{{ flow.trigger }}</div>
+                </div>
+                <span class="flow-status {{ 'active' if flow.is_active else 'inactive' }}">
+                    {{ 'Ativo' if flow.is_active else 'Inativo' }}
+                </span>
+            </div>
+
+            <div class="flow-body">
+                <span class="flow-type-badge {{ flow.message_type }}">
+                    {% if flow.message_type == 'buttons' %}
+                        <i class="fas fa-hand-pointer"></i> {{ flow.type_label }}
+                    {% elif flow.message_type == 'list' %}
+                        <i class="fas fa-list"></i> {{ flow.type_label }}
+                    {% else %}
+                        <i class="fas fa-comment"></i> {{ flow.type_label }}
+                    {% endif %}
+                </span>
+
+                <div class="flow-preview">
+                    <i class="fas fa-quote-left me-1" style="font-size: 0.65rem; opacity: 0.4;"></i>
+                    {{ flow.content }}
+                </div>
+
+                {% if flow.buttons %}
+                <div class="flow-buttons">
+                    {% for btn in flow.buttons %}
+                    <span class="flow-btn-preview">{{ btn }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="flow-footer">
+                <span class="flow-sends">
+                    <i class="fas fa-paper-plane me-1"></i>
+                    <strong>{{ flow.sends_30d }}</strong> envios
+                </span>
+                <form action="{{ url_for('admin_whatsapp.toggle_flow', id=flow.id) }}" method="POST" style="display: inline;">
+                    {% if flow.is_active %}
+                    <button type="submit" class="toggle-btn deactivate">
+                        <i class="fas fa-pause me-1"></i>Desativar
+                    </button>
+                    {% else %}
+                    <button type="submit" class="toggle-btn activate">
+                        <i class="fas fa-play me-1"></i>Ativar
+                    </button>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Legend -->
+    {% if flows %}
+    <div class="mt-4 p-3" style="background: #F8FAFC; border-radius: 10px;">
+        <div class="d-flex flex-wrap gap-4" style="font-size: 0.78rem; color: #64748B;">
+            <span><span class="flow-type-badge buttons" style="font-size: 0.65rem;">Botoes</span> Ate 3 botoes de acao rapida</span>
+            <span><span class="flow-type-badge list" style="font-size: 0.65rem;">Lista</span> Menu com ate 10 opcoes</span>
+            <span><span class="flow-type-badge text" style="font-size: 0.65rem;">Texto</span> Mensagem simples sem interacao</span>
+            <span><span class="prd-badge" style="font-size: 0.55rem;">PRD</span> Fluxo definido no PRD v3</span>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

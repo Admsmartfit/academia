@@ -4,74 +4,109 @@
 
 {% block extra_css %}
 <style>
+    /* Dark mode */
+    body.dark-training {
+        background-color: #0F172A !important;
+        color: #f1f5f9;
+    }
+    body.dark-training .card {
+        background-color: #1E293B;
+        border: 1px solid rgba(255,255,255,0.06);
+        color: #f1f5f9;
+    }
+    body.dark-training .modal-content {
+        background: #1E293B;
+        color: #f1f5f9;
+    }
+    body.dark-training .btn-close {
+        filter: invert(1);
+    }
+
     .training-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #1E293B, rgba(139,92,246,0.15));
+        border: 1px solid rgba(139,92,246,0.2);
         color: white;
         padding: 20px;
-        border-radius: 0 0 20px 20px;
-        margin: -12px -12px 20px -12px;
+        border-radius: 16px;
+        margin-bottom: 20px;
     }
 
     .student-info {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
     }
 
     .avatar-sm {
-        width: 50px;
-        height: 50px;
+        width: 48px;
+        height: 48px;
         border-radius: 50%;
-        background: rgba(255,255,255,0.2);
+        background: rgba(139,92,246,0.2);
+        border: 2px solid rgba(139,92,246,0.3);
         display: flex;
         align-items: center;
         justify-content: center;
+        color: #a78bfa;
     }
 
-    .streak-badge {
-        font-size: 1.3em;
-        font-weight: bold;
+    .training-streak {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(135deg, rgba(255,107,53,0.15), rgba(255,107,53,0.05));
+        border: 1px solid rgba(255,107,53,0.2);
+        padding: 4px 14px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #FF6B35;
     }
 
+    /* Session selector */
     .session-selector {
         display: flex;
         overflow-x: auto;
         gap: 10px;
         padding: 15px 0;
-        border-bottom: 1px solid #dee2e6;
         margin-bottom: 15px;
     }
 
     .session-btn {
         flex-shrink: 0;
         padding: 8px 20px;
-        border: 2px solid #dee2e6;
-        background: white;
+        border: 2px solid rgba(255,255,255,0.1);
+        background: #1E293B;
         border-radius: 20px;
         font-weight: 500;
         cursor: pointer;
         transition: all 0.3s;
-        color: #495057;
+        color: #94a3b8;
+        font-size: 0.9rem;
     }
 
     .session-btn:hover {
-        border-color: #667eea;
-        color: #667eea;
+        border-color: #8B5CF6;
+        color: #a78bfa;
     }
 
     .session-btn.active {
-        background: #667eea;
+        background: linear-gradient(135deg, #8B5CF6, #a78bfa);
         color: white;
-        border-color: #667eea;
+        border-color: #8B5CF6;
     }
 
+    /* Exercise card */
     .exercise-card {
-        background: white;
-        border-radius: 15px;
+        background: #1E293B;
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 12px;
         padding: 20px;
-        margin-bottom: 15px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        border: 1px solid #eee;
+        margin-bottom: 12px;
+        transition: border-color 0.2s;
+    }
+
+    .exercise-card:hover {
+        border-color: rgba(255,255,255,0.12);
     }
 
     .exercise-header {
@@ -88,7 +123,7 @@
         width: 28px;
         height: 28px;
         border-radius: 50%;
-        background: #667eea;
+        background: linear-gradient(135deg, #8B5CF6, #a78bfa);
         color: white;
         font-size: 0.85em;
         font-weight: bold;
@@ -96,33 +131,33 @@
     }
 
     .exercise-name {
-        font-size: 1.1em;
+        font-size: 1.05em;
         font-weight: bold;
     }
 
     .video-thumb-btn {
-        width: 50px;
-        height: 50px;
+        width: 44px;
+        height: 44px;
         border-radius: 10px;
-        border: 2px solid #667eea;
-        background: #e3f2fd;
+        border: 2px solid rgba(6,182,212,0.3);
+        background: rgba(6,182,212,0.1);
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
         transition: all 0.2s;
-        color: #667eea;
-        font-size: 1.2em;
+        color: #06B6D4;
+        font-size: 1rem;
     }
 
     .video-thumb-btn:hover {
-        background: #667eea;
+        background: #06B6D4;
         color: white;
     }
 
     .exercise-details {
         display: flex;
-        gap: 10px;
+        gap: 8px;
         margin-top: 12px;
     }
 
@@ -130,39 +165,112 @@
         flex: 1;
         text-align: center;
         padding: 10px 5px;
-        background: #f8f9fa;
+        background: rgba(255,255,255,0.03);
         border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.04);
     }
 
     .detail-label {
-        font-size: 0.75em;
-        color: #6c757d;
+        font-size: 0.7em;
+        color: #64748b;
         display: block;
         text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
 
     .detail-value {
-        font-size: 1.3em;
+        font-size: 1.2em;
         font-weight: bold;
-        color: #495057;
+        color: #f1f5f9;
     }
 
     .exercise-notes {
-        margin-top: 8px;
-        padding: 8px 12px;
-        background: #fff3cd;
-        border-radius: 8px;
+        margin-top: 10px;
+        padding: 10px 14px;
+        background: rgba(251,191,36,0.08);
+        border-left: 3px solid #FBBF24;
+        border-radius: 6px;
         font-size: 0.9em;
+        color: #fbbf24;
+    }
+
+    /* History section */
+    .history-section {
+        background: #1E293B;
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .history-title {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: #64748b;
+        font-weight: 700;
+        margin-bottom: 14px;
+    }
+
+    .history-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .history-item:last-child {
+        border-bottom: none;
+    }
+
+    .history-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .history-date {
+        font-size: 0.8rem;
+        color: #64748b;
+        min-width: 50px;
+    }
+
+    .history-modality {
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    /* Pain report */
+    .pain-btn {
+        background: rgba(244,63,94,0.1);
+        border: 1px solid rgba(244,63,94,0.2);
+        color: #F43F5E;
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: block;
+        width: 100%;
+        text-align: center;
+    }
+
+    .pain-btn:hover {
+        background: rgba(244,63,94,0.2);
+        border-color: #F43F5E;
     }
 
     .no-plan-container {
         text-align: center;
-        padding: 60px 20px;
+        padding: 80px 20px;
     }
 
     .no-plan-container i {
         font-size: 4em;
-        color: #dee2e6;
+        color: #334155;
         margin-bottom: 20px;
     }
 </style>
@@ -173,25 +281,45 @@
     {% if plan %}
     <!-- Training Header -->
     <div class="training-header">
-        <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex justify-content-between align-items-start">
             <div class="student-info">
                 <div class="avatar-sm">
                     <i class="fas fa-user fa-lg"></i>
                 </div>
                 <div>
                     <h6 class="mb-0">{{ current_user.name }}</h6>
-                    <small style="opacity: 0.8;">{{ plan.goal_label }} | Valido ate {{ plan.valid_until.strftime('%d/%m/%Y') }}</small>
+                    <small style="opacity: 0.7;">{{ plan.goal_label }} | Ate {{ plan.valid_until.strftime('%d/%m/%Y') }}</small>
                 </div>
             </div>
+            {% if training_streak and training_streak > 1 %}
+            <span class="training-streak"><i class="fas fa-fire"></i> {{ training_streak }} dias</span>
+            {% endif %}
         </div>
         {% if plan.instructor %}
         <div class="mt-2">
-            <small style="opacity: 0.7;">
-                <i class="fas fa-user-tie me-1"></i>Instrutor: {{ plan.instructor.name }}
+            <small style="opacity: 0.6;">
+                <i class="fas fa-user-tie me-1"></i>{{ plan.instructor.name }}
             </small>
         </div>
         {% endif %}
     </div>
+
+    <!-- Histórico dos últimos 7 treinos -->
+    {% if recent_completed %}
+    <div class="history-section">
+        <div class="history-title"><i class="fas fa-history me-2"></i>Ultimos Treinos</div>
+        {% for booking in recent_completed %}
+        <div class="history-item">
+            <div class="history-dot" style="background-color: {{ booking.schedule.modality.color if booking.schedule.modality else '#8B5CF6' }};"></div>
+            <span class="history-date">{{ booking.date.strftime('%d/%m') }}</span>
+            <span class="history-modality">{{ booking.schedule.modality.name if booking.schedule.modality else 'Treino' }}</span>
+            {% if booking.xp_earned %}
+            <span style="margin-left: auto; color: #a78bfa; font-size: 0.8rem; font-weight: 600;">+{{ booking.xp_earned }} XP</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 
     <!-- Session Selector -->
     {% if plan.workout_sessions|length > 1 %}
@@ -242,26 +370,26 @@
                     {% if we.weight_suggestion %}
                     <div class="detail-item">
                         <span class="detail-label">Carga</span>
-                        <span class="detail-value" style="font-size:1em;">{{ we.weight_suggestion }}</span>
+                        <span class="detail-value" style="font-size:0.95em;">{{ we.weight_suggestion }}</span>
                     </div>
                     {% endif %}
                 </div>
 
                 {% if we.instructor_notes %}
                 <div class="exercise-notes">
-                    <i class="fas fa-info-circle me-1 text-warning"></i>{{ we.instructor_notes }}
+                    <i class="fas fa-info-circle me-1"></i>{{ we.instructor_notes }}
                 </div>
                 {% endif %}
 
                 {% if we.exercise.description %}
                 <div class="mt-2">
-                    <small class="text-muted">{{ we.exercise.description }}</small>
+                    <small style="color: #64748b;">{{ we.exercise.description }}</small>
                 </div>
                 {% endif %}
             </div>
             {% else %}
             <div class="text-center py-4">
-                <p class="text-muted">Nenhum exercicio nesta sessao.</p>
+                <p style="color: #64748b;">Nenhum exercicio nesta sessao.</p>
             </div>
             {% endfor %}
         </div>
@@ -271,19 +399,26 @@
     {% if plan.notes %}
     <div class="card mt-3">
         <div class="card-body">
-            <h6><i class="fas fa-sticky-note me-2"></i>Observacoes do Instrutor</h6>
-            <p class="mb-0 text-muted">{{ plan.notes }}</p>
+            <h6><i class="fas fa-sticky-note me-2" style="color: #FBBF24;"></i>Observacoes do Instrutor</h6>
+            <p class="mb-0" style="color: #94a3b8;">{{ plan.notes }}</p>
         </div>
     </div>
     {% endif %}
+
+    <!-- Reportar Dor / Desconforto -->
+    <div class="mt-4 mb-4">
+        <button class="pain-btn" data-bs-toggle="modal" data-bs-target="#painModal">
+            <i class="fas fa-exclamation-triangle me-2"></i>Reportar Dor ou Desconforto
+        </button>
+    </div>
 
     {% else %}
     <!-- No active plan -->
     <div class="no-plan-container">
         <i class="fas fa-dumbbell"></i>
         <h4>Nenhum treino prescrito</h4>
-        <p class="text-muted">Seu instrutor ainda nao prescreveu um plano de treino para voce.</p>
-        <a href="{{ url_for('student.dashboard') }}" class="btn btn-primary">
+        <p style="color: #64748b;">Seu instrutor ainda nao prescreveu um plano de treino para voce.</p>
+        <a href="{{ url_for('student.dashboard') }}" class="btn" style="background: #FF6B35; color: white;">
             <i class="fas fa-home me-2"></i>Voltar ao Dashboard
         </a>
     </div>
@@ -294,7 +429,7 @@
 <div class="modal fade" id="videoModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class="modal-header border-0">
                 <h5 class="modal-title" id="videoTitle">Exercicio</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -307,50 +442,102 @@
     </div>
 </div>
 
+<!-- Pain Report Modal -->
+<div class="modal fade" id="painModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2" style="color: #F43F5E;"></i>Reportar Dor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('student.report_pain') }}" method="POST">
+                <div class="modal-body">
+                    <p style="color: #94a3b8; font-size: 0.9rem;">Seu instrutor sera notificado imediatamente.</p>
+
+                    <div class="mb-3">
+                        <label class="form-label">Local da dor</label>
+                        <select name="body_part" class="form-select" style="background: #0F172A; border-color: rgba(255,255,255,0.1); color: #f1f5f9;">
+                            <option value="Ombro">Ombro</option>
+                            <option value="Costas (lombar)">Costas (lombar)</option>
+                            <option value="Costas (dorsal)">Costas (dorsal)</option>
+                            <option value="Joelho">Joelho</option>
+                            <option value="Quadril">Quadril</option>
+                            <option value="Cotovelo">Cotovelo</option>
+                            <option value="Punho">Punho</option>
+                            <option value="Tornozelo">Tornozelo</option>
+                            <option value="Pescoco">Pescoco</option>
+                            <option value="Outro">Outro</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Intensidade (1-10)</label>
+                        <input type="range" name="pain_level" class="form-range" min="1" max="10" value="5"
+                               oninput="document.getElementById('painVal').textContent = this.value"
+                               style="accent-color: #F43F5E;">
+                        <div class="text-center"><span id="painVal" style="color: #F43F5E; font-weight: 700; font-size: 1.3rem;">5</span>/10</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Descricao (opcional)</label>
+                        <textarea name="description" class="form-control" rows="2" placeholder="Descreva quando sente dor..."
+                                  style="background: #0F172A; border-color: rgba(255,255,255,0.1); color: #f1f5f9;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn" style="background: #F43F5E; color: white;">
+                        <i class="fas fa-paper-plane me-2"></i>Enviar Relato
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
-function selectSession(btn, sessionId) {
-    // Update buttons
-    document.querySelectorAll('.session-btn').forEach(function(b) {
-        b.classList.remove('active');
-    });
-    btn.classList.add('active');
+    // Apply dark mode
+    document.body.classList.add('dark-training');
 
-    // Show/hide exercise sections
-    document.querySelectorAll('.session-exercises').forEach(function(el) {
-        el.style.display = 'none';
-    });
-    var target = document.querySelector('.session-exercises[data-session-id="' + sessionId + '"]');
-    if (target) target.style.display = '';
-}
+    function selectSession(btn, sessionId) {
+        document.querySelectorAll('.session-btn').forEach(function(b) {
+            b.classList.remove('active');
+        });
+        btn.classList.add('active');
 
-function showVideo(url, title) {
-    var embedUrl = url;
-    // Convert YouTube watch URL to embed
-    if (url.indexOf('youtube.com/watch') !== -1) {
-        var videoId = url.split('v=')[1];
-        if (videoId) {
-            var ampPos = videoId.indexOf('&');
-            if (ampPos !== -1) videoId = videoId.substring(0, ampPos);
-            embedUrl = 'https://www.youtube.com/embed/' + videoId;
-        }
-    } else if (url.indexOf('youtu.be/') !== -1) {
-        var videoId = url.split('youtu.be/')[1];
-        if (videoId) {
-            var ampPos = videoId.indexOf('?');
-            if (ampPos !== -1) videoId = videoId.substring(0, ampPos);
-            embedUrl = 'https://www.youtube.com/embed/' + videoId;
-        }
+        document.querySelectorAll('.session-exercises').forEach(function(el) {
+            el.style.display = 'none';
+        });
+        var target = document.querySelector('.session-exercises[data-session-id="' + sessionId + '"]');
+        if (target) target.style.display = '';
     }
 
-    document.getElementById('videoFrame').src = embedUrl;
-    document.getElementById('videoTitle').textContent = title;
-    var modal = new bootstrap.Modal(document.getElementById('videoModal'));
-    modal.show();
-}
+    function showVideo(url, title) {
+        var embedUrl = url;
+        if (url.indexOf('youtube.com/watch') !== -1) {
+            var videoId = url.split('v=')[1];
+            if (videoId) {
+                var ampPos = videoId.indexOf('&');
+                if (ampPos !== -1) videoId = videoId.substring(0, ampPos);
+                embedUrl = 'https://www.youtube.com/embed/' + videoId;
+            }
+        } else if (url.indexOf('youtu.be/') !== -1) {
+            var videoId = url.split('youtu.be/')[1];
+            if (videoId) {
+                var ampPos = videoId.indexOf('?');
+                if (ampPos !== -1) videoId = videoId.substring(0, ampPos);
+                embedUrl = 'https://www.youtube.com/embed/' + videoId;
+            }
+        }
 
-// Stop video when modal closes
-document.getElementById('videoModal').addEventListener('hidden.bs.modal', function() {
-    document.getElementById('videoFrame').src = '';
-});
+        document.getElementById('videoFrame').src = embedUrl;
+        document.getElementById('videoTitle').textContent = title;
+        var modal = new bootstrap.Modal(document.getElementById('videoModal'));
+        modal.show();
+    }
+
+    document.getElementById('videoModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('videoFrame').src = '';
+    });
 </script>
 {% endblock %}

@@ -1,6 +1,8 @@
 # app/routes/auth.py
 
 import re
+import time
+from collections import defaultdict
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
 from app.models import User, Gender
@@ -8,6 +10,28 @@ from app import db
 from datetime import datetime
 
 auth_bp = Blueprint('auth', __name__)
+
+# Rate limiting for login attempts
+_login_attempts = defaultdict(list)  # IP -> [timestamps]
+LOGIN_MAX_ATTEMPTS = 5
+LOGIN_WINDOW_SECONDS = 300  # 5 minutes
+
+
+def _check_login_rate_limit():
+    """Returns True if rate limited, False if allowed."""
+    ip = request.remote_addr or '127.0.0.1'
+    now = time.time()
+    # Clean old attempts
+    _login_attempts[ip] = [t for t in _login_attempts[ip] if now - t < LOGIN_WINDOW_SECONDS]
+    if len(_login_attempts[ip]) >= LOGIN_MAX_ATTEMPTS:
+        return True
+    return False
+
+
+def _record_login_attempt():
+    """Record a failed login attempt."""
+    ip = request.remote_addr or '127.0.0.1'
+    _login_attempts[ip].append(time.time())
 
 
 def validate_phone(phone: str) -> str:
@@ -53,6 +77,11 @@ def login():
         return redirect(url_for('student.dashboard'))
 
     if request.method == 'POST':
+        # Rate limiting
+        if _check_login_rate_limit():
+            flash('Muitas tentativas de login. Aguarde 5 minutos.', 'danger')
+            return render_template('auth/login.html')
+
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         remember = bool(request.form.get('remember'))
@@ -84,6 +113,7 @@ def login():
                 return redirect(url_for('instructor.dashboard'))
             return redirect(url_for('student.dashboard'))
 
+        _record_login_attempt()
         flash('E-mail ou senha invalidos.', 'danger')
 
     return render_template('auth/login.html')

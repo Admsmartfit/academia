@@ -297,3 +297,192 @@ def register_cli_commands(app):
         automation = RetentionAutomation()
         results = automation.run_daily_automations()
         click.echo(f"Concluído: {results}")
+
+    @app.cli.group()
+    def backup():
+        """Comandos para gerenciamento de backup"""
+        pass
+
+    @backup.command('create')
+    @with_appcontext
+    def backup_create():
+        """Cria backup manual do banco de dados"""
+        from app.utils.backup import backup_database
+        click.echo("Criando backup do banco de dados...")
+        if backup_database():
+            click.echo("Backup criado com sucesso!")
+        else:
+            click.echo("Erro ao criar backup.")
+
+    @backup.command('list')
+    @with_appcontext
+    def backup_list():
+        """Lista todos os backups disponíveis"""
+        from app.utils.backup import list_backups
+        backups = list_backups()
+        if not backups:
+            click.echo("Nenhum backup encontrado.")
+            return
+        click.echo(f"\n{'Arquivo':<45} {'Tamanho':<12} {'Data'}")
+        click.echo("-" * 75)
+        for b in backups:
+            click.echo(f"{b['filename']:<45} {b['size_mb']:.2f} MB     {b['created_at'].strftime('%d/%m/%Y %H:%M')}")
+        click.echo(f"\nTotal: {len(backups)} backup(s)")
+
+    @backup.command('restore')
+    @click.argument('filename')
+    @with_appcontext
+    def backup_restore(filename):
+        """Restaura banco de dados a partir de um backup"""
+        from app.utils.backup import restore_database
+        if not click.confirm(f'Tem certeza que deseja restaurar {filename}? O banco atual será substituído'):
+            click.echo("Restauração cancelada.")
+            return
+        try:
+            restore_database(filename)
+            click.echo("Banco restaurado com sucesso! Reinicie a aplicação.")
+        except FileNotFoundError:
+            click.echo(f"Backup não encontrado: {filename}")
+        except Exception as e:
+            click.echo(f"Erro ao restaurar: {e}")
+
+    @app.cli.command('seed-whatsapp-flows')
+    @with_appcontext
+    def seed_whatsapp_flows():
+        """Popula os 6 fluxos interativos PRD de WhatsApp"""
+        from app import db
+        from app.models.whatsapp_template import (
+            WhatsAppTemplate, TemplateCategory, TemplateTrigger
+        )
+
+        flows = [
+            {
+                'name': 'Lembrete de Aula (2h antes)',
+                'template_code': 'lembrete_aula_2h_interativo',
+                'category': TemplateCategory.TRANSACTIONAL,
+                'trigger': TemplateTrigger.CLASS_REMINDER_2H,
+                'content': 'Você tem aula de {{1}} hoje às {{2}}!',
+                'variables': ['{{1}} Modalidade', '{{2}} Horário'],
+                'message_type': 'buttons',
+                'buttons_config': {
+                    'buttons': [
+                        {'id': 'confirm_attendance', 'title': 'Vou comparecer'},
+                        {'id': 'cancel_class', 'title': 'Cancelar'},
+                        {'id': 'reschedule', 'title': 'Reagendar'}
+                    ]
+                },
+                'is_prd_flow': True,
+            },
+            {
+                'name': 'Renovação de Plano (3 dias)',
+                'template_code': 'renovacao_plano_3d',
+                'category': TemplateCategory.TRANSACTIONAL,
+                'trigger': TemplateTrigger.PLAN_RENEWAL,
+                'content': 'Seu plano vence em 3 dias. Renove e continue evoluindo!',
+                'variables': ['{{1}} Nome', '{{2}} Dias restantes'],
+                'message_type': 'buttons',
+                'buttons_config': {
+                    'buttons': [
+                        {'id': 'renew_pix', 'title': 'Renovar via PIX'},
+                        {'id': 'talk_consultant', 'title': 'Falar com consultor'},
+                        {'id': 'remind_tomorrow', 'title': 'Lembrar amanhã'}
+                    ]
+                },
+                'is_prd_flow': True,
+            },
+            {
+                'name': 'Pesquisa NPS',
+                'template_code': 'pesquisa_nps_mensal',
+                'category': TemplateCategory.MARKETING,
+                'trigger': TemplateTrigger.NPS_SURVEY,
+                'content': 'Como você avalia sua experiência este mês?',
+                'variables': ['{{1}} Nome'],
+                'message_type': 'list',
+                'buttons_config': {
+                    'button_text': 'Avaliar',
+                    'sections': [{
+                        'title': 'Sua Avaliação',
+                        'rows': [
+                            {'id': 'nps_excelente', 'title': 'Excelente', 'description': 'Estou adorando!'},
+                            {'id': 'nps_boa', 'title': 'Boa', 'description': 'Estou gostando'},
+                            {'id': 'nps_regular', 'title': 'Regular', 'description': 'Pode melhorar'},
+                            {'id': 'nps_ruim', 'title': 'Ruim', 'description': 'Não estou satisfeito'}
+                        ]
+                    }]
+                },
+                'is_prd_flow': True,
+            },
+            {
+                'name': 'Recuperação D+10',
+                'template_code': 'recuperacao_d10_interativo',
+                'category': TemplateCategory.MARKETING,
+                'trigger': TemplateTrigger.RECOVERY_D10,
+                'content': 'Oi {{1}}, tudo bem? Notamos que você não treinou esta semana.',
+                'variables': ['{{1}} Nome'],
+                'message_type': 'buttons',
+                'buttons_config': {
+                    'buttons': [
+                        {'id': 'schedule_now', 'title': 'Agendar aula agora'},
+                        {'id': 'need_help', 'title': 'Preciso de ajuda'},
+                        {'id': 'pause_plan', 'title': 'Pausar meu plano'}
+                    ]
+                },
+                'is_prd_flow': True,
+            },
+            {
+                'name': 'Hidratação Eletrolipólise',
+                'template_code': 'hidratacao_eletrolipo',
+                'category': TemplateCategory.TRANSACTIONAL,
+                'trigger': TemplateTrigger.HYDRATION_REMINDER,
+                'content': 'Lembrete: beba 500ml de água agora! Sua sessão começa em 30 min.',
+                'variables': ['{{1}} Nome'],
+                'message_type': 'text',
+                'buttons_config': None,
+                'is_prd_flow': True,
+            },
+            {
+                'name': 'Pagamento Confirmado',
+                'template_code': 'pagamento_confirmado_interativo',
+                'category': TemplateCategory.TRANSACTIONAL,
+                'trigger': TemplateTrigger.PAYMENT_CONFIRMED,
+                'content': 'Pagamento confirmado! Você tem {{1}} créditos até {{2}}.',
+                'variables': ['{{1}} Créditos', '{{2}} Data validade'],
+                'message_type': 'buttons',
+                'buttons_config': {
+                    'buttons': [
+                        {'id': 'view_schedule', 'title': 'Ver horários'},
+                        {'id': 'book_first_class', 'title': 'Agendar primeira aula'}
+                    ]
+                },
+                'is_prd_flow': True,
+            },
+        ]
+
+        created = 0
+        skipped = 0
+        for flow_data in flows:
+            existing = WhatsAppTemplate.query.filter_by(
+                template_code=flow_data['template_code']
+            ).first()
+            if existing:
+                skipped += 1
+                continue
+
+            template = WhatsAppTemplate(
+                name=flow_data['name'],
+                template_code=flow_data['template_code'],
+                category=flow_data['category'],
+                trigger=flow_data['trigger'],
+                content=flow_data['content'],
+                variables=flow_data['variables'],
+                message_type=flow_data['message_type'],
+                buttons_config=flow_data['buttons_config'],
+                is_prd_flow=flow_data['is_prd_flow'],
+                megaapi_status='approved',
+                is_active=True
+            )
+            db.session.add(template)
+            created += 1
+
+        db.session.commit()
+        click.echo(f"Seed concluído: {created} fluxos criados, {skipped} já existiam.")

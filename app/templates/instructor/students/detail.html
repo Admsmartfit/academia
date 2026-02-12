@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Perfil do Aluno - {{ student.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="{{ url_for('instructor.list_students') }}">Alunos</a></li>
+                <li class="breadcrumb-item active text-truncate" style="max-width: 200px;">{{ student.name }}</li>
+            </ol>
+        </nav>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('instructor.training_prescribe') }}?student_id={{ student.id }}"
+                class="btn btn-primary">
+                <i class="fas fa-dumbbell me-1"></i>Prescrever Treino
+            </a>
+            <a href="{{ url_for('instructor.face_enrollment', id=student.id) }}" class="btn btn-outline-warning">
+                <i class="fas fa-camera me-1"></i>Cadastrar Face
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Sidebar: User Info -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body text-center py-4">
+                    <div class="avatar-lg bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3"
+                        style="width: 80px; height: 80px; font-size: 2rem;">
+                        {{ student.name[:1] }}
+                    </div>
+                    <h4>{{ student.name }}</h4>
+                    <p class="text-muted mb-3">{{ student.email }}</p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <div class="text-center">
+                            <h5 class="mb-0">{{ student.xp }}</h5>
+                            <small class="text-muted">XP Total</small>
+                        </div>
+                        <div class="vr"></div>
+                        <div class="text-center">
+                            <h5 class="mb-0">{{ student.level or 1 }}</h5>
+                            <small class="text-muted">Nivel</small>
+                        </div>
+                    </div>
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-phone me-2 text-muted"></i>Telefone</span>
+                        <span>{{ student.phone or 'N/A' }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-calendar me-2 text-muted"></i>Cadastro</span>
+                        <span>{{ student.created_at.strftime('%d/%m/%Y') }}</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Health Status -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-heartbeat me-2 text-danger"></i>Saude e Triagens</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="small text-muted d-block mb-1">PAR-Q</label>
+                        {% if parq %}
+                        {% if parq.status.name == 'APTO' %}
+                        <span class="badge bg-success">APTO (Válido até {{ parq.expires_at.strftime('%d/%m/%y')
+                            }})</span>
+                        {% elif parq.status.name == 'PENDENTE_MEDICO' %}
+                        <span class="badge bg-warning text-dark">PENDENTE DE ATESTADO</span>
+                        {% if parq.medical_certificate_url %}
+                        <a href="{{ parq.medical_certificate_url }}" target="_blank"
+                            class="d-block mt-2 btn btn-sm btn-outline-info">Ver Atestado</a>
+                        {% endif %}
+                        {% else %}
+                        <span class="badge bg-danger">BLOQUEADO</span>
+                        {% endif %}
+                        {% else %}
+                        <span class="badge bg-secondary">NAO REALIZADO</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-0">
+                        <label class="small text-muted d-block mb-1">Anamnese EMS</label>
+                        {% if ems %}
+                        {% if ems.status.name == 'APTO' %}
+                        <span class="badge bg-success">APTO</span>
+                        {% elif ems.status.name == 'BLOQUEADO' %}
+                        <span class="badge bg-danger">BLOQUEADO</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">PENDENTE</span>
+                        {% endif %}
+                        {% else %}
+                        <span class="badge bg-secondary">NAO REALIZADA</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Active Training Plan -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-dumbbell me-2 text-primary"></i>Plano de Treino Atual</h5>
+                    {% if active_plan %}
+                    <span class="badge bg-primary">Ativo</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if active_plan %}
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="small text-muted d-block">Objetivo</label>
+                            <strong>{{ active_plan.goal_label }}</strong>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small text-muted d-block">Validade</label>
+                            <strong>Até {{ active_plan.valid_until.strftime('%d/%m/%Y') }}</strong>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted d-block">Sessões</label>
+                        {% for sess in active_plan.workout_sessions %}
+                        <span class="badge bg-light text-dark border me-1">{{ sess.name }} ({{ sess.exercises|length }}
+                            ex.)</span>
+                        {% endfor %}
+                    </div>
+                    <a href="{{ url_for('instructor.training_detail', id=active_plan.id) }}"
+                        class="btn btn-sm btn-outline-primary">Ver Plano Completo</a>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <p>Nenhum plano de treino ativo para este aluno.</p>
+                        <a href="{{ url_for('instructor.training_prescribe', student_id=student.id) }}"
+                            class="btn btn-sm btn-primary">Criar Primeiro Plano</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Booking History -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-history me-2 text-info"></i>Ultimas Aulas</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Modalidade</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for booking in bookings %}
+                                <tr>
+                                    <td>{{ booking.date.strftime('%d/%m/%Y') }} {{
+                                        booking.schedule.start_time.strftime('%H:%M') }}</td>
+                                    <td>{{ booking.schedule.modality.name }}</td>
+                                    <td>
+                                        {% if booking.status.name == 'CONFIRMED' %}
+                                        <span class="badge bg-primary">Confirmado</span>
+                                        {% elif booking.status.name == 'COMPLETED' %}
+                                        <span class="badge bg-success">Presente</span>
+                                        {% elif booking.status.name == 'CANCELLED' %}
+                                        <span class="badge bg-secondary">Cancelado</span>
+                                        {% elif booking.status.name == 'NO_SHOW' %}
+                                        <span class="badge bg-danger">Falta</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="3" class="text-center py-3 text-muted">Nenhum historico encontrado.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

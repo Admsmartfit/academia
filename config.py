@@ -5,7 +5,13 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     # No Windows, o SQLite precisa de 3 barras (relativo) ou 4 (absoluto)
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///academia.db'
-    
+
+    # Session cookie security
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SAMESITE = 'Lax'
+
     # Configurações da Academia
     ACADEMIA_NAME = "Academia"
     
@@ -27,6 +33,8 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
+    SESSION_COOKIE_SECURE = True
+    REMEMBER_COOKIE_SECURE = True
 
 config = {
     'development': DevelopmentConfig,

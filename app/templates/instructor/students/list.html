@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Alunos - Instrutor{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-users me-2"></i>Alunos</h1>
+        <form class="d-flex" action="{{ url_for('instructor.list_students') }}" method="GET">
+            <input class="form-control me-2" type="search" name="search" placeholder="Nome ou email..."
+                value="{{ search }}">
+            <button class="btn btn-primary" type="submit">Buscar</button>
+        </form>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th>Nome</th>
+                        <th>Contato</th>
+                        <th>Status Saude</th>
+                        <th class="text-end">Acoes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3"
+                                    style="width: 40px; height: 40px;">
+                                    {{ student.name[:1] }}
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">{{ student.name }}</h6>
+                                    <small class="text-muted">ID: #{{ student.id }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div><i class="fas fa-envelope me-1 small text-muted"></i> {{ student.email }}</div>
+                            {% if student.phone %}
+                            <div><i class="fas fa-phone me-1 small text-muted"></i> {{ student.phone }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% set parq = student.get_screening_status('PARQ') %}
+                            {% if parq %}
+                            {% if parq.name == 'APTO' %}
+                            <span class="badge bg-success">PAR-Q OK</span>
+                            {% elif parq.name == 'PENDENTE_MEDICO' %}
+                            <span class="badge bg-warning text-dark">PAR-Q PENDENTE</span>
+                            {% else %}
+                            <span class="badge bg-danger">PAR-Q BLOQUEADO</span>
+                            {% endif %}
+                            {% else %}
+                            <span class="badge bg-secondary">SEM PAR-Q</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{{ url_for('instructor.student_detail', id=student.id) }}"
+                                class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye me-1"></i>Ver Perfil
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center py-5">
+                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">Nenhum aluno encontrado.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

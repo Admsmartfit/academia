@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+
+{% block title %}Pipeline de Leads - Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .leads-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .leads-header h3 { margin: 0; font-weight: 700; }
+
+    /* Stats bar */
+    .stats-bar { display: flex; gap: 16px; margin-bottom: 20px; }
+    .stat-chip {
+        display: flex; align-items: center; gap: 8px;
+        padding: 8px 16px; border-radius: 10px;
+        background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        font-size: 0.85rem;
+    }
+    .stat-chip .num { font-weight: 800; font-size: 1.1rem; }
+    .stat-chip.new .num { color: #06B6D4; }
+    .stat-chip.won .num { color: #10B981; }
+    .stat-chip.lost .num { color: #F43F5E; }
+    .stat-chip.rate .num { color: #8B5CF6; }
+
+    /* Pipeline columns */
+    .pipeline { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 16px; }
+    .pipeline-col {
+        min-width: 240px;
+        flex: 1;
+        background: #F8FAFC;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+    }
+    .col-header {
+        padding: 12px 16px;
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 2px solid;
+    }
+    .col-header.new { border-color: #06B6D4; }
+    .col-header.contacted { border-color: #8B5CF6; }
+    .col-header.visited { border-color: #F59E0B; }
+    .col-header.trial { border-color: #FB923C; }
+    .col-header.proposal { border-color: #FF6B35; }
+    .col-header.won { border-color: #10B981; }
+    .col-header.lost { border-color: #94A3B8; }
+    .col-title { font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .col-count {
+        font-size: 0.7rem; font-weight: 700; padding: 2px 8px;
+        border-radius: 10px; background: rgba(0,0,0,0.06);
+    }
+    .col-body { padding: 8px; flex: 1; min-height: 100px; }
+
+    /* Lead cards */
+    .lead-card {
+        background: white;
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 8px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        cursor: pointer;
+        transition: all 0.15s;
+        border-left: 3px solid transparent;
+    }
+    .lead-card:hover { box-shadow: 0 3px 8px rgba(0,0,0,0.1); transform: translateY(-1px); }
+    .lead-card .lead-name { font-weight: 600; font-size: 0.9rem; margin-bottom: 2px; }
+    .lead-card .lead-phone { font-size: 0.75rem; color: #64748B; }
+    .lead-card .lead-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+    .source-badge {
+        font-size: 0.65rem; padding: 2px 6px; border-radius: 4px;
+        font-weight: 600; text-transform: uppercase;
+    }
+    .source-badge.website { background: #DBEAFE; color: #2563EB; }
+    .source-badge.instagram { background: #FCE7F3; color: #DB2777; }
+    .source-badge.referral { background: #D1FAE5; color: #059669; }
+    .source-badge.walk_in { background: #FEF3C7; color: #D97706; }
+    .source-badge.google_ads { background: #EDE9FE; color: #7C3AED; }
+    .lead-date { font-size: 0.7rem; color: #94A3B8; }
+
+    /* Move buttons */
+    .move-btns { display: flex; gap: 4px; margin-top: 8px; }
+    .move-btn {
+        flex: 1; padding: 4px; border: 1px solid #E2E8F0; border-radius: 6px;
+        background: white; cursor: pointer; font-size: 0.7rem; color: #64748B;
+        text-align: center; transition: all 0.15s;
+    }
+    .move-btn:hover { background: #F1F5F9; color: #1E293B; }
+    .move-btn.advance { border-color: #10B981; color: #10B981; }
+    .move-btn.advance:hover { background: #D1FAE5; }
+
+    /* New Lead form */
+    .new-lead-form { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .new-lead-form .form-label { font-size: 0.8rem; font-weight: 600; color: #475569; }
+    .new-lead-form .form-control, .new-lead-form .form-select {
+        font-size: 0.85rem; border-radius: 8px;
+    }
+    .new-lead-form .btn-create {
+        background: #FF6B35; color: white; border: none; border-radius: 8px;
+        padding: 10px 24px; font-weight: 600; font-size: 0.9rem;
+    }
+    .new-lead-form .btn-create:hover { background: #e55a2b; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="leads-header">
+        <div>
+            <h3><i class="fas fa-funnel-dollar me-2" style="color: #FF6B35;"></i>Pipeline de Leads</h3>
+            <small style="color: #94A3B8;">Gerencie prospects do primeiro contato a conversao</small>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('crm.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-heartbeat me-1"></i>CRM Dashboard
+            </a>
+            <button class="btn btn-sm" style="background: #FF6B35; color: white;" data-bs-toggle="modal" data-bs-target="#newLeadModal">
+                <i class="fas fa-plus me-1"></i>Novo Lead
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-bar">
+        <div class="stat-chip">
+            <span>Total:</span> <span class="num">{{ total }}</span>
+        </div>
+        <div class="stat-chip new">
+            <span>Novos:</span> <span class="num">{{ new_count }}</span>
+        </div>
+        <div class="stat-chip won">
+            <span>Convertidos:</span> <span class="num">{{ won_count }}</span>
+        </div>
+        <div class="stat-chip lost">
+            <span>Perdidos:</span> <span class="num">{{ lost_count }}</span>
+        </div>
+        <div class="stat-chip rate">
+            <span>Conversao:</span> <span class="num">{{ conversion_rate }}%</span>
+        </div>
+    </div>
+
+    <!-- Pipeline -->
+    <div class="pipeline">
+        {% set status_config = {
+            'new': {'label': 'Novo', 'icon': 'fas fa-star', 'next': 'contacted'},
+            'contacted': {'label': 'Contactado', 'icon': 'fas fa-phone', 'next': 'visited'},
+            'visited': {'label': 'Visitou', 'icon': 'fas fa-building', 'next': 'trial'},
+            'trial': {'label': 'Aula Exp.', 'icon': 'fas fa-dumbbell', 'next': 'proposal'},
+            'proposal': {'label': 'Proposta', 'icon': 'fas fa-file-invoice', 'next': 'won'},
+            'won': {'label': 'Convertido', 'icon': 'fas fa-trophy', 'next': none},
+            'lost': {'label': 'Perdido', 'icon': 'fas fa-times-circle', 'next': none}
+        } %}
+
+        {% for status_val, config in status_config.items() %}
+        {% set leads_list = leads_by_status.get(status_val, []) %}
+        <div class="pipeline-col">
+            <div class="col-header {{ status_val }}">
+                <span class="col-title"><i class="{{ config.icon }} me-1"></i>{{ config.label }}</span>
+                <span class="col-count">{{ leads_list|length }}</span>
+            </div>
+            <div class="col-body" data-status="{{ status_val }}">
+                {% for lead in leads_list %}
+                <div class="lead-card" data-lead-id="{{ lead.id }}" onclick="showLeadDetail({{ lead.id }})">
+                    <div class="lead-name">{{ lead.full_name }}</div>
+                    <div class="lead-phone"><i class="fas fa-phone me-1"></i>{{ lead.phone }}</div>
+                    {% if lead.interest_goal %}
+                    <div style="font-size: 0.75rem; color: #475569; margin-top: 4px;">
+                        <i class="fas fa-bullseye me-1"></i>{{ lead.interest_goal }}
+                    </div>
+                    {% endif %}
+                    <div class="lead-meta">
+                        <span class="source-badge {{ lead.source.value }}">{{ lead.source_label }}</span>
+                        <span class="lead-date">{{ lead.created_at.strftime('%d/%m') }}</span>
+                    </div>
+                    {% if config.next %}
+                    <div class="move-btns">
+                        <button class="move-btn advance" onclick="event.stopPropagation(); moveLead({{ lead.id }}, '{{ config.next }}')">
+                            <i class="fas fa-arrow-right me-1"></i>{{ status_config[config.next].label }}
+                        </button>
+                        {% if status_val != 'lost' %}
+                        <button class="move-btn" onclick="event.stopPropagation(); moveLead({{ lead.id }}, 'lost')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                {% if leads_list|length == 0 %}
+                <div style="text-align: center; padding: 20px; color: #CBD5E1; font-size: 0.8rem;">
+                    <i class="fas fa-inbox"></i><br>Vazio
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- New Lead Modal -->
+<div class="modal fade" id="newLeadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-user-plus me-2" style="color: #FF6B35;"></i>Novo Lead</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('crm.create_lead') }}" method="POST">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Nome Completo *</label>
+                            <input type="text" name="full_name" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Telefone *</label>
+                            <input type="text" name="phone" class="form-control" required placeholder="(11) 99999-9999">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">E-mail</label>
+                            <input type="email" name="email" class="form-control">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Origem</label>
+                            <select name="source" class="form-select">
+                                {% for s in sources %}
+                                <option value="{{ s.value }}">{{ s.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Responsavel</label>
+                            <select name="assigned_to_id" class="form-select">
+                                <option value="">Nenhum</option>
+                                {% for s in staff %}
+                                <option value="{{ s.id }}">{{ s.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Interesse / Objetivo</label>
+                            <input type="text" name="interest_goal" class="form-control" placeholder="Ex: Emagrecer, FES, Hipertrofia...">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Horario Preferido</label>
+                            <input type="text" name="preferred_schedule" class="form-control" placeholder="Ex: Manha, Noite...">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Faixa de Orcamento</label>
+                            <input type="text" name="budget_range" class="form-control" placeholder="Ex: R$ 200-400">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Observacoes</label>
+                            <textarea name="notes" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-sm" style="background: #FF6B35; color: white;">
+                        <i class="fas fa-plus me-1"></i>Criar Lead
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Lead Detail Modal -->
+<div class="modal fade" id="leadDetailModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailTitle"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detailBody">
+                Carregando...
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Move lead to new status
+    function moveLead(leadId, newStatus) {
+        fetch('/admin/crm/leads/' + leadId + '/update-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erro: ' + (data.error || 'Falha'));
+            }
+        });
+    }
+
+    // Show lead detail
+    function showLeadDetail(leadId) {
+        // Find the card element
+        var card = document.querySelector('[data-lead-id="' + leadId + '"]');
+        if (!card) return;
+
+        var name = card.querySelector('.lead-name').textContent;
+        document.getElementById('detailTitle').textContent = name;
+        document.getElementById('detailBody').innerHTML =
+            '<div class="text-center py-4">' +
+                '<p>Lead ID: ' + leadId + '</p>' +
+                '<div class="d-grid gap-2">' +
+                    '<a href="#" onclick="event.preventDefault(); moveLead(' + leadId + ', \'contacted\')" class="btn btn-sm btn-outline-primary"><i class="fas fa-phone me-1"></i>Marcar como Contactado</a>' +
+                    '<a href="#" onclick="event.preventDefault(); moveLead(' + leadId + ', \'visited\')" class="btn btn-sm btn-outline-success"><i class="fas fa-building me-1"></i>Marcou Visita</a>' +
+                    '<a href="#" onclick="event.preventDefault(); moveLead(' + leadId + ', \'trial\')" class="btn btn-sm btn-outline-warning"><i class="fas fa-dumbbell me-1"></i>Aula Experimental</a>' +
+                    '<a href="#" onclick="event.preventDefault(); moveLead(' + leadId + ', \'proposal\')" class="btn btn-sm btn-outline-info"><i class="fas fa-file-invoice me-1"></i>Enviar Proposta</a>' +
+                    '<a href="#" onclick="event.preventDefault(); moveLead(' + leadId + ', \'won\')" class="btn btn-sm btn-success"><i class="fas fa-trophy me-1"></i>Convertido!</a>' +
+                    '<hr>' +
+                    '<form action="/admin/crm/leads/' + leadId + '/delete" method="POST" onsubmit="return confirm(\'Remover este lead?\')">' +
+                        '<button type="submit" class="btn btn-sm btn-outline-danger w-100"><i class="fas fa-trash me-1"></i>Remover Lead</button>' +
+                    '</form>' +
+                '</div>' +
+            '</div>';
+
+        var modal = new bootstrap.Modal(document.getElementById('leadDetailModal'));
+        modal.show();
+    }
+</script>
+{% endblock %}

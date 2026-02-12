@@ -1,0 +1,390 @@
+{% extends "base.html" %}
+
+{% block title %}Relatórios Financeiros - Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .fin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .fin-header h3 { margin: 0; font-weight: 700; }
+
+    /* Summary KPI Cards */
+    .fin-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+
+    .fin-kpi-card {
+        background: white; border-radius: 14px; padding: 18px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        transition: box-shadow 0.2s;
+    }
+    .fin-kpi-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+
+    .fin-kpi-card .kpi-icon {
+        width: 36px; height: 36px; border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.95rem; color: white; margin-bottom: 10px;
+    }
+    .fin-kpi-card .kpi-label { font-size: 0.72rem; font-weight: 600; color: #64748B; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+    .fin-kpi-card .kpi-value { font-size: 1.6rem; font-weight: 800; color: #0F172A; line-height: 1; }
+    .fin-kpi-card .kpi-sub { font-size: 0.72rem; color: #94A3B8; margin-top: 6px; }
+
+    /* Charts */
+    .fin-charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .fin-chart-card {
+        background: white; border-radius: 14px; padding: 20px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .fin-chart-card h5 { font-size: 0.85rem; font-weight: 700; margin-bottom: 16px; color: #1E293B; }
+
+    /* Full width card */
+    .fin-full-row { margin-bottom: 20px; }
+    .fin-full-card {
+        background: white; border-radius: 14px; padding: 20px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .fin-full-card h5 { font-size: 0.85rem; font-weight: 700; margin-bottom: 16px; color: #1E293B; }
+
+    /* Auto vs Manual Stats */
+    .method-stats { display: flex; gap: 24px; align-items: center; justify-content: center; margin-top: 12px; }
+    .method-stat { text-align: center; }
+    .method-stat .stat-value { font-size: 1.4rem; font-weight: 800; color: #0F172A; }
+    .method-stat .stat-label { font-size: 0.7rem; color: #64748B; font-weight: 600; }
+    .method-stat .stat-revenue { font-size: 0.75rem; color: #94A3B8; }
+
+    /* Package table */
+    .pkg-table { width: 100%; font-size: 0.78rem; }
+    .pkg-table th { padding: 8px 10px; color: #64748B; font-weight: 600; border-bottom: 1px solid #F1F5F9; text-align: left; }
+    .pkg-table td { padding: 8px 10px; border-bottom: 1px solid #F8FAFC; }
+    .pkg-table .pkg-bar-bg { height: 6px; background: #F1F5F9; border-radius: 3px; min-width: 80px; }
+    .pkg-table .pkg-bar-fill { height: 100%; border-radius: 3px; background: #10B981; }
+
+    /* Churn badge */
+    .churn-badge {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 4px 12px; border-radius: 10px; font-size: 0.75rem; font-weight: 700;
+    }
+    .churn-low { background: #D1FAE5; color: #059669; }
+    .churn-mid { background: #FEF3C7; color: #D97706; }
+    .churn-high { background: #FEE2E2; color: #DC2626; }
+
+    @media (max-width: 991px) {
+        .fin-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+        .fin-charts-row { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="fin-header">
+        <div>
+            <h3><i class="fas fa-file-invoice-dollar me-2" style="color: #10B981;"></i>Relatórios Financeiros</h3>
+            <small style="color: #94A3B8;">PRD §3.7 - Revenue, pacotes, métodos de pagamento e churn</small>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('admin_metrics.strategic_dashboard') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-chart-line me-1"></i>Métricas
+            </a>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+            </a>
+            <button class="btn btn-sm" style="background: #10B981; color: white;" onclick="loadFinancialData()">
+                <i class="fas fa-sync-alt me-1"></i>Atualizar
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Summary -->
+    <div class="fin-kpi-grid" id="finKpiGrid">
+        <div class="fin-kpi-card">
+            <div class="kpi-icon" style="background: #10B981;"><i class="fas fa-dollar-sign"></i></div>
+            <div class="kpi-label">Revenue (30 dias)</div>
+            <div class="kpi-value" id="kpiRevenue">R$ 0</div>
+            <div class="kpi-sub" id="kpiActiveSubs">0 assinaturas ativas</div>
+        </div>
+        <div class="fin-kpi-card">
+            <div class="kpi-icon" style="background: #F59E0B;"><i class="fas fa-clock"></i></div>
+            <div class="kpi-label">Pendente</div>
+            <div class="kpi-value" id="kpiPending">R$ 0</div>
+            <div class="kpi-sub">Aguardando pagamento</div>
+        </div>
+        <div class="fin-kpi-card">
+            <div class="kpi-icon" style="background: #F43F5E;"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="kpi-label">Em Atraso</div>
+            <div class="kpi-value" id="kpiOverdue">R$ 0</div>
+            <div class="kpi-sub" id="kpiChurnInfo">Churn: 0%</div>
+        </div>
+        <div class="fin-kpi-card">
+            <div class="kpi-icon" style="background: #8B5CF6;"><i class="fas fa-gem"></i></div>
+            <div class="kpi-label">LTV Estimado</div>
+            <div class="kpi-value" id="kpiLTV">R$ 0</div>
+            <div class="kpi-sub" id="kpiAvgTicket">Ticket médio: R$ 0</div>
+        </div>
+    </div>
+
+    <!-- Charts Row 1: Revenue Mensal + Auto vs Manual -->
+    <div class="fin-charts-row">
+        <div class="fin-chart-card">
+            <h5><i class="fas fa-chart-bar me-2" style="color: #10B981;"></i>Revenue Mensal (6 meses)</h5>
+            <canvas id="monthlyRevenueChart" height="260"></canvas>
+        </div>
+        <div class="fin-chart-card">
+            <h5><i class="fas fa-robot me-2" style="color: #06B6D4;"></i>Automático vs Manual</h5>
+            <div style="display: flex; align-items: center; justify-content: center; height: 200px;">
+                <canvas id="paymentMethodChart" width="200" height="200"></canvas>
+            </div>
+            <div class="method-stats" id="methodStats">
+                <div class="method-stat">
+                    <div class="stat-value" id="autoCount">0</div>
+                    <div class="stat-label">Automático</div>
+                    <div class="stat-revenue" id="autoRevenue">R$ 0</div>
+                </div>
+                <div class="method-stat">
+                    <div class="stat-value" id="manualCount">0</div>
+                    <div class="stat-label">Manual</div>
+                    <div class="stat-revenue" id="manualRevenue">R$ 0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 2: Revenue por Pacote + Churn -->
+    <div class="fin-charts-row">
+        <div class="fin-chart-card">
+            <h5><i class="fas fa-boxes me-2" style="color: #FF6B35;"></i>Revenue por Pacote</h5>
+            <div style="display: flex; align-items: center; justify-content: center; height: 220px;">
+                <canvas id="packageChart" width="220" height="220"></canvas>
+            </div>
+            <table class="pkg-table" id="packageTable">
+                <thead>
+                    <tr>
+                        <th>Pacote</th>
+                        <th>Revenue</th>
+                        <th>Vendas</th>
+                        <th>%</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="fin-chart-card">
+            <h5><i class="fas fa-user-minus me-2" style="color: #F43F5E;"></i>Análise de Churn</h5>
+            <div id="churnAnalysis" style="padding: 20px; text-align: center;">
+                <div style="font-size: 3rem; font-weight: 800; color: #0F172A;" id="churnRate">0%</div>
+                <div style="font-size: 0.8rem; color: #64748B; margin-bottom: 20px;">Taxa de Churn (30 dias)</div>
+                <div id="churnBadge"></div>
+                <div style="margin-top: 24px; text-align: left;">
+                    <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #F1F5F9;">
+                        <span style="color: #64748B; font-size: 0.8rem;">Assinaturas Ativas</span>
+                        <span style="font-weight: 700; font-size: 0.85rem;" id="activeSubs">0</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #F1F5F9;">
+                        <span style="color: #64748B; font-size: 0.8rem;">Canceladas (30d)</span>
+                        <span style="font-weight: 700; font-size: 0.85rem; color: #F43F5E;" id="cancelled30d">0</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 10px 0;">
+                        <span style="color: #64748B; font-size: 0.8rem;">LTV Médio</span>
+                        <span style="font-weight: 700; font-size: 0.85rem; color: #8B5CF6;" id="ltvValue">R$ 0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+var monthlyChart = null;
+var methodChart = null;
+var pkgChart = null;
+
+function fmt(v) {
+    return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+function fmtK(v) {
+    return 'R$ ' + (v / 1000).toFixed(1) + 'k';
+}
+
+function loadFinancialData() {
+    fetch('{{ url_for("admin_metrics.get_financial_data") }}')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        renderSummary(data.summary);
+        renderMonthlyChart(data.monthly);
+        renderMethodChart(data.payment_methods);
+        renderPackageChart(data.packages);
+        renderChurnAnalysis(data.summary);
+    });
+}
+
+function renderSummary(s) {
+    document.getElementById('kpiRevenue').textContent = fmt(s.revenue_30d);
+    document.getElementById('kpiPending').textContent = fmt(s.pending);
+    document.getElementById('kpiOverdue').textContent = fmt(s.overdue);
+    document.getElementById('kpiLTV').textContent = fmt(s.ltv);
+    document.getElementById('kpiAvgTicket').textContent = 'Ticket médio: ' + fmt(s.avg_ticket);
+    document.getElementById('kpiActiveSubs').textContent = s.active_subs + ' assinaturas ativas';
+    document.getElementById('kpiChurnInfo').textContent = 'Churn 30d: ' + s.churn_rate + '%';
+}
+
+function renderMonthlyChart(monthly) {
+    var ctx = document.getElementById('monthlyRevenueChart').getContext('2d');
+    if (monthlyChart) monthlyChart.destroy();
+
+    monthlyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: monthly.map(function(m) { return m.label; }),
+            datasets: [
+                {
+                    label: 'Pago',
+                    data: monthly.map(function(m) { return m.paid; }),
+                    backgroundColor: '#10B981',
+                    borderRadius: 4,
+                    order: 3
+                },
+                {
+                    label: 'Pendente',
+                    data: monthly.map(function(m) { return m.pending; }),
+                    backgroundColor: '#F59E0B',
+                    borderRadius: 4,
+                    order: 2
+                },
+                {
+                    label: 'Em Atraso',
+                    data: monthly.map(function(m) { return m.overdue; }),
+                    backgroundColor: '#F43F5E',
+                    borderRadius: 4,
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { font: { size: 11 } } },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) { return ctx.dataset.label + ': ' + fmt(ctx.parsed.y); }
+                    }
+                }
+            },
+            scales: {
+                x: { stacked: true, grid: { display: false } },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    grid: { color: '#F1F5F9' },
+                    ticks: { callback: function(v) { return fmtK(v); } }
+                }
+            }
+        }
+    });
+}
+
+function renderMethodChart(methods) {
+    var ctx = document.getElementById('paymentMethodChart').getContext('2d');
+    if (methodChart) methodChart.destroy();
+
+    var total = methods.auto.count + methods.manual.count;
+    var autoPct = total > 0 ? Math.round(methods.auto.count / total * 100) : 0;
+
+    methodChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Automático (' + autoPct + '%)', 'Manual (' + (100 - autoPct) + '%)'],
+            datasets: [{
+                data: [methods.auto.count, methods.manual.count],
+                backgroundColor: ['#06B6D4', '#94A3B8'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: false,
+            cutout: '65%',
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12 } }
+            }
+        }
+    });
+
+    document.getElementById('autoCount').textContent = methods.auto.count;
+    document.getElementById('manualCount').textContent = methods.manual.count;
+    document.getElementById('autoRevenue').textContent = fmt(methods.auto.revenue);
+    document.getElementById('manualRevenue').textContent = fmt(methods.manual.revenue);
+}
+
+function renderPackageChart(packages) {
+    var ctx = document.getElementById('packageChart').getContext('2d');
+    if (pkgChart) pkgChart.destroy();
+
+    var colors = ['#FF6B35', '#06B6D4', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899', '#F43F5E', '#64748B'];
+    var totalRev = packages.reduce(function(s, p) { return s + p.revenue; }, 0);
+
+    if (packages.length === 0) {
+        packages = [{ name: 'Sem dados', revenue: 0, count: 0 }];
+    }
+
+    pkgChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: packages.map(function(p) { return p.name; }),
+            datasets: [{
+                data: packages.map(function(p) { return p.revenue; }),
+                backgroundColor: colors.slice(0, packages.length),
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: false,
+            cutout: '60%',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) { return ctx.label + ': ' + fmt(ctx.parsed); }
+                    }
+                }
+            }
+        }
+    });
+
+    // Package table
+    var tbody = document.querySelector('#packageTable tbody');
+    var html = '';
+    packages.forEach(function(pkg, i) {
+        var pct = totalRev > 0 ? Math.round(pkg.revenue / totalRev * 100) : 0;
+        html += '<tr>' +
+            '<td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + colors[i % colors.length] + ';margin-right:6px;"></span>' + pkg.name + '</td>' +
+            '<td>' + fmt(pkg.revenue) + '</td>' +
+            '<td>' + pkg.count + '</td>' +
+            '<td>' +
+                '<div class="pkg-bar-bg"><div class="pkg-bar-fill" style="width:' + pct + '%;background:' + colors[i % colors.length] + ';"></div></div>' +
+                '<span style="font-size:0.7rem;color:#94A3B8;">' + pct + '%</span>' +
+            '</td>' +
+        '</tr>';
+    });
+    tbody.innerHTML = html;
+}
+
+function renderChurnAnalysis(summary) {
+    var rate = summary.churn_rate;
+    document.getElementById('churnRate').textContent = rate + '%';
+    document.getElementById('activeSubs').textContent = summary.active_subs;
+    document.getElementById('cancelled30d').textContent = summary.churn_30d;
+    document.getElementById('ltvValue').textContent = fmt(summary.ltv);
+
+    var badgeClass = 'churn-low';
+    var badgeText = 'Saudável';
+    var badgeIcon = 'fas fa-check-circle';
+    if (rate > 10) { badgeClass = 'churn-high'; badgeText = 'Crítico'; badgeIcon = 'fas fa-exclamation-circle'; }
+    else if (rate > 5) { badgeClass = 'churn-mid'; badgeText = 'Atenção'; badgeIcon = 'fas fa-exclamation-triangle'; }
+
+    document.getElementById('churnBadge').innerHTML =
+        '<span class="churn-badge ' + badgeClass + '"><i class="' + badgeIcon + '"></i> ' + badgeText + '</span>';
+}
+
+document.addEventListener('DOMContentLoaded', loadFinancialData);
+</script>
+{% endblock %}

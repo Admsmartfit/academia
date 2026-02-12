@@ -20,6 +20,13 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+
+    <!-- PWA -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#FF6B35">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-152x152.png') }}">
 </head>
 
 <body>
@@ -35,9 +42,8 @@
         </div>
     </nav>
 
-    <!-- 2.1 Hero Section -->
+    <!-- 1. Hero Section -->
     <section class="hero-section">
-        <!-- Video Placeholder -->
         <div class="hero-bg"
             style="background: linear-gradient(rgba(26, 26, 46, 0.7), rgba(26, 26, 46, 0.9)), url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop'); background-size: cover; background-position: center;">
         </div>
@@ -49,43 +55,203 @@
                 98% das suas fibras musculares.
             </p>
             <a href="#planos" class="btn-neon">Garantir Minha Sessão Experimental</a>
-        </div>
-    </section>
 
-    <!-- 2.2 Authority Section: The Truth Graph -->
-    <section class="authority-section">
-        <div class="container" style="max-width: 1000px; margin: 0 auto; text-align: center;">
-            <h2 style="font-size: 2.5rem; margin-bottom: 20px;">O GRÁFICO DA <span class="text-accent">VERDADE</span>
-            </h2>
-            <p style="font-size: 1.1rem; color: var(--text-secondary); max-width: 700px; margin: 0 auto;">
-                Enquanto o seu cérebro limita o recrutamento para te proteger, nossa tecnologia destrava as Fibras Tipo
-                II.
-                Em 40 minutos, você entrega ao músculo o que ele levaria semanas para processar.
-            </p>
-
-            <div class="graphic-container">
-                <!-- Simple CSS Bar Chart Visualization -->
-                <div style="display: flex; align-items: flex-end; justify-content: center; height: 300px; gap: 50px;">
-                    <div style="width: 100px; text-align: center;">
-                        <span style="display: block; margin-bottom: 10px; font-weight: bold; color: #a0a0a0;">30%</span>
-                        <div style="height: 90px; background-color: #4a4a4a; width: 100%; border-radius: 8px 8px 0 0;">
-                        </div>
-                        <p style="margin-top: 15px; color: #a0a0a0;">Treino<br>Comum</p>
-                    </div>
-                    <div style="width: 100px; text-align: center;">
-                        <span class="text-accent"
-                            style="display: block; margin-bottom: 10px; font-weight: bold; font-size: 1.5rem;">98%</span>
-                        <div
-                            style="height: 290px; background-color: var(--accent); width: 100%; border-radius: 8px 8px 0 0; box-shadow: 0 0 20px var(--accent-glow);">
-                        </div>
-                        <p class="text-accent" style="margin-top: 15px; font-weight: bold;">Treino<br>FES</p>
-                    </div>
+            <!-- Trust Badges -->
+            <div class="trust-badges">
+                <div class="trust-badge">
+                    <i class="fas fa-users"></i>
+                    <span>{{ top_users|length * 15 }}+ Alunos Ativos</span>
+                </div>
+                <div class="trust-badge">
+                    <i class="fas fa-star"></i>
+                    <span>4.9/5 Avaliação</span>
+                </div>
+                <div class="trust-badge">
+                    <i class="fas fa-certificate"></i>
+                    <span>ANVISA Aprovado</span>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- 2.3 Section: 48h Cycle -->
+    <!-- 2. Problema / Solução -->
+    <section class="problem-section">
+        <div class="container" style="max-width: 1100px; margin: 0 auto; text-align: center;">
+            <h2 style="font-size: 2.5rem; margin-bottom: 15px;">POR QUE SEUS TREINOS <span class="text-accent">NÃO
+                    FUNCIONAM</span></h2>
+            <p style="color: var(--text-secondary); max-width: 700px; margin: 0 auto 50px;">
+                O mercado fitness brasileiro tem mais de 34.500 academias, mas 70% dos novos alunos abandonam em 90
+                dias. O problema não é falta de vontade — é falta de resultado.
+            </p>
+
+            <div class="problems-grid">
+                <div class="problem-card">
+                    <div class="problem-icon"><i class="fas fa-clock"></i></div>
+                    <h3>Sem Tempo</h3>
+                    <p class="problem-text">"Preciso treinar 1h por dia, 5x por semana, mas minha agenda não permite."
+                    </p>
+                    <div class="solution-arrow"><i class="fas fa-arrow-down text-accent"></i></div>
+                    <p class="solution-text"><strong class="text-accent">Com FES:</strong> 20 minutos, 2x por semana.
+                        Mesmo resultado.</p>
+                </div>
+
+                <div class="problem-card">
+                    <div class="problem-icon"><i class="fas fa-chart-line" style="transform: rotate(-10deg);"></i></div>
+                    <h3>Platô de Resultados</h3>
+                    <p class="problem-text">"Treino há meses e nada muda. Estou estagnado no mesmo corpo."</p>
+                    <div class="solution-arrow"><i class="fas fa-arrow-down text-accent"></i></div>
+                    <p class="solution-text"><strong class="text-accent">Com FES:</strong> Ativa fibras Tipo II que seu
+                        cérebro nunca recruta voluntariamente.</p>
+                </div>
+
+                <div class="problem-card">
+                    <div class="problem-icon"><i class="fas fa-brain"></i></div>
+                    <h3>Fibras Dormentes</h3>
+                    <p class="problem-text">"Treino convencional só ativa 30% das fibras musculares. 70% estão
+                        dormindo."</p>
+                    <div class="solution-arrow"><i class="fas fa-arrow-down text-accent"></i></div>
+                    <p class="solution-text"><strong class="text-accent">Com FES:</strong> Eletroestimulação recruta até
+                        98% das fibras em cada sessão.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. Ciência FES (Authority Section Enhanced) -->
+    <section class="authority-section">
+        <div class="container" style="max-width: 1000px; margin: 0 auto; text-align: center;">
+            <h2 style="font-size: 2.5rem; margin-bottom: 20px;">A CIÊNCIA DO <span class="text-accent">FES</span></h2>
+            <p style="font-size: 1.1rem; color: var(--text-secondary); max-width: 700px; margin: 0 auto;">
+                Functional Electrical Stimulation — a mesma tecnologia utilizada na fisioterapia olímpica
+                e reabilitação de elite, agora aplicada ao treinamento de alta performance.
+            </p>
+
+            <div class="graphic-container">
+                <!-- SVG Animation: Muscle Fiber Activation -->
+                <div class="fiber-animation">
+                    <div class="fiber-group">
+                        <h4 style="margin-bottom: 20px; color: var(--text-secondary);">TREINO CONVENCIONAL</h4>
+                        <div class="fiber-bar-container">
+                            <div class="fiber-bar fiber-bar-traditional">
+                                <div class="fiber-fill" style="width: 30%;"></div>
+                            </div>
+                            <span class="fiber-label" style="color: #6b7280;">30% das fibras</span>
+                        </div>
+                        <div class="fiber-dots">
+                            {% for i in range(20) %}
+                            <span class="fiber-dot {% if i < 6 %}active-gray{% endif %}"></span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="fiber-vs">VS</div>
+
+                    <div class="fiber-group">
+                        <h4 style="margin-bottom: 20px; color: var(--accent);">TREINO FES</h4>
+                        <div class="fiber-bar-container">
+                            <div class="fiber-bar fiber-bar-fes">
+                                <div class="fiber-fill fes-fill" style="width: 98%;"></div>
+                            </div>
+                            <span class="fiber-label text-accent" style="font-weight: bold;">98% das fibras</span>
+                        </div>
+                        <div class="fiber-dots">
+                            {% for i in range(20) %}
+                            <span class="fiber-dot active-fes {% if i < 20 %}pulse-delay-{{ i % 5 }}{% endif %}"></span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="badge-anvisa">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Tecnologia aprovada pela ANVISA | Mesma base da fisioterapia olímpica</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. Comparativo Visual: FES vs Tradicional -->
+    <section class="compare-section">
+        <div class="container" style="max-width: 900px; margin: 0 auto; text-align: center;">
+            <h2 style="font-size: 2.5rem; margin-bottom: 50px;">FES vs TREINO <span
+                    class="text-accent">TRADICIONAL</span></h2>
+
+            <div class="compare-table">
+                <div class="compare-row compare-header">
+                    <div class="compare-label">Critério</div>
+                    <div class="compare-trad">Tradicional</div>
+                    <div class="compare-fes">FES</div>
+                </div>
+                <div class="compare-row">
+                    <div class="compare-label">Tempo por sessão</div>
+                    <div class="compare-trad">60-90 min</div>
+                    <div class="compare-fes highlight">20-40 min</div>
+                </div>
+                <div class="compare-row">
+                    <div class="compare-label">Ativação muscular</div>
+                    <div class="compare-trad">~30%</div>
+                    <div class="compare-fes highlight">~98%</div>
+                </div>
+                <div class="compare-row">
+                    <div class="compare-label">Frequência semanal</div>
+                    <div class="compare-trad">4-6x</div>
+                    <div class="compare-fes highlight">2-3x</div>
+                </div>
+                <div class="compare-row">
+                    <div class="compare-label">Resultados visíveis</div>
+                    <div class="compare-trad">8-12 semanas</div>
+                    <div class="compare-fes highlight">4-6 semanas</div>
+                </div>
+                <div class="compare-row">
+                    <div class="compare-label">Risco de lesão</div>
+                    <div class="compare-trad">Moderado</div>
+                    <div class="compare-fes highlight">Mínimo</div>
+                </div>
+                <div class="compare-row">
+                    <div class="compare-label">Supervisão</div>
+                    <div class="compare-trad">Opcional</div>
+                    <div class="compare-fes highlight">100% supervisionado</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. Modalidades Grid -->
+    <section class="modalities-section">
+        <div class="container" style="max-width: 1200px; margin: 0 auto; text-align: center;">
+            <h2 style="font-size: 2.5rem; margin-bottom: 15px;">NOSSAS <span class="text-accent">MODALIDADES</span></h2>
+            <p style="color: var(--text-secondary); margin-bottom: 50px;">Escolha sua arma de evolução. Combine
+                modalidades para resultados acelerados.</p>
+
+            <div class="modalities-grid">
+                {% for mod in modalities %}
+                <div class="modality-card {% if mod.is_featured %}modality-featured{% endif %}">
+                    {% if mod.is_featured %}
+                    <span class="modality-badge">Tecnologia Exclusiva</span>
+                    {% endif %}
+                    <div class="modality-icon" style="color: {{ mod.color }};">
+                        {% if mod.icon %}
+                        {{ mod.icon }}
+                        {% else %}
+                        <i class="fas fa-dumbbell"></i>
+                        {% endif %}
+                    </div>
+                    <h3>{{ mod.name }}</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem;">
+                        {{ mod.description[:100] + '...' if mod.description and mod.description|length > 100 else
+                        (mod.description or '') }}
+                    </p>
+                    <div class="modality-meta">
+                        <span><i class="fas fa-clock"></i> {{ mod.default_duration }} min</span>
+                        <span><i class="fas fa-coins"></i> {{ mod.credits_cost }} cr</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- 6. Section: 48h Cycle -->
     <section class="cycle-section">
         <div class="container" style="max-width: 1200px; margin: 0 auto; text-align: center;">
             <h2 style="font-size: 2.5rem;">O CICLO DE <span class="text-accent">48 HORAS</span></h2>
@@ -125,7 +291,7 @@
         </div>
     </section>
 
-    <!-- 2.4 Biohacking Simulator -->
+    <!-- 7. Biohacking Simulator -->
     <section class="simulator-section">
         <div class="container" style="max-width: 1000px; margin: 0 auto; text-align: center;">
             <h2 style="font-size: 2.5rem; margin-bottom: 30px;">SIMULADOR DE <span class="text-accent">BIOHACKING</span>
@@ -153,62 +319,43 @@
         </div>
     </section>
 
-    <!-- 3. Pricing Plans -->
+    <!-- 8. Pricing Plans -->
     <section id="planos" class="pricing-section">
         <div class="container" style="max-width: 1200px; margin: 0 auto; text-align: center;">
             <h2 style="font-size: 2.5rem; margin-bottom: 50px;">INVESTIMENTO EM <span
                     class="text-accent">PERFORMANCE</span></h2>
 
             <div class="pricing-grid">
-                <!-- Plan 1 -->
-                <div class="pricing-card">
-                    <h3>START ADAPTIVE</h3>
-                    <p class="credits-info">Iniciante</p>
-                    <div class="price">240 CRÉDITOS</div>
-                    <!-- Assuming dynamic price integration later, placeholders for now based on prompt -->
-                    <ul
-                        style="list-style: none; padding: 0; margin-bottom: 30px; text-align: left; padding-left: 20px;">
-                        <li style="margin-bottom: 10px;"><i class="fas fa-check text-accent"></i> 4x FES / mês</li>
-                        <li style="margin-bottom: 10px;"><i class="fas fa-check text-accent"></i> 8x Musculação / mês
-                        </li>
-                        <li style="margin-bottom: 10px;"><i class="fas fa-check text-accent"></i> Validade 30 dias</li>
-                    </ul>
-                    <a href="/shop" class="btn-neon"
-                        style="background-color: transparent; border: 1px solid var(--accent);">Selecionar</a>
-                </div>
-
-                <!-- Plan 2 (Popular) -->
-                <div class="pricing-card popular">
+                {% for pkg in packages %}
+                <div class="pricing-card {% if pkg.is_featured %}popular{% endif %}">
+                    {% if pkg.is_featured %}
                     <span class="badge-popular">MAIS POPULAR</span>
-                    <h3>HYPER EVOLUTION</h3>
-                    <p class="credits-info">Evolução Constante</p>
-                    <div class="price text-accent">400 CRÉDITOS</div>
+                    {% endif %}
+                    <h3>{{ pkg.name }}</h3>
+                    <p class="credits-info">{{ pkg.description or '' }}</p>
+                    <div class="price {% if pkg.is_featured %}text-accent{% endif %}">{{ pkg.credits }} CRÉDITOS</div>
+                    <div style="font-size: 1.3rem; margin-bottom: 20px; color: var(--text-secondary);">
+                        R$ {{ "%.2f"|format(pkg.price) }}
+                    </div>
                     <ul
                         style="list-style: none; padding: 0; margin-bottom: 30px; text-align: left; padding-left: 20px;">
-                        <li style="margin-bottom: 10px;"><i class="fas fa-bolt text-accent"></i> 8x FES / mês</li>
-                        <li style="margin-bottom: 10px;"><i class="fas fa-check text-accent"></i> 8x Musculação / mês
-                        </li>
-                        <li style="margin-bottom: 10px;"><i class="fas fa-check text-accent"></i> Acesso Prioritário
-                        </li>
-                    </ul>
-                    <a href="/shop" class="btn-neon">Quero Este</a>
-                </div>
-
-                <!-- Plan 3 -->
-                <div class="pricing-card">
-                    <h3>NEURAL ELITE</h3>
-                    <p class="credits-info">Alta Performance</p>
-                    <div class="price">600 CRÉDITOS</div>
-                    <ul
-                        style="list-style: none; padding: 0; margin-bottom: 30px; text-align: left; padding-left: 20px;">
-                        <li style="margin-bottom: 10px;"><i class="fas fa-check text-accent"></i> 12x FES / mês</li>
-                        <li style="margin-bottom: 10px;"><i class="fas fa-check text-accent"></i> 12x Musculação / mês
-                        </li>
-                        <li style="margin-bottom: 10px;"><i class="fas fa-check text-accent"></i> Personal Trainer</li>
+                        {% if pkg.extra_benefits %}
+                        {% for benefit in pkg.extra_benefits %}
+                        <li style="margin-bottom: 10px;"><i class="fas fa-check text-accent"></i> {{ benefit }}</li>
+                        {% endfor %}
+                        {% else %}
+                        <li style="margin-bottom: 10px;"><i class="fas fa-check text-accent"></i> {{ pkg.credits }}
+                            créditos</li>
+                        <li style="margin-bottom: 10px;"><i class="fas fa-check text-accent"></i> Validade {{
+                            pkg.validity_days }} dias</li>
+                        {% endif %}
                     </ul>
                     <a href="/shop" class="btn-neon"
-                        style="background-color: transparent; border: 1px solid var(--accent);">Selecionar</a>
+                        style="{% if not pkg.is_featured %}background-color: transparent; border: 1px solid var(--accent);{% endif %} text-decoration: none;">
+                        {% if pkg.is_featured %}Quero Este{% else %}Selecionar{% endif %}
+                    </a>
                 </div>
+                {% endfor %}
             </div>
 
             <p style="margin-top: 30px; color: var(--text-secondary); font-size: 0.9rem;">
@@ -217,8 +364,229 @@
         </div>
     </section>
 
+    <!-- 9. Depoimentos + Resultados -->
+    <section class="testimonials-section">
+        <div class="container" style="max-width: 1100px; margin: 0 auto; text-align: center;">
+            <h2 style="font-size: 2.5rem; margin-bottom: 50px;">RESULTADOS <span class="text-accent">REAIS</span></h2>
+
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="testimonial-stars">
+                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i
+                            class="fas fa-star"></i><i class="fas fa-star"></i>
+                    </div>
+                    <p class="testimonial-text">"Em 6 semanas com FES ganhei 4kg de massa magra. No treino convencional,
+                        levei 6 meses para o mesmo resultado."</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">R</div>
+                        <div>
+                            <strong>Rafael M.</strong>
+                            <span>Executivo, 38 anos</span>
+                        </div>
+                    </div>
+                    <div class="testimonial-metric">
+                        <span class="text-accent" style="font-size: 1.5rem; font-weight: 800;">+4kg</span>
+                        <span style="color: var(--text-secondary); font-size: 0.8rem;">massa magra em 6 semanas</span>
+                    </div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-stars">
+                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i
+                            class="fas fa-star"></i><i class="fas fa-star"></i>
+                    </div>
+                    <p class="testimonial-text">"Eu treinava 5x por semana e não via mudança. Com 2 sessões de FES por
+                        semana, finalmente saí do platô."</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">C</div>
+                        <div>
+                            <strong>Camila S.</strong>
+                            <span>Atleta amadora, 29 anos</span>
+                        </div>
+                    </div>
+                    <div class="testimonial-metric">
+                        <span class="text-accent" style="font-size: 1.5rem; font-weight: 800;">-12%</span>
+                        <span style="color: var(--text-secondary); font-size: 0.8rem;">gordura corporal em 8
+                            semanas</span>
+                    </div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-stars">
+                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i
+                            class="fas fa-star"></i><i class="fas fa-star"></i>
+                    </div>
+                    <p class="testimonial-text">"Pós-cirurgia do joelho, a fisioterapia com FES acelerou minha
+                        recuperação em semanas. Voltei a correr em 3 meses."</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">A</div>
+                        <div>
+                            <strong>André L.</strong>
+                            <span>Pós-fisioterapia, 45 anos</span>
+                        </div>
+                    </div>
+                    <div class="testimonial-metric">
+                        <span class="text-accent" style="font-size: 1.5rem; font-weight: 800;">3x</span>
+                        <span style="color: var(--text-secondary); font-size: 0.8rem;">mais rápido na recuperação</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 10. Hall da Fama (Gamificação) -->
+    {% if top_users %}
+    <section class="hall-section">
+        <div class="container" style="max-width: 900px; margin: 0 auto; text-align: center;">
+            <h2 style="font-size: 2.5rem; margin-bottom: 15px;">HALL DA <span class="text-accent">FAMA</span></h2>
+            <p style="color: var(--text-secondary); margin-bottom: 40px;">Os top performers do studio. Você pode ser o
+                próximo.</p>
+
+            <!-- Contador em tempo real -->
+            <div class="hall-counter">
+                <div class="counter-item">
+                    <span class="counter-value text-accent" id="fibrasCounter"
+                        data-target="{{ (total_xp|int) * 47 }}">0</span>
+                    <span class="counter-label">Fibras Ativadas Hoje</span>
+                </div>
+                <div class="counter-item">
+                    <span class="counter-value text-accent">{{ "{:,}".format(total_xp|int) }}</span>
+                    <span class="counter-label">XP Total Gerado</span>
+                </div>
+                <div class="counter-item">
+                    <span class="counter-value" style="color: #06B6D4;">{{ top_users|length * 15 }}+</span>
+                    <span class="counter-label">Alunos Ativos</span>
+                </div>
+            </div>
+
+            <div class="hall-ranking">
+                {% for user in top_users[:10] %}
+                <div class="hall-row {% if loop.index <= 3 %}hall-top3{% endif %}">
+                    <div class="hall-position">
+                        {% if loop.index == 1 %}
+                        <i class="fas fa-trophy" style="color: #FFD700; font-size: 1.3rem;"></i>
+                        {% elif loop.index == 2 %}
+                        <i class="fas fa-trophy" style="color: #C0C0C0; font-size: 1.2rem;"></i>
+                        {% elif loop.index == 3 %}
+                        <i class="fas fa-trophy" style="color: #CD7F32; font-size: 1.1rem;"></i>
+                        {% else %}
+                        <span>#{{ loop.index }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="hall-name">{{ anonymize_name(user.name) }}</div>
+                    <div class="hall-level">Nv. {{ user.level }}</div>
+                    <div class="hall-xp text-accent">{{ "{:,}".format(user.xp|int) }} XP</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- 11. FAQ sobre FES -->
+    <section class="faq-section">
+        <div class="container" style="max-width: 800px; margin: 0 auto;">
+            <h2 style="font-size: 2.5rem; margin-bottom: 50px; text-align: center;">PERGUNTAS <span
+                    class="text-accent">FREQUENTES</span></h2>
+
+            <div class="faq-list">
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>O treino com FES dói?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Não! A sensação é de uma contração muscular intensa, similar a um "formigamento" forte. A
+                            intensidade é ajustada individualmente por um instrutor certificado. A maioria dos alunos se
+                            adapta na primeira sessão e descreve como "diferente, mas não doloroso".</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>FES é seguro? Tem aprovação?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Sim! A tecnologia FES (Functional Electrical Stimulation) é aprovada pela ANVISA e utilizada
+                            há décadas na fisioterapia e reabilitação esportiva. Nossos equipamentos possuem
+                            certificação e todas as sessões são 100% supervisionadas por profissionais treinados.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>FES substitui a musculação?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>O FES é um potencializador. Ele pode ser usado sozinho para resultados impressionantes, mas
+                            nosso protocolo híbrido (FES + Peso Livre) gera resultados superiores. O FES ativa as
+                            fibras, e o treino mecânico consolida o ganho. É ciência, não substituição.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Quem não pode fazer FES?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Existem 3 contraindicações absolutas: portadores de marca-passo, gestantes e pessoas com
+                            epilepsia. Para outras condições, realizamos uma triagem de saúde completa antes da primeira
+                            sessão. Sua segurança é nossa prioridade número 1.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Em quanto tempo vejo resultados?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>A maioria dos alunos relata mudanças visíveis entre 4-6 semanas com 2 sessões semanais.
+                            Diferente do treino convencional (8-12 semanas), o FES acelera o processo por recrutar quase
+                            100% das fibras musculares em cada sessão.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Preciso ter experiência em academia?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Não! O FES é ideal tanto para iniciantes quanto para atletas avançados. Como todas as sessões
+                            são supervisionadas, você receberá orientação completa. Na verdade, muitos dos nossos
+                            melhores resultados vêm de pessoas que nunca pisaram numa academia.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 12. CTA Final -->
+    <section class="cta-final-section">
+        <div class="container" style="max-width: 800px; margin: 0 auto; text-align: center;">
+            <div class="cta-badge">SESSÃO EXPERIMENTAL GRATUITA</div>
+            <h2 style="font-size: 2.8rem; margin-bottom: 20px;">
+                AGENDE SUA SESSÃO DE <span class="text-accent">ATIVAÇÃO FES</span>
+            </h2>
+            <p style="font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 15px;">
+                100% Gratuita. Avaliação corporal inclusa. Sem cartão necessário.
+            </p>
+            <p style="color: var(--text-secondary); margin-bottom: 40px;">
+                <i class="fas fa-shield-alt" style="color: #10B981;"></i>
+                Vagas limitadas por semana para garantir atendimento personalizado.
+            </p>
+            <a href="#planos" class="btn-neon btn-neon-large">
+                <i class="fas fa-bolt"></i> Garantir Minha Sessão Experimental
+            </a>
+        </div>
+    </section>
+
     <!-- Footer -->
-    <footer style="background-color: #0a0a1a; padding: 40px 20px; text-align: center; margin-top: 80px;">
+    <footer style="background-color: #0a0a1a; padding: 40px 20px; text-align: center;">
         <p style="color: var(--text-secondary);">© 2026 Biohack Academia. Todos os direitos reservados.</p>
     </footer>
 
@@ -235,18 +603,68 @@
             const months = parseInt(this.value);
             monthsDisplay.textContent = months + (months === 1 ? ' Mês' : ' Meses');
 
-            // Logic: 
-            // Traditional: Assume 30 hours per month (1h/day) -> 30 * months
-            // FES: Assume 4 hours per month (1 session/week) -> 4 * months
-            // Very rough approximation for visual effect based on "90% more efficient"
-
-            const tradHours = months * 30; // 30h per month
-            const fesHours = months * 4;   // 4h per month
+            const tradHours = months * 30;
+            const fesHours = months * 4;
 
             tradHoursDisplay.textContent = tradHours + ' horas';
             fesHoursDisplay.textContent = fesHours + ' horas';
             savedHoursDisplay.textContent = (tradHours - fesHours);
         });
+
+        // FAQ Accordion
+        function toggleFaq(btn) {
+            const item = btn.parentElement;
+            const isOpen = item.classList.contains('faq-open');
+
+            // Close all
+            document.querySelectorAll('.faq-item').forEach(function (el) {
+                el.classList.remove('faq-open');
+            });
+
+            // Open clicked (if wasn't open)
+            if (!isOpen) {
+                item.classList.add('faq-open');
+            }
+        }
+
+        // Scroll animation observer
+        var observer = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-in');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.problem-card, .modality-card, .testimonial-card, .compare-row, .hall-row').forEach(function (el) {
+            observer.observe(el);
+        });
+
+        // Fibras ativadas counter animation
+        var fibrasEl = document.getElementById('fibrasCounter');
+        if (fibrasEl) {
+            var fibrasObserver = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    if (entry.isIntersecting) {
+                        var target = parseInt(fibrasEl.getAttribute('data-target')) || 0;
+                        if (target > 0) {
+                            animateCounter(fibrasEl, target, 2500);
+                        }
+                        fibrasObserver.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.3 });
+            fibrasObserver.observe(fibrasEl);
+        }
+    </script>
+    <script src="{{ url_for('static', filename='js/gamification.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/pwa-install.js') }}"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/sw.js', { scope: '/' })
+                .then(function (reg) { console.log('SW registered'); })
+                .catch(function (err) { console.log('SW failed:', err); });
+        }
     </script>
 </body>
 

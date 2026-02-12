@@ -195,6 +195,75 @@ def manual_approve_template(id):
     return redirect(url_for('admin_whatsapp.list_templates'))
 
 
+@whatsapp_bp.route('/flows')
+@login_required
+@admin_required
+def interactive_flows():
+    """Painel dos 6 Fluxos Interativos PRD com status e métricas."""
+    from app.models.crm import AutomationLog
+    from sqlalchemy import func
+    from datetime import timedelta
+
+    # Buscar fluxos PRD
+    prd_flows = WhatsAppTemplate.query.filter_by(is_prd_flow=True).all()
+
+    # Montar métricas para cada fluxo
+    flows_data = []
+    thirty_days_ago = db.func.now() - timedelta(days=30)
+
+    for flow in prd_flows:
+        # Contar envios (30 dias)
+        sends_30d = flow.send_count or 0
+
+        # Tipo de interação
+        type_label = {
+            'buttons': 'Botões',
+            'list': 'Lista',
+            'text': 'Texto simples',
+            'template': 'Template'
+        }.get(flow.message_type, 'Template')
+
+        # Botões/opções configurados
+        buttons = []
+        if flow.buttons_config:
+            if 'buttons' in flow.buttons_config:
+                buttons = [b['title'] for b in flow.buttons_config['buttons']]
+            elif 'sections' in flow.buttons_config:
+                for section in flow.buttons_config['sections']:
+                    for row in section.get('rows', []):
+                        buttons.append(row['title'])
+
+        flows_data.append({
+            'id': flow.id,
+            'name': flow.name,
+            'trigger': flow.trigger.value,
+            'content': flow.content,
+            'message_type': flow.message_type,
+            'type_label': type_label,
+            'buttons': buttons,
+            'is_active': flow.is_active,
+            'status': flow.megaapi_status or 'pending',
+            'sends_30d': sends_30d,
+            'template_code': flow.template_code
+        })
+
+    return render_template('admin/whatsapp/flows.html', flows=flows_data)
+
+
+@whatsapp_bp.route('/flows/toggle/<int:id>', methods=['POST'])
+@login_required
+@admin_required
+def toggle_flow(id):
+    """Ativar/desativar fluxo PRD."""
+    flow = WhatsAppTemplate.query.get_or_404(id)
+    flow.is_active = not flow.is_active
+    db.session.commit()
+
+    status = 'ativado' if flow.is_active else 'desativado'
+    flash(f'Fluxo "{flow.name}" {status}!', 'success')
+    return redirect(url_for('admin_whatsapp.interactive_flows'))
+
+
 @whatsapp_bp.route('/logs')
 @login_required
 @admin_required

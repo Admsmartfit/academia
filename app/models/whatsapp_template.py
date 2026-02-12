@@ -28,6 +28,10 @@ class TemplateTrigger(enum.Enum):
     WELCOME = "Boas-vindas (Novo Cadastro)"
     HEALTH_SCREENING_EXPIRING = "Triagem de Saúde Expirando"
     HEALTH_SCREENING_EXPIRING_1D = "Triagem de Saúde Expira Amanhã"
+    PLAN_RENEWAL = "Renovação de Plano (3 dias)"
+    NPS_SURVEY = "Pesquisa NPS Mensal"
+    HYDRATION_REMINDER = "Hidratação Eletrolipólise (30min)"
+    RECOVERY_D10 = "Recuperação D+10 (Ausência)"
     CUSTOM = "Personalizado / Envio Manual"
 
 
@@ -50,6 +54,9 @@ class WhatsAppTemplate(db.Model):
     # Conteudo
     content = db.Column(db.Text, nullable=False)
     variables = db.Column(db.JSON)  # Ex: ["{{nome}}", "{{data}}"]
+    message_type = db.Column(db.String(20), default='template')  # template, buttons, list, text
+    buttons_config = db.Column(db.JSON)  # Config dos botoes/lista interativos
+    is_prd_flow = db.Column(db.Boolean, default=False)  # Fluxo pre-configurado do PRD
 
     # Status Megaapi
     megaapi_status = db.Column(db.String(20))  # pending, approved, rejected

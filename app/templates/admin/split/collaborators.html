@@ -1,0 +1,99 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Colaboradores - Split{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="fas fa-user-tie me-2"></i>Colaboradores
+    </h4>
+    <a href="{{ url_for('admin_split.dashboard') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Voltar
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if collaborators %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Colaborador</th>
+                        <th>Tipo</th>
+                        <th>Comissao Pendente</th>
+                        <th>Total Pago</th>
+                        <th>Dados Bancarios</th>
+                        <th>Acoes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in collaborators %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3"
+                                     style="width: 40px; height: 40px;">
+                                    {{ c.user.name[0] }}
+                                </div>
+                                <div>
+                                    <strong>{{ c.user.name }}</strong><br>
+                                    <small class="text-muted">{{ c.user.email }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if c.user.professional_type %}
+                                {% if c.user.professional_type.value == 'instructor' %}
+                                <span class="badge bg-primary">Professor</span>
+                                {% elif c.user.professional_type.value == 'technician' %}
+                                <span class="badge bg-info">Tecnica</span>
+                                {% elif c.user.professional_type.value == 'nutritionist' %}
+                                <span class="badge bg-success">Nutricionista</span>
+                                {% endif %}
+                            {% else %}
+                            <span class="badge bg-secondary">Nao definido</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if c.pending > 0 %}
+                            <span class="text-warning fw-bold">R$ {{ "%.2f"|format(c.pending) }}</span>
+                            {% else %}
+                            <span class="text-muted">R$ 0,00</span>
+                            {% endif %}
+                        </td>
+                        <td>R$ {{ "%.2f"|format(c.total_paid) }}</td>
+                        <td>
+                            {% if c.has_bank_info %}
+                            <span class="badge bg-success"><i class="fas fa-check me-1"></i>Cadastrado</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark"><i class="fas fa-exclamation me-1"></i>Pendente</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('admin_split.edit_collaborator', user_id=c.user.id) }}"
+                                   class="btn btn-outline-primary" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{{ url_for('admin_split.collaborator_statement', user_id=c.user.id) }}"
+                                   class="btn btn-outline-success" title="Extrato">
+                                    <i class="fas fa-file-invoice-dollar"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-user-slash fa-4x text-muted mb-3"></i>
+            <h5>Nenhum colaborador encontrado</h5>
+            <p class="text-muted">Cadastre instrutores no sistema para gerenciar comissoes.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

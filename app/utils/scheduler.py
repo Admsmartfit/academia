@@ -31,7 +31,7 @@ def init_scheduler(app):
             from app.services.payment_processor import PaymentProcessor
             PaymentProcessor.send_upcoming_payment_reminders()
 
-    # Lembretes de aula 2h antes (a cada 30min)
+    # Lembretes de aula 2h antes (a cada 30min) - PRD: Botões interativos
     @scheduler.scheduled_job(IntervalTrigger(minutes=30))
     def class_reminders_2h():
         with app.app_context():
@@ -48,7 +48,6 @@ def init_scheduler(app):
                 Booking.reminder_2h_sent == False
             ).all()
 
-            # Filtrar por horario (dentro da janela de 30min)
             window_start = two_hours_later.time()
             window_end = (two_hours_later + timedelta(minutes=30)).time()
 
@@ -56,42 +55,27 @@ def init_scheduler(app):
                 schedule_time = booking.schedule.start_time
                 if window_start <= schedule_time <= window_end:
                     try:
-                        from app.services.megaapi import megaapi
-
-                        # Preparar menu interativo
-                        sections = [
-                            {
-                                "title": "Gerenciar Aula",
-                                "rows": [
-                                    {
-                                        "title": "Confirmar Presenca",
-                                        "rowId": f"confirm_{booking.id}",
-                                        "description": "Garante sua vaga"
-                                    },
-                                    {
-                                        "title": "Cancelar Aula",
-                                        "rowId": f"cancel_{booking.id}",
-                                        "description": "Libera vaga p/ outro"
-                                    }
-                                ]
-                            }
-                        ]
+                        from app.services.megaapi import megaapi, Button
 
                         instructor_name = booking.schedule.instructor.name if booking.schedule.instructor else 'Instrutor'
+                        first_name = booking.user.name.split()[0]
+                        modality = booking.schedule.modality.name
+                        hora = booking.schedule.start_time.strftime('%H:%M')
 
-                        text = f"""Ola {booking.user.name.split()[0]}!
+                        buttons = [
+                            Button(id=f'confirm_{booking.id}', title='Vou comparecer'),
+                            Button(id=f'cancel_{booking.id}', title='Cancelar'),
+                            Button(id='reschedule', title='Reagendar')
+                        ]
 
-Lembrete: Sua aula de *{booking.schedule.modality.name}* e daqui a 2 horas!
+                        text = (f"Olá {first_name}! Você tem aula de "
+                                f"*{modality}* hoje às *{hora}*!\n\n"
+                                f"Instrutor: {instructor_name}")
 
-Data: {booking.date.strftime('%d/%m/%Y')}
-Horario: {booking.schedule.start_time.strftime('%H:%M')}
-Instrutor: {instructor_name}"""
-
-                        megaapi.send_list_message(
+                        megaapi.send_buttons(
                             phone=booking.user.phone,
-                            text=text,
-                            button_text="Opcoes",
-                            sections=sections,
+                            message=text,
+                            buttons=buttons,
                             user_id=booking.user_id
                         )
 
@@ -140,6 +124,32 @@ Instrutor: {instructor_name}"""
                     print(f"Erro ao enviar lembrete 24h: {e}")
 
             db.session.commit()
+
+    # Renovação de Plano - 3 dias antes (diário às 8h) - PRD
+    @scheduler.scheduled_job(CronTrigger(hour=8, minute=0))
+    def plan_renewal_reminders():
+        with app.app_context():
+            print("[SCHEDULER] Enviando lembretes de renovação de plano...")
+            from app.services.retention_automation import RetentionAutomation
+            try:
+                automation = RetentionAutomation()
+                count = automation.send_plan_renewal()
+                print(f"[SCHEDULER] {count} lembretes de renovação enviados")
+            except Exception as e:
+                print(f"[SCHEDULER] Erro em lembretes de renovação: {e}")
+
+    # NPS Mensal (diário às 14h) - PRD
+    @scheduler.scheduled_job(CronTrigger(hour=14, minute=0))
+    def monthly_nps_survey():
+        with app.app_context():
+            print("[SCHEDULER] Enviando pesquisas NPS mensais...")
+            from app.services.retention_automation import RetentionAutomation
+            try:
+                automation = RetentionAutomation()
+                count = automation.send_nps_survey()
+                print(f"[SCHEDULER] {count} pesquisas NPS enviadas")
+            except Exception as e:
+                print(f"[SCHEDULER] Erro em pesquisas NPS: {e}")
 
     # Verificar conquistas (a cada hora)
     @scheduler.scheduled_job(IntervalTrigger(hours=1))
@@ -433,6 +443,69 @@ Instrutor: {instructor_name}"""
                 print(f"[SCHEDULER] Automações concluídas: {results}")
             except Exception as e:
                 print(f"[SCHEDULER] Erro nas automações de retenção: {e}")
+
+    # ==========================================================================
+    # SPLIT BANCARIO DINAMICO
+    # ==========================================================================
+
+    # Sugestao de Split Dinamico (Domingo as 22h)
+    @scheduler.scheduled_job(CronTrigger(day_of_week='sun', hour=22, minute=0))
+    def generate_split_suggestions():
+        with app.app_context():
+            print("[SCHEDULER] Gerando sugestoes de split dinamico...")
+            from app.services.dynamic_split_algorithm import dynamic_split
+            try:
+                stats = dynamic_split.generate_suggestions()
+                print(f"[SCHEDULER] Sugestoes de split: {stats}")
+
+                # Notificar admin se houver sugestoes
+                if stats.get('suggestions_created', 0) > 0:
+                    from app.services.notification_service import NotificationService
+                    try:
+                        # Notificar primeiro admin encontrado
+                        from app.models import User
+                        admin = User.query.filter_by(role='admin', is_active=True).first()
+                        if admin and admin.phone:
+                            from app.services.megaapi import megaapi
+                            megaapi.send_message(
+                                phone=admin.phone,
+                                message=(
+                                    f"📊 *Sugestões de Split*\n\n"
+                                    f"O algoritmo gerou {stats['suggestions_created']} sugestões "
+                                    f"de ajuste de comissão para a próxima semana.\n\n"
+                                    f"Acesse o painel admin para revisar."
+                                ),
+                                user_id=admin.id
+                            )
+                    except Exception as e:
+                        print(f"[SCHEDULER] Erro ao notificar admin sobre splits: {e}")
+
+            except Exception as e:
+                print(f"[SCHEDULER] Erro ao gerar sugestoes de split: {e}")
+
+    # Processar comissoes de bookings finalizados (diario as 23h)
+    @scheduler.scheduled_job(CronTrigger(hour=23, minute=0))
+    def process_booking_commissions():
+        with app.app_context():
+            print("[SCHEDULER] Processando comissoes de bookings...")
+            from app.services.split_service import split_service
+            try:
+                stats = split_service.process_pending_bookings()
+                print(f"[SCHEDULER] Comissoes processadas: {stats}")
+            except Exception as e:
+                print(f"[SCHEDULER] Erro ao processar comissoes: {e}")
+
+    # Processar creditos expirados como receita (diario as 1h)
+    @scheduler.scheduled_job(CronTrigger(hour=1, minute=0))
+    def process_expired_credits_revenue():
+        with app.app_context():
+            print("[SCHEDULER] Processando creditos expirados como receita...")
+            from app.services.split_service import split_service
+            try:
+                stats = split_service.process_expired_credits_revenue()
+                print(f"[SCHEDULER] Creditos expirados: {stats}")
+            except Exception as e:
+                print(f"[SCHEDULER] Erro ao processar creditos expirados: {e}")
 
     # Iniciar scheduler
     scheduler.start()

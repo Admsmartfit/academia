@@ -1,0 +1,140 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Editar Split do Horario{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-sliders-h me-2"></i>Configurar Split do Horario
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Info do Horario -->
+                <div class="card bg-light mb-4">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <h6 class="text-muted">Dia</h6>
+                                <h5>{{ schedule.weekday_name }}</h5>
+                            </div>
+                            <div class="col-md-3">
+                                <h6 class="text-muted">Horario</h6>
+                                <h5>{{ schedule.start_time.strftime('%H:%M') }} - {{ schedule.end_time.strftime('%H:%M') }}</h5>
+                            </div>
+                            <div class="col-md-3">
+                                <h6 class="text-muted">Modalidade</h6>
+                                <h5>{{ schedule.modality.name if schedule.modality else 'N/A' }}</h5>
+                            </div>
+                            <div class="col-md-3">
+                                <h6 class="text-muted">Instrutor</h6>
+                                <h5>{{ schedule.instructor.name if schedule.instructor else 'N/A' }}</h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analise do Algoritmo -->
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Analise do Algoritmo</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <h6 class="text-muted">Taxa de Ocupacao</h6>
+                                <div class="progress mb-2" style="height: 25px;">
+                                    <div class="progress-bar
+                                        {% if analysis.analysis.occupancy_rate > 80 %}bg-danger
+                                        {% elif analysis.analysis.occupancy_rate > 40 %}bg-warning
+                                        {% else %}bg-success{% endif %}"
+                                        style="width: {{ analysis.analysis.occupancy_rate }}%">
+                                        {{ "%.0f"|format(analysis.analysis.occupancy_rate) }}%
+                                    </div>
+                                </div>
+                                <small class="text-muted">Ultimos {{ analysis.analysis.lookback_days }} dias</small>
+                            </div>
+                            <div class="col-md-4">
+                                <h6 class="text-muted">Nivel de Demanda</h6>
+                                {% if analysis.analysis.demand_level == 'high' %}
+                                <span class="badge bg-danger fs-6">Alta (Pico)</span>
+                                {% elif analysis.analysis.demand_level == 'low' %}
+                                <span class="badge bg-success fs-6">Baixa (Ocioso)</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark fs-6">Padrao</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <h6 class="text-muted">Split Sugerido</h6>
+                                <h5>
+                                    <span class="text-muted">{{ analysis.suggested_split.academy_pct|int }}%</span> /
+                                    <span class="text-primary">{{ analysis.suggested_split.professional_pct|int }}%</span>
+                                </h5>
+                                <small class="text-muted">Academia / Colaborador</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulario -->
+                <form method="POST">
+                    <div class="mb-4">
+                        <label class="form-label">Split Academia (%)</label>
+                        <input type="range" class="form-range" name="academy_pct" id="academyPct"
+                               min="10" max="90" step="5"
+                               value="{{ analysis.current_split.academy_pct|int }}"
+                               oninput="updateSplitDisplay()">
+
+                        <div class="row mt-3">
+                            <div class="col-6 text-center">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="text-muted">Academia</h6>
+                                        <h3 id="academyDisplay">{{ analysis.current_split.academy_pct|int }}%</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 text-center">
+                                <div class="card bg-primary text-white">
+                                    <div class="card-body">
+                                        <h6>Colaborador</h6>
+                                        <h3 id="professionalDisplay">{{ analysis.current_split.professional_pct|int }}%</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Atencao:</strong> Definir um split manual desativa as sugestoes
+                        automaticas do algoritmo para este horario.
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin_split.schedules') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Salvar Split
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateSplitDisplay() {
+    var academy = document.getElementById('academyPct').value;
+    var professional = 100 - academy;
+    document.getElementById('academyDisplay').textContent = academy + '%';
+    document.getElementById('professionalDisplay').textContent = professional + '%';
+}
+</script>
+{% endblock %}

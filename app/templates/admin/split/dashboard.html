@@ -1,0 +1,208 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Split Bancario - Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="fas fa-chart-pie me-2"></i>Split Bancario Dinamico
+    </h4>
+    <div class="btn-group">
+        <a href="{{ url_for('admin_split.settings') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-cog me-2"></i>Configuracoes
+        </a>
+    </div>
+</div>
+
+<!-- Alertas de Pendencias -->
+{% if pending_suggestions > 0 %}
+<div class="alert alert-warning">
+    <i class="fas fa-lightbulb me-2"></i>
+    <strong>{{ pending_suggestions }} sugestoes</strong> de ajuste de split aguardando revisao.
+    <a href="{{ url_for('admin_split.suggestions') }}" class="alert-link">Revisar agora</a>
+</div>
+{% endif %}
+
+{% if pending_payouts > 0 %}
+<div class="alert alert-info">
+    <i class="fas fa-money-bill-wave me-2"></i>
+    <strong>{{ pending_payouts }} lotes</strong> de pagamento aguardando aprovacao.
+    <a href="{{ url_for('admin_split.payouts') }}" class="alert-link">Ver lotes</a>
+</div>
+{% endif %}
+
+<!-- Cards de Resumo -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Comissoes do Mes</h6>
+                        <h3 class="mb-0">R$ {{ "%.2f"|format(month_commissions) }}</h3>
+                        <small>{{ current_month }}</small>
+                    </div>
+                    <i class="fas fa-users fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Receita Academia</h6>
+                        <h3 class="mb-0">R$ {{ "%.2f"|format(month_academy) }}</h3>
+                        <small>{{ current_month }}</small>
+                    </div>
+                    <i class="fas fa-building fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Colaboradores</h6>
+                        <h3 class="mb-0">{{ collaborators }}</h3>
+                        <small>ativos</small>
+                    </div>
+                    <i class="fas fa-user-tie fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Valor do Credito</h6>
+                        <h3 class="mb-0">R$ {{ "%.2f"|format(settings.credit_value_reais) }}</h3>
+                        <small>configurado</small>
+                    </div>
+                    <i class="fas fa-coins fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Acoes Rapidas -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-bolt me-2"></i>Acoes Rapidas</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('admin_split.suggestions') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-lightbulb me-2"></i>Revisar Sugestoes de Split
+                        {% if pending_suggestions > 0 %}
+                        <span class="badge bg-warning text-dark">{{ pending_suggestions }}</span>
+                        {% endif %}
+                    </a>
+                    <form method="POST" action="{{ url_for('admin_split.process_commissions') }}" class="d-inline">
+                        <button type="submit" class="btn btn-outline-success w-100">
+                            <i class="fas fa-sync me-2"></i>Processar Comissoes Pendentes
+                            {% if pending_commissions > 0 %}
+                            <span class="badge bg-info">{{ pending_commissions }}</span>
+                            {% endif %}
+                        </button>
+                    </form>
+                    <a href="{{ url_for('admin_split.generate_payouts') }}" class="btn btn-outline-info">
+                        <i class="fas fa-file-invoice-dollar me-2"></i>Gerar Lotes de Pagamento
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-sliders-h me-2"></i>Splits por Demanda</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Demanda</th>
+                            <th>Ocupacao</th>
+                            <th>Academia</th>
+                            <th>Colaborador</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="table-danger">
+                            <td><span class="badge bg-danger">Alta</span></td>
+                            <td>> {{ settings.high_demand_threshold }}%</td>
+                            <td>{{ settings.high_demand_academy_pct }}%</td>
+                            <td>{{ settings.high_demand_professional_pct }}%</td>
+                        </tr>
+                        <tr class="table-warning">
+                            <td><span class="badge bg-warning text-dark">Padrao</span></td>
+                            <td>{{ settings.low_demand_threshold }}-{{ settings.high_demand_threshold }}%</td>
+                            <td>{{ settings.standard_demand_academy_pct }}%</td>
+                            <td>{{ settings.standard_demand_professional_pct }}%</td>
+                        </tr>
+                        <tr class="table-success">
+                            <td><span class="badge bg-success">Baixa</span></td>
+                            <td>< {{ settings.low_demand_threshold }}%</td>
+                            <td>{{ settings.low_demand_academy_pct }}%</td>
+                            <td>{{ settings.low_demand_professional_pct }}%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Links de Navegacao -->
+<div class="row">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-calendar-alt fa-3x text-primary mb-3"></i>
+                <h6>Horarios</h6>
+                <p class="text-muted small">Configurar split por horario</p>
+                <a href="{{ url_for('admin_split.schedules') }}" class="btn btn-primary btn-sm">Gerenciar</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-receipt fa-3x text-success mb-3"></i>
+                <h6>Comissoes</h6>
+                <p class="text-muted small">Historico de comissoes</p>
+                <a href="{{ url_for('admin_split.commissions') }}" class="btn btn-success btn-sm">Ver Todas</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-money-check-alt fa-3x text-info mb-3"></i>
+                <h6>Pagamentos</h6>
+                <p class="text-muted small">Lotes de pagamento</p>
+                <a href="{{ url_for('admin_split.payouts') }}" class="btn btn-info btn-sm">Ver Lotes</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-user-tie fa-3x text-warning mb-3"></i>
+                <h6>Colaboradores</h6>
+                <p class="text-muted small">Gerenciar colaboradores</p>
+                <a href="{{ url_for('admin_split.collaborators') }}" class="btn btn-warning btn-sm">Gerenciar</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

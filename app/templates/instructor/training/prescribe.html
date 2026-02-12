@@ -4,31 +4,42 @@
 
 {% block extra_css %}
 <style>
-    .prescription-step { display: none; }
-    .prescription-step.active { display: block; }
+    .prescription-step {
+        display: none;
+    }
+
+    .prescription-step.active {
+        display: block;
+    }
+
     .exercise-library-item {
         cursor: pointer;
         transition: all 0.2s;
     }
+
     .exercise-library-item:hover {
         background-color: #e3f2fd;
         transform: translateX(5px);
     }
+
     .exercise-item {
         padding: 10px;
         border: 1px solid #dee2e6;
         border-radius: 8px;
         background: #f8f9fa;
     }
+
     .session-card .card-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
     }
+
     .step-indicator {
         display: flex;
         justify-content: center;
         margin-bottom: 20px;
     }
+
     .step-indicator .step {
         width: 40px;
         height: 40px;
@@ -42,20 +53,24 @@
         margin: 0 10px;
         transition: all 0.3s;
     }
+
     .step-indicator .step.active {
         background: #667eea;
         color: white;
     }
+
     .step-indicator .step.completed {
         background: #28a745;
         color: white;
     }
+
     .step-connector {
         width: 50px;
         height: 2px;
         background: #dee2e6;
         align-self: center;
     }
+
     .step-connector.completed {
         background: #28a745;
     }
@@ -78,23 +93,59 @@
         <div class="col-lg-8">
             <div class="card">
                 <div class="card-header">
-                    <h4 class="mb-0"><i class="fas fa-dumbbell me-2"></i>Nova Prescricao de Treino</h4>
+                    <h4 class="mb-0"><i class="fas fa-dumbbell me-2"></i>{{ 'Criar Novo Modelo' if is_template else
+                        'Nova Prescricao de Treino' }}</h4>
                 </div>
                 <div class="card-body">
                     <!-- Step 1: Student & Basic Info -->
-                    <div id="step1" class="prescription-step active">
-                        <h5>1. Informacoes Gerais</h5>
+                    <div id="step1" class="prescription-step active" {% if is_template %}data-mode="template" {% endif
+                        %} {% if template_id %}data-load-template="{{ template_id }}" {% endif %}>
 
-                        <div class="mb-3 position-relative">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5>1. {{ 'Definir Modelo (Template)' if is_template else 'Informacoes Gerais' }}</h5>
+                            {% if not is_template %}
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="showTemplateModal()">
+                                <i class="fas fa-magic me-1"></i>Carregar de um Modelo
+                            </button>
+                            {% endif %}
+                        </div>
+
+                        {% if is_template %}
+                        <div class="mb-3">
+                            <label class="form-label">Nome do Modelo</label>
+                            <input type="text" id="templateName" class="form-control"
+                                placeholder="Ex: Hipertrofia Iniciante A/B">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descricao (Opcional)</label>
+                            <textarea id="templateDescription" class="form-control" rows="2"></textarea>
+                        </div>
+                        {% else %}
+                        <div class="mb-3 position-relative" id="studentContainer" {% if student %}
+                            data-initial-id="{{ student.id }}" data-initial-name="{{ student.name }}"
+                            data-initial-email="{{ student.email }}" {% endif %}>
                             <label class="form-label">Aluno</label>
-                            <input type="text" id="studentSearch" class="form-control"
-                                   placeholder="Digite o nome do aluno..." autocomplete="off">
-                            <div id="studentResults" class="dropdown-menu w-100" style="display:none;"></div>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="text" id="studentSearch" class="form-control"
+                                    placeholder="Digite nome ou sobrenome..." autocomplete="off">
+                                <button class="btn btn-outline-secondary" type="button" id="clearStudent"
+                                    style="display:none;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div id="studentResults" class="dropdown-menu w-100 shadow-sm"
+                                style="display:none; max-height: 300px; overflow-y: auto;"></div>
                             <input type="hidden" id="selectedStudentId">
                             <div id="selectedStudentInfo" class="mt-2" style="display:none;">
-                                <span class="badge bg-primary" id="studentBadge"></span>
+                                <div
+                                    class="alert alert-info py-2 px-3 mb-0 d-flex justify-content-between align-items-center">
+                                    <span><i class="fas fa-user-check me-2"></i><span id="studentBadge"></span></span>
+                                    <button type="button" class="btn-close" onclick="resetStudent()"></button>
+                                </div>
                             </div>
                         </div>
+                        {% endif %}
 
                         <div class="row mb-3">
                             <div class="col-md-6">
@@ -109,27 +160,43 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Validade (dias)</label>
-                                <input type="number" id="validity" class="form-control"
-                                       value="30" min="7" max="180">
+                                <input type="number" id="validity" class="form-control" value="30" min="7" max="180"
+                                    {{ 'disabled' if is_template else '' }}>
                             </div>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Observacoes (opcional)</label>
                             <textarea id="planNotes" class="form-control" rows="2"
-                                      placeholder="Observacoes gerais sobre o plano..."></textarea>
+                                placeholder="Observacoes gerais sobre o plano..."></textarea>
                         </div>
 
+                        {% if is_template %}
+                        <div class="alert alert-light border small">
+                            <i class="fas fa-info-circle me-1"></i>
+                            No próximo passo, voce poderá criar as sessoes (Treino A, B, C...) e adicionar os
+                            exercícios.
+                        </div>
+                        {% endif %}
+
                         <button class="btn btn-primary" onclick="goToStep(2)">
-                            Proximo <i class="fas fa-arrow-right ms-1"></i>
+                            {{ 'Definir Sessoes' if is_template else 'Proximo' }} <i
+                                class="fas fa-arrow-right ms-1"></i>
                         </button>
                     </div>
 
                     <!-- Step 2: Sessions -->
                     <div id="step2" class="prescription-step">
-                        <h5>2. Sessoes de Treino</h5>
+                        <h5>2. Sessoes de Treino (Ex: Treino A, B...)</h5>
 
-                        <div id="sessions-container"></div>
+                        <div id="sessions-container">
+                            <div class="text-center py-5 border rounded bg-light mb-3" id="emptySessionsMsg">
+                                <i class="fas fa-layer-group fa-3x text-muted mb-2"></i>
+                                <p class="text-muted fs-5">Nenhuma sessao adicionada</p>
+                                <p class="text-muted small">Clique no botão abaixo para criar a primeira sessao de
+                                    treino deste modelo.</p>
+                            </div>
+                        </div>
 
                         <button class="btn btn-success mb-3" onclick="addSession()">
                             <i class="fas fa-plus me-1"></i>Adicionar Sessao
@@ -173,7 +240,7 @@
                             <div class="col-md-6">
                                 <label class="form-label">Buscar exercicio</label>
                                 <input type="text" id="exerciseSearch" class="form-control"
-                                       placeholder="Nome do exercicio...">
+                                    placeholder="Nome do exercicio...">
                             </div>
                         </div>
 
@@ -186,8 +253,9 @@
                             <button class="btn btn-secondary me-2" onclick="goToStep(2)">
                                 <i class="fas fa-arrow-left me-1"></i>Voltar
                             </button>
-                            <button class="btn btn-success" onclick="savePrescription()" id="saveBtn">
-                                <i class="fas fa-save me-1"></i>Salvar Prescricao
+                            <button class="btn btn-primary" id="saveBtn" onclick="handleSave()">
+                                <i class="fas fa-save me-1"></i>
+                                {% if is_template %}Salvar Modelo{% else %}Salvar Prescricao{% endif %}
                             </button>
                         </div>
                     </div>
@@ -211,10 +279,91 @@
     </div>
 </div>
 
+<!-- Template Selection Modal -->
+<div class="modal fade" id="templateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Escolher Modelo de Treino</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" id="templateSearch" class="form-control" placeholder="Buscar modelo...">
+                </div>
+                <div class="list-group" id="templatesList" style="max-height: 400px; overflow-y: auto;">
+                    <p class="text-center py-3">Carregando modelos...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Alert container -->
 <div id="prescriptionAlerts" class="position-fixed top-0 end-0 p-3" style="z-index: 1050;"></div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/training-prescription.js') }}"></script>
+<script>
+    function handleSave() {
+        const isTemplateMode = !!document.querySelector('#step1[data-mode="template"]');
+        if (isTemplateMode) {
+            saveAsTemplate();
+        } else {
+            savePrescription();
+        }
+    }
+
+    async function showTemplateModal() {
+        const modal = new bootstrap.Modal(document.getElementById('templateModal'));
+        modal.show();
+
+        try {
+            const response = await fetch('/api/training/templates/list');
+            const templates = await response.json();
+            const list = document.getElementById('templatesList');
+
+            if (templates.length === 0) {
+                list.innerHTML = '<p class="text-center py-3">Nenhum modelo encontrado.</p>';
+                return;
+            }
+
+            list.innerHTML = templates.map(t => `
+            <button type="button" class="list-group-item list-group-item-action" onclick="loadTemplateIntoPrescription(${t.id})">
+                <div class="d-flex w-100 justify-content-between align-items-center">
+                    <h6 class="mb-1">${t.name}</h6>
+                    <span class="badge bg-soft-info text-info border border-info px-2">${t.goal_label}</span>
+                </div>
+                <small class="text-muted d-block mb-1">${t.description || 'Sem descrição'}</small>
+                <div class="d-flex gap-3 small text-muted">
+                    <span><i class="fas fa-layer-group me-1"></i>${t.session_count} Sessoes</span>
+                    <span><i class="fas fa-user-tie me-1"></i>${t.instructor_name}</span>
+                </div>
+            </button>
+        `).join('');
+        } catch (err) {
+            console.error('Erro ao carregar templates:', err);
+            document.getElementById('templatesList').innerHTML = '<p class="text-danger text-center py-3">Erro ao carregar modelos.</p>';
+        }
+    }
+
+    function loadTemplateIntoPrescription(templateId) {
+        const modalEl = document.getElementById('templateModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+
+        // Chama a função global definida no training-prescription.js
+        if (typeof loadTemplate === 'function') {
+            loadTemplate(templateId);
+        } else {
+            console.error('Função loadTemplate não encontrada');
+        }
+    }
+</script>
+<style>
+    .bg-soft-info {
+        background-color: rgba(13, 202, 240, 0.1);
+    }
+</style>
 {% endblock %}

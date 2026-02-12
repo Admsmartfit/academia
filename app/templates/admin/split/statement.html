@@ -1,0 +1,197 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Extrato - {{ statement.professional.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="fas fa-file-invoice-dollar me-2"></i>Extrato de Comissoes
+    </h4>
+    <div class="btn-group">
+        <a href="{{ url_for('admin_split.export_statement_pdf', user_id=statement.professional.id, month=statement.period.month, year=statement.period.year) }}"
+           class="btn btn-outline-danger">
+            <i class="fas fa-file-pdf me-2"></i>Exportar PDF
+        </a>
+        <a href="{{ url_for('admin_split.collaborators') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Voltar
+        </a>
+    </div>
+</div>
+
+<!-- Cabecalho do Extrato -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h5>{{ statement.professional.name }}</h5>
+                <p class="text-muted mb-1">
+                    <i class="fas fa-envelope me-2"></i>{{ statement.professional.email }}
+                </p>
+                {% if statement.professional.cpf %}
+                <p class="text-muted mb-0">
+                    <i class="fas fa-id-card me-2"></i>{{ statement.professional.cpf }}
+                </p>
+                {% endif %}
+            </div>
+            <div class="col-md-6 text-end">
+                <h6 class="text-muted">Periodo de Referencia</h6>
+                <h4>{{ '%02d'|format(statement.period.month) }}/{{ statement.period.year }}</h4>
+                <small class="text-muted">
+                    {{ statement.period.start_date }} a {{ statement.period.end_date }}
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Navegacao de Periodo -->
+<div class="mb-4">
+    <form method="GET" class="row g-2 align-items-center">
+        <div class="col-auto">
+            <label class="form-label mb-0">Periodo:</label>
+        </div>
+        <div class="col-auto">
+            <select name="month" class="form-select form-select-sm">
+                {% for m in range(1, 13) %}
+                <option value="{{ m }}" {{ 'selected' if m == statement.period.month }}>
+                    {{ ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][m-1] }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <select name="year" class="form-select form-select-sm">
+                {% for y in range(2024, 2027) %}
+                <option value="{{ y }}" {{ 'selected' if y == statement.period.year }}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-sm btn-primary">
+                <i class="fas fa-search me-1"></i>Buscar
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Resumo -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Total de Atendimentos</h6>
+                <h3 class="mb-0">{{ statement.summary.total_entries }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Valor Bruto</h6>
+                <h3 class="mb-0">R$ {{ "%.2f"|format(statement.summary.total_gross) }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Taxa Academia</h6>
+                <h3 class="mb-0 text-danger">R$ {{ "%.2f"|format(statement.summary.total_academy) }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h6>Valor Liquido</h6>
+                <h3 class="mb-0">R$ {{ "%.2f"|format(statement.summary.total_professional) }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status das Comissoes -->
+{% if statement.summary.by_status %}
+<div class="row mb-4">
+    {% for status, data in statement.summary.by_status.items() %}
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <small class="text-muted text-uppercase">{{ status }}</small>
+                        <h5 class="mb-0">R$ {{ "%.2f"|format(data.amount) }}</h5>
+                    </div>
+                    <span class="badge bg-{{ 'warning' if status == 'pending' else 'success' if status == 'paid' else 'info' }} align-self-center">
+                        {{ data.count }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Detalhes -->
+<div class="card">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-list me-2"></i>Detalhamento</h6>
+    </div>
+    <div class="card-body">
+        {% if statement.entries %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Horario</th>
+                        <th>Cliente</th>
+                        <th>Modalidade</th>
+                        <th>Status</th>
+                        <th class="text-end">Valor Bruto</th>
+                        <th class="text-center">Split</th>
+                        <th class="text-end">Valor Liquido</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in statement.entries %}
+                    <tr>
+                        <td>{{ e.date.strftime('%d/%m') if e.date else '-' }}</td>
+                        <td>{{ e.time.strftime('%H:%M') if e.time else '-' }}</td>
+                        <td>{{ e.client_name }}</td>
+                        <td>{{ e.modality }}</td>
+                        <td>
+                            {% if e.status == 'COMPLETED' %}
+                            <span class="badge bg-success">Realizado</span>
+                            {% elif e.status == 'NO_SHOW' %}
+                            <span class="badge bg-warning text-dark">No-Show</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ e.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">R$ {{ "%.2f"|format(e.credit_value) }}</td>
+                        <td class="text-center">{{ e.split_pct|int }}%</td>
+                        <td class="text-end fw-bold">R$ {{ "%.2f"|format(e.amount) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <td colspan="5"><strong>TOTAL</strong></td>
+                        <td class="text-end"><strong>R$ {{ "%.2f"|format(statement.summary.total_gross) }}</strong></td>
+                        <td></td>
+                        <td class="text-end"><strong class="text-success">R$ {{ "%.2f"|format(statement.summary.total_professional) }}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+            <p class="text-muted">Nenhuma comissao registrada neste periodo.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

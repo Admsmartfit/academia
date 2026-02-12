@@ -1,0 +1,195 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Lote #{{ batch.id }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="fas fa-file-invoice-dollar me-2"></i>Lote de Pagamento #{{ batch.id }}
+    </h4>
+    <a href="{{ url_for('admin_split.payouts') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Voltar
+    </a>
+</div>
+
+<!-- Info do Lote -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Colaborador</h6>
+                        <h5>{{ batch.professional.name }}</h5>
+                        <p class="text-muted mb-0">{{ batch.professional.email }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Periodo</h6>
+                        <h5>{{ '%02d'|format(batch.reference_month) }}/{{ batch.reference_year }}</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h6>Valor a Pagar</h6>
+                <h2 class="mb-0">R$ {{ "%.2f"|format(batch.total_professional) }}</h2>
+                <small>{{ batch.entries_count }} atendimentos</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status e Acoes -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h6 class="mb-1">Status:</h6>
+                {% if batch.status.value == 'draft' %}
+                <span class="badge bg-secondary fs-6">Rascunho</span>
+                {% elif batch.status.value == 'pending' %}
+                <span class="badge bg-warning text-dark fs-6">Aguardando Aprovacao</span>
+                {% elif batch.status.value == 'approved' %}
+                <span class="badge bg-info fs-6">Aprovado - Aguardando Pagamento</span>
+                {% elif batch.status.value == 'processing' %}
+                <span class="badge bg-primary fs-6">Processando Pagamento</span>
+                {% elif batch.status.value == 'paid' %}
+                <span class="badge bg-success fs-6">Pago</span>
+                <p class="text-muted small mb-0 mt-1">
+                    Pago em {{ batch.paid_at.strftime('%d/%m/%Y %H:%M') if batch.paid_at else 'N/A' }}
+                    {% if batch.payment_reference %}
+                    - Ref: {{ batch.payment_reference }}
+                    {% endif %}
+                </p>
+                {% elif batch.status.value == 'failed' %}
+                <span class="badge bg-danger fs-6">Falha no Pagamento</span>
+                {% endif %}
+            </div>
+            <div class="col-md-6 text-end">
+                {% if batch.status.value == 'pending' %}
+                <form method="POST" action="{{ url_for('admin_split.approve_payout', batch_id=batch.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check me-2"></i>Aprovar para Pagamento
+                    </button>
+                </form>
+                {% elif batch.status.value == 'approved' %}
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#markPaidModal">
+                    <i class="fas fa-money-bill-wave me-2"></i>Marcar como Pago
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resumo -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Valor Bruto</h6>
+                <h4>R$ {{ "%.2f"|format(batch.total_gross) }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Taxa Academia</h6>
+                <h4 class="text-danger">R$ {{ "%.2f"|format(batch.total_academy) }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Valor Liquido</h6>
+                <h4 class="text-success">R$ {{ "%.2f"|format(batch.total_professional) }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Entradas do Lote -->
+<div class="card">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-list me-2"></i>Comissoes do Lote</h6>
+    </div>
+    <div class="card-body">
+        {% if batch.entries %}
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Cliente</th>
+                        <th>Status</th>
+                        <th>Valor Bruto</th>
+                        <th>Split</th>
+                        <th>Valor Liquido</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in batch.entries %}
+                    <tr>
+                        <td>{{ e.processed_at.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ e.booking.user.name if e.booking and e.booking.user else 'N/A' }}</td>
+                        <td>
+                            {% if e.booking_status == 'COMPLETED' %}
+                            <span class="badge bg-success">Realizado</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">{{ e.booking_status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>R$ {{ "%.2f"|format(e.credit_value) }}</td>
+                        <td>{{ e.professional_percentage|int }}%</td>
+                        <td class="fw-bold">R$ {{ "%.2f"|format(e.amount_professional) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center">Nenhuma entrada neste lote.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal Marcar como Pago -->
+<div class="modal fade" id="markPaidModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin_split.mark_payout_paid', batch_id=batch.id) }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Pagamento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Confirmar pagamento de <strong>R$ {{ "%.2f"|format(batch.total_professional) }}</strong>
+                       para <strong>{{ batch.professional.name }}</strong>?</p>
+
+                    <div class="mb-3">
+                        <label class="form-label">Referencia do Pagamento</label>
+                        <input type="text" name="payment_reference" class="form-control"
+                               placeholder="Ex: PIX 123456, TED 789...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">URL do Comprovante (opcional)</label>
+                        <input type="url" name="proof_url" class="form-control"
+                               placeholder="https://...">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check me-2"></i>Confirmar Pagamento
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

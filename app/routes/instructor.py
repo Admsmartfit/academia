@@ -59,13 +59,18 @@ def dashboard():
         is_active=True
     ).order_by(ClassSchedule.start_time).all()
 
-    # Para cada horário, buscar todos os agendamentos (confirmados, completed, no_show)
     for sched in schedules:
         sched.today_bookings = Booking.query.filter(
             Booking.schedule_id == sched.id,
             Booking.date == selected_date,
             Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.COMPLETED, BookingStatus.NO_SHOW])
         ).all()
+        
+        # Adicionar status de saude para cada booking
+        from app.models.health import ScreeningType
+        for booking in sched.today_bookings:
+            booking.user.parq_status = booking.user.get_screening_status(ScreeningType.PARQ)
+            booking.user.ems_status = booking.user.get_screening_status(ScreeningType.EMS)
 
     # Datas de navegação
     prev_date = selected_date - timedelta(days=1)
@@ -228,7 +233,20 @@ def totem_view():
 @instructor_required
 def training_prescribe():
     """Interface de prescricao de treino para instrutor."""
-    return render_template('instructor/training/prescribe.html')
+    student_id = request.args.get('student_id')
+    template_id = request.args.get('template_id')
+    is_template = request.args.get('is_template') == '1'
+    
+    student = None
+    if student_id:
+        student = User.query.get(student_id)
+        if student and student.role != 'student':
+            student = None
+            
+    return render_template('instructor/training/prescribe.html', 
+                         student=student, 
+                         template_id=template_id,
+                         is_template=is_template)
 
 
 @instructor_bp.route('/training/list')
@@ -241,6 +259,21 @@ def training_list():
         instructor_id=current_user.id
     ).order_by(TrainingPlan.created_at.desc()).all()
     return render_template('instructor/training/list.html', plans=plans)
+
+
+@instructor_bp.route('/training/templates')
+@login_required
+@instructor_required
+def list_templates():
+    """Lista modelos de treino (templates)."""
+    from app.models.training import TrainingTemplate
+    templates = TrainingTemplate.query.filter(
+        db.or_(
+            TrainingTemplate.instructor_id == current_user.id,
+            TrainingTemplate.is_public == True
+        )
+    ).order_by(TrainingTemplate.name).all()
+    return render_template('instructor/training/templates.html', templates=templates)
 
 
 @instructor_bp.route('/training/<int:plan_id>')
@@ -304,5 +337,91 @@ def validate_checklist(booking_id):
     
     flash(f'Checklist APROVADO! Pode iniciar a sessão na área: {area}. ✅', 'success')
     return redirect(request.referrer or url_for('instructor.dashboard'))
+
+
+@instructor_bp.route('/students')
+@login_required
+@instructor_required
+def list_students():
+    """Lista de alunos para o instrutor"""
+    search = request.args.get('search', '')
+    if search:
+        students = User.query.filter(
+            User.role == 'student',
+            User.is_active == True,
+            (User.name.ilike(f'%{search}%')) | (User.email.ilike(f'%{search}%'))
+        ).order_by(User.name).all()
+    else:
+        students = User.query.filter_by(role='student', is_active=True).order_by(User.name).limit(50).all()
+    
+    return render_template('instructor/students/list.html', students=students, search=search)
+
+
+@instructor_bp.route('/student/<int:id>')
+@login_required
+@instructor_required
+def student_detail(id):
+    """Detalhes do aluno para o instrutor (saude, treinos, historico)"""
+    student = User.query.get_or_404(id)
+    if student.role != 'student':
+        abort(403)
+        
+    # Buscar treinos
+    from app.models.training import TrainingPlan
+    active_plan = TrainingPlan.query.filter_by(user_id=student.id, is_active=True).first()
+    past_plans = TrainingPlan.query.filter_by(user_id=student.id, is_active=False).order_by(TrainingPlan.created_at.desc()).all()
+    
+    # Buscar triagens
+    from app.models.health import HealthScreening, ScreeningType
+    parq = HealthScreening.query.filter_by(user_id=student.id, screening_type=ScreeningType.PARQ).order_by(HealthScreening.created_at.desc()).first()
+    ems = HealthScreening.query.filter_by(user_id=student.id, screening_type=ScreeningType.EMS).order_by(HealthScreening.created_at.desc()).first()
+    
+    # Historico de aulas
+    bookings = Booking.query.filter_by(user_id=student.id).order_by(Booking.date.desc()).limit(20).all()
+    
+    return render_template('instructor/students/detail.html', 
+                          student=student, 
+                          active_plan=active_plan,
+                          past_plans=past_plans,
+                          parq=parq,
+                          ems=ems,
+                          bookings=bookings)
+
+
+@instructor_bp.route('/student/<int:id>/face', methods=['GET'])
+@login_required
+@instructor_required
+def face_enrollment(id):
+    """Pagina de cadastro facial pelo instrutor"""
+    student = User.query.get_or_404(id)
+    if student.role != 'student':
+        abort(403)
+    return render_template('instructor/students/face_enrollment.html', student=student)
+
+
+@instructor_bp.route('/student/<int:id>/face/enroll', methods=['POST'])
+@login_required
+@instructor_required
+def enroll_face(id):
+    """API para instrutor cadastrar face do aluno"""
+    from app.services.face_service import FaceRecognitionService
+    
+    student = User.query.get_or_404(id)
+    data = request.get_json()
+    
+    if not data or 'image' not in data:
+        return jsonify({'success': False, 'error': 'Imagem nao fornecida'}), 400
+        
+    face_service = FaceRecognitionService(tolerance=0.6)
+    result = face_service.enroll_face(student.id, data['image'])
+    
+    if result['success']:
+        return jsonify({
+            'success': True, 
+            'message': f'Face de {student.name} cadastrada com sucesso!',
+            'confidence': result['confidence']
+        }), 201
+    else:
+        return jsonify({'success': False, 'error': result['message']}), 400
 
 

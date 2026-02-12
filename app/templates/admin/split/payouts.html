@@ -1,0 +1,96 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Lotes de Pagamento{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="fas fa-money-check-alt me-2"></i>Lotes de Pagamento
+    </h4>
+    <div class="btn-group">
+        <a href="{{ url_for('admin_split.generate_payouts') }}" class="btn btn-success">
+            <i class="fas fa-plus me-2"></i>Gerar Lotes
+        </a>
+        <a href="{{ url_for('admin_split.dashboard') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Voltar
+        </a>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="btn-group mb-4">
+    <a href="{{ url_for('admin_split.payouts') }}"
+       class="btn btn-sm btn-outline-secondary {{ 'active' if not current_status }}">Todos</a>
+    <a href="{{ url_for('admin_split.payouts', status='pending') }}"
+       class="btn btn-sm btn-outline-secondary {{ 'active' if current_status == 'pending' }}">Pendentes</a>
+    <a href="{{ url_for('admin_split.payouts', status='approved') }}"
+       class="btn btn-sm btn-outline-secondary {{ 'active' if current_status == 'approved' }}">Aprovados</a>
+    <a href="{{ url_for('admin_split.payouts', status='paid') }}"
+       class="btn btn-sm btn-outline-secondary {{ 'active' if current_status == 'paid' }}">Pagos</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if payouts %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Periodo</th>
+                        <th>Colaborador</th>
+                        <th>Entradas</th>
+                        <th>Valor Bruto</th>
+                        <th>Valor Liquido</th>
+                        <th>Status</th>
+                        <th>Acoes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in payouts %}
+                    <tr>
+                        <td>#{{ p.id }}</td>
+                        <td>{{ '%02d'|format(p.reference_month) }}/{{ p.reference_year }}</td>
+                        <td>{{ p.professional.name }}</td>
+                        <td>{{ p.entries_count }}</td>
+                        <td>R$ {{ "%.2f"|format(p.total_gross) }}</td>
+                        <td class="fw-bold">R$ {{ "%.2f"|format(p.total_professional) }}</td>
+                        <td>
+                            {% if p.status.value == 'draft' %}
+                            <span class="badge bg-secondary">Rascunho</span>
+                            {% elif p.status.value == 'pending' %}
+                            <span class="badge bg-warning text-dark">Pendente</span>
+                            {% elif p.status.value == 'approved' %}
+                            <span class="badge bg-info">Aprovado</span>
+                            {% elif p.status.value == 'processing' %}
+                            <span class="badge bg-primary">Processando</span>
+                            {% elif p.status.value == 'paid' %}
+                            <span class="badge bg-success">Pago</span>
+                            {% elif p.status.value == 'failed' %}
+                            <span class="badge bg-danger">Falhou</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('admin_split.payout_detail', batch_id=p.id) }}"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i> Detalhes
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+            <h5>Nenhum lote de pagamento</h5>
+            <p class="text-muted">Gere lotes para pagar os colaboradores.</p>
+            <a href="{{ url_for('admin_split.generate_payouts') }}" class="btn btn-success">
+                <i class="fas fa-plus me-2"></i>Gerar Lotes
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

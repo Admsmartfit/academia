@@ -92,3 +92,8 @@ Abra seu navegador de internet e digite:
 
 *   **Erro "comando não encontrado"**: Verifique se instalou o Python e marcou a opção "Add Python to PATH".
 *   **Erro de Permissão no PowerShell**: Se ao ativar o venv der erro, execute: `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` e tente ativar novamente.
+*   **Erro ao instalar `dlib` ou `face_recognition`**: Este erro ocorre porque o `dlib` exige um compilador C++ (Visual Studio Build Tools) instalado no Windows. 
+    *   **Opção 1 (Recomendada)**: O sistema agora ignora essa parte por padrão no `requirements.txt` para você conseguir rodar o resto.
+    *   **Opção 2 (Se precisar de reconhecimento facial)**: Baixe e instale o [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) e marque a opção "Desenvolvimento para desktop com C++".
+    *   **Opção 3 (Rápida)**: Tente instalar via uma "wheel" pré-compilada para Python 3.13: 
+        `pip install https://github.com/shaurya0028/dlib-for-python-3.13/releases/download/v19.24.99/dlib-19.24.99-cp313-cp313-win_amd64.whl`

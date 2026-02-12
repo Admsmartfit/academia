@@ -14,12 +14,15 @@ APScheduler==3.10.4
 # APIs Externas
 requests==2.31.0
 
-# Reconhecimento Facial
-face_recognition==1.3.0
+# Reconhecimento Facial (Opcional - dlib exige compilador C++ no Windows)
 opencv-python>=4.8.1.78
 numpy>=1.24.3
 Pillow>=10.2.0
+# face_recognition==1.3.0
 # dlib>=19.24.2  # Requer CMake instalado. Instale manualmente se precisar de rec. facial: pip install cmake dlib
+
+# PDF Generation
+reportlab>=4.0.0
 
 # Testes
 pytest==7.4.3

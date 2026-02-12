@@ -84,11 +84,15 @@ def search_users():
     if len(q) < 2:
         return jsonify([])
 
+    # Busca mais flexivel: divide por espacos e garante que todos os termos existam no nome
+    words = q.split()
+    query_filters = [User.name.ilike(f'%{word}%') for word in words]
+    
     users = User.query.filter(
-        User.name.ilike(f'%{q}%'),
+        *query_filters,
         User.role == role,
         User.is_active == True
-    ).limit(10).all()
+    ).limit(15).all()
 
     return jsonify([{
         'id': u.id,
@@ -314,4 +318,116 @@ def delete_training_plan(plan_id):
     plan.is_active = False
     db.session.commit()
 
-    return jsonify({'success': True, 'message': 'Plano desativado com sucesso'})
+@training_api_bp.route('/templates/list', methods=['GET'])
+@login_required
+def list_templates():
+    """Lista templates de treino disponiveis."""
+    from app.models.training import TrainingTemplate
+    
+    goal = request.args.get('goal')
+    query = TrainingTemplate.query.filter(
+        db.or_(
+            TrainingTemplate.instructor_id == current_user.id,
+            TrainingTemplate.is_public == True
+        )
+    )
+    
+    if goal:
+        try:
+            from app.models.training import TrainingGoal
+            target_goal = TrainingGoal(goal.lower())
+            query = query.filter_by(goal=target_goal)
+        except ValueError:
+            pass
+            
+    templates = query.order_by(TrainingTemplate.name).all()
+    
+    return jsonify([{
+        'id': t.id,
+        'name': t.name,
+        'description': t.description,
+        'goal': t.goal.value,
+        'goal_label': t.goal.name.title(), # Simplificado
+        'instructor_name': t.instructor.name,
+        'session_count': len(t.sessions)
+    } for t in templates])
+
+
+@training_api_bp.route('/templates/<int:template_id>', methods=['GET'])
+@login_required
+def get_template(template_id):
+    """Retorna detalhes de um template."""
+    from app.models.training import TrainingTemplate
+    template = TrainingTemplate.query.get_or_404(template_id)
+    
+    return jsonify({
+        'id': template.id,
+        'name': template.name,
+        'goal': template.goal.value,
+        'sessions': [{
+            'name': s.name,
+            'exercises': [{
+                'exercise_id': we.exercise_id,
+                'name': we.exercise.name,
+                'muscle_group_label': we.exercise.muscle_group_label,
+                'sets': we.sets,
+                'reps': we.reps_range,
+                'rest': we.rest_seconds,
+                'weight': we.weight_suggestion,
+                'notes': we.notes
+            } for we in s.exercises]
+        } for s in template.sessions]
+    })
+
+
+@training_api_bp.route('/templates/save', methods=['POST'])
+@login_required
+def save_template():
+    """Salva um novo template de treino."""
+    if current_user.role not in ('instructor', 'admin'):
+        return jsonify({'success': False, 'error': 'Acesso negado'}), 403
+        
+    data = request.get_json()
+    if not data or not data.get('name'):
+        return jsonify({'success': False, 'error': 'Nome do template obrigatorio'}), 400
+        
+    from app.models.training import TrainingTemplate, TemplateSession, TemplateExercise, TrainingGoal
+    
+    try:
+        template = TrainingTemplate(
+            name=data['name'],
+            description=data.get('description', ''),
+            goal=TrainingGoal(data.get('goal', 'health').lower()),
+            instructor_id=current_user.id,
+            is_public=data.get('is_public', True)
+        )
+        db.session.add(template)
+        db.session.flush()
+        
+        for s_idx, s_data in enumerate(data.get('sessions', [])):
+            session = TemplateSession(
+                template_id=template.id,
+                name=s_data.get('name', f'Treino {chr(65+s_idx)}'),
+                order_in_template=s_idx + 1
+            )
+            db.session.add(session)
+            db.session.flush()
+            
+            for e_idx, e_data in enumerate(s_data.get('exercises', [])):
+                exercise = TemplateExercise(
+                    template_session_id=session.id,
+                    exercise_id=e_data['exercise_id'],
+                    sets=int(e_data.get('sets', 3)),
+                    reps_range=e_data.get('reps', '10-12'),
+                    rest_seconds=int(e_data.get('rest', 60)),
+                    weight_suggestion=e_data.get('weight', ''),
+                    order_in_session=e_idx + 1,
+                    notes=e_data.get('notes', '')
+                )
+                db.session.add(exercise)
+                
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Template salvo com sucesso!', 'id': template.id})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500

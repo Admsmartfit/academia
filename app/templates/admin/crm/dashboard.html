@@ -1,433 +1,691 @@
 {% extends "base.html" %}
 
-{% block content %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>CRM & Retenção</h2>
-        <div>
-            <button class="btn btn-outline-primary mr-2" onclick="loadDashboardData(); loadStudents();">
-                <i class="fas fa-sync-alt"></i> Atualizar
-            </button>
-            <button class="btn btn-success" disabled>
-                <i class="fas fa-magic"></i> Automação Ativa
-            </button>
-        </div>
-    </div>
+{% block title %}CRM & Retencao - Admin{% endblock %}
 
-    <!-- KPIs -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="stats-card green">
-                <div class="stats-icon"><i class="fas fa-users"></i></div>
-                <div class="stats-info">
-                    <h3 id="total-students">0</h3>
-                    <p>Total de Alunos</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="stats-card yellow">
-                <div class="stats-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                <div class="stats-info">
-                    <h3 id="at-risk">0</h3>
-                    <p>Em Risco</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="stats-card red">
-                <div class="stats-icon"><i class="fas fa-user-times"></i></div>
-                <div class="stats-info">
-                    <h3 id="critical">0</h3>
-                    <p>Críticos</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="stats-card blue">
-                <div class="stats-icon"><i class="fas fa-heartbeat"></i></div>
-                <div class="stats-info">
-                    <h3 id="avg-score">0</h3>
-                    <p>Score Médio</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Filtros -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-3">
-                    <label>Nível de Risco</label>
-                    <select id="risk-filter" class="form-control">
-                        <option value="">Todos</option>
-                        <option value="CRITICAL">Crítico</option>
-                        <option value="HIGH">Alto</option>
-                        <option value="MEDIUM">Médio</option>
-                        <option value="LOW">Baixo</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label>Dias sem Check-in</label>
-                    <select id="days-filter" class="form-control">
-                        <option value="">Qualquer</option>
-                        <option value="7">7+ dias</option>
-                        <option value="14">14+ dias</option>
-                        <option value="30">30+ dias</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label>Ordenar por</label>
-                    <select id="sort-filter" class="form-control">
-                        <option value="score-asc">Score (menor primeiro)</option>
-                        <option value="score-desc">Score (maior primeiro)</option>
-                        <option value="last-checkin">Último check-in</option>
-                    </select>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button class="btn btn-primary btn-block" onclick="applyFilters()">
-                        <i class="fas fa-filter"></i> Filtrar
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Tabela de alunos -->
-    <div class="card">
-        <div class="card-header">
-            <h5>Alunos em Risco</h5>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover" id="students-table">
-                    <thead>
-                        <tr>
-                            <th>Aluno</th>
-                            <th>Score</th>
-                            <th>Último Check-in</th>
-                            <th>Frequência (30d)</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="students-tbody">
-                        <!-- Gerado via JS -->
-                        <tr>
-                            <td colspan="5" class="text-center">Carregando...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal de Ações -->
-<div class="modal fade" id="actionModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Ações para <span id="modal-student-name"></span></h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="modal-student-id">
-
-                <div class="list-group">
-                    <a href="#" class="list-group-item list-group-item-action" onclick="sendMessage('RECOVERY')">
-                        <i class="fas fa-comment text-primary"></i> Enviar Mensagem de Recuperação
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action" onclick="scheduleCall()">
-                        <i class="fas fa-phone text-success"></i> Agendar Ligação
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action" onclick="offerDiscount()">
-                        <i class="fas fa-tag text-warning"></i> Oferecer Desconto
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action" onclick="viewHistory()">
-                        <i class="fas fa-history text-info"></i> Ver Histórico Completo
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
+{% block extra_css %}
 <style>
-    .stats-card {
-        background: white;
-        border-radius: 10px;
-        padding: 20px;
+    .crm-header {
         display: flex;
+        justify-content: space-between;
         align-items: center;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        border-left: 5px solid;
-        margin-bottom: 20px;
+        margin-bottom: 24px;
     }
+    .crm-header h3 { margin: 0; font-weight: 700; }
 
-    .stats-card.green {
-        border-left-color: #28a745;
+    /* KPI Cards */
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .kpi-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        position: relative;
+        overflow: hidden;
     }
-
-    .stats-card.yellow {
-        border-left-color: #ffc107;
+    .kpi-card::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
     }
+    .kpi-card.green::after { background: #10B981; }
+    .kpi-card.yellow::after { background: #F59E0B; }
+    .kpi-card.red::after { background: #F43F5E; }
+    .kpi-card.blue::after { background: #06B6D4; }
+    .kpi-value { font-size: 2rem; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+    .kpi-label { font-size: 0.8rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.03em; }
+    .kpi-icon { position: absolute; right: 16px; top: 16px; font-size: 2rem; opacity: 0.1; }
 
-    .stats-card.red {
-        border-left-color: #dc3545;
+    /* Filters */
+    .filters-bar {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
     }
-
-    .stats-card.blue {
-        border-left-color: #007bff;
+    .filter-select {
+        padding: 6px 12px;
+        border: 1px solid #E2E8F0;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        background: white;
+        min-width: 140px;
     }
-
-    .stats-icon {
-        font-size: 3em;
-        margin-right: 20px;
-        opacity: 0.3;
+    .filter-btn {
+        padding: 6px 16px;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
     }
+    .filter-btn.primary { background: #FF6B35; color: white; }
+    .filter-btn.primary:hover { background: #e55a2b; }
+    .filter-btn.outline { background: white; border: 1px solid #E2E8F0; color: #475569; }
 
-    .stats-info h3 {
-        margin: 0;
-        font-size: 2.5em;
-        font-weight: bold;
+    /* Student Table */
+    .students-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        overflow: hidden;
     }
-
-    .stats-info p {
-        margin: 0;
-        color: #6c757d;
+    .students-card .card-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 20px;
+        border-bottom: 1px solid #F1F5F9;
     }
+    .students-card .card-top h5 { margin: 0; font-weight: 700; font-size: 1rem; }
+    .student-table { width: 100%; border-collapse: collapse; }
+    .student-table th {
+        padding: 10px 16px;
+        text-align: left;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #64748B;
+        border-bottom: 1px solid #F1F5F9;
+        background: #FAFBFC;
+    }
+    .student-table td { padding: 12px 16px; border-bottom: 1px solid #F8FAFC; vertical-align: middle; }
+    .student-table tr:hover { background: #F8FAFC; }
 
+    /* Student info */
+    .student-info { display: flex; align-items: center; gap: 12px; }
+    .student-avatar {
+        width: 36px; height: 36px; border-radius: 50%;
+        background: #E2E8F0;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 0.85rem; color: #475569;
+        overflow: hidden;
+    }
+    .student-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .student-name { font-weight: 600; font-size: 0.9rem; }
+    .student-email { font-size: 0.75rem; color: #94A3B8; }
+
+    /* Score bar */
+    .score-cell { display: flex; align-items: center; gap: 10px; }
+    .score-bar-bg {
+        flex: 1;
+        height: 8px;
+        background: #F1F5F9;
+        border-radius: 4px;
+        overflow: hidden;
+        min-width: 80px;
+    }
+    .score-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
+    .score-bar-fill.green { background: #10B981; }
+    .score-bar-fill.yellow { background: #F59E0B; }
+    .score-bar-fill.red { background: #F43F5E; }
+    .score-number { font-weight: 700; font-size: 0.85rem; min-width: 28px; }
+
+    /* Risk badge */
     .risk-badge {
-        padding: 5px 10px;
-        border-radius: 20px;
-        font-size: 0.85em;
-        font-weight: bold;
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+    .risk-badge.critical { background: #FEE2E2; color: #DC2626; }
+    .risk-badge.high { background: #FEF3C7; color: #D97706; }
+    .risk-badge.medium { background: #FEF9C3; color: #CA8A04; }
+    .risk-badge.low { background: #D1FAE5; color: #059669; }
+
+    /* Action buttons */
+    .action-btns { display: flex; gap: 4px; }
+    .action-btn-sm {
+        width: 32px; height: 32px; border-radius: 8px; border: 1px solid #E2E8F0;
+        background: white; cursor: pointer; display: flex;
+        align-items: center; justify-content: center; transition: all 0.15s;
+        font-size: 0.8rem; color: #475569;
+    }
+    .action-btn-sm:hover { background: #F1F5F9; }
+    .action-btn-sm.whatsapp:hover { background: #D1FAE5; color: #059669; }
+    .action-btn-sm.discount:hover { background: #FEF3C7; color: #D97706; }
+    .action-btn-sm.history:hover { background: #DBEAFE; color: #2563EB; }
+
+    /* Checkin date */
+    .checkin-date { font-size: 0.85rem; }
+    .checkin-date.danger { color: #F43F5E; font-weight: 600; }
+    .checkin-date .days { font-size: 0.7rem; color: #94A3B8; display: block; }
+
+    /* Charts Row */
+    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .chart-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .chart-card h6 { margin: 0 0 16px; font-weight: 700; font-size: 0.9rem; }
+
+    /* Detail Modal */
+    .detail-modal .modal-content { border: none; border-radius: 16px; }
+    .detail-modal .modal-header { border-bottom: 1px solid #F1F5F9; padding: 20px 24px; }
+    .detail-modal .modal-body { padding: 24px; }
+    .score-breakdown { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+    .score-component {
+        background: #F8FAFC;
+        border-radius: 10px;
+        padding: 12px;
+    }
+    .score-component .label { font-size: 0.75rem; color: #64748B; margin-bottom: 2px; }
+    .score-component .value { font-size: 1.2rem; font-weight: 700; }
+    .score-component .bar {
+        height: 4px;
+        background: #E2E8F0;
+        border-radius: 2px;
+        margin-top: 6px;
+        overflow: hidden;
+    }
+    .score-component .bar-fill { height: 100%; border-radius: 2px; }
+
+    /* Quick actions in modal */
+    .quick-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 16px; }
+    .quick-action {
+        display: flex; align-items: center; gap: 10px;
+        padding: 12px; border-radius: 10px; border: 1px solid #E2E8F0;
+        background: white; cursor: pointer; transition: all 0.15s;
+        font-size: 0.85rem; font-weight: 500;
+    }
+    .quick-action:hover { background: #F8FAFC; border-color: #CBD5E1; }
+    .quick-action i { font-size: 1rem; width: 20px; text-align: center; }
+
+    /* Automation Badge */
+    .auto-badge {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 4px 10px; border-radius: 6px; font-size: 0.75rem;
+        background: #D1FAE5; color: #059669; font-weight: 600;
     }
 
-    .risk-badge.critical {
-        background: #dc3545;
-        color: white;
+    /* Toast notification */
+    .crm-toast {
+        position: fixed; bottom: 24px; right: 24px; z-index: 2000;
+        background: #1E293B; color: white; padding: 12px 20px;
+        border-radius: 10px; font-size: 0.85rem;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+        opacity: 0; transform: translateY(20px);
+        transition: all 0.3s;
     }
+    .crm-toast.show { opacity: 1; transform: translateY(0); }
+    .crm-toast.success { border-left: 4px solid #10B981; }
+    .crm-toast.error { border-left: 4px solid #F43F5E; }
 
-    .risk-badge.high {
-        background: #fd7e14;
-        color: white;
-    }
-
-    .risk-badge.medium {
-        background: #ffc107;
-        color: #000;
-    }
-
-    .risk-badge.low {
-        background: #28a745;
-        color: white;
+    @media (max-width: 768px) {
+        .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+        .charts-row { grid-template-columns: 1fr; }
     }
 </style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="crm-header">
+        <div>
+            <h3><i class="fas fa-heartbeat me-2" style="color: #F43F5E;"></i>CRM & Retencao</h3>
+            <small style="color: #94A3B8;">Monitoramento de saude dos alunos e acoes de retencao</small>
+        </div>
+        <div class="d-flex gap-2">
+            <span class="auto-badge"><i class="fas fa-robot"></i> Automacao Ativa</span>
+            <button class="filter-btn outline" onclick="refreshAll()">
+                <i class="fas fa-sync-alt me-1"></i>Atualizar
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <div class="kpi-card green">
+            <i class="fas fa-users kpi-icon"></i>
+            <div class="kpi-value" id="kpi-total">-</div>
+            <div class="kpi-label">Total de Alunos</div>
+        </div>
+        <div class="kpi-card yellow">
+            <i class="fas fa-exclamation-triangle kpi-icon"></i>
+            <div class="kpi-value" id="kpi-risk" style="color: #F59E0B;">-</div>
+            <div class="kpi-label">Em Risco</div>
+        </div>
+        <div class="kpi-card red">
+            <i class="fas fa-user-times kpi-icon"></i>
+            <div class="kpi-value" id="kpi-critical" style="color: #F43F5E;">-</div>
+            <div class="kpi-label">Criticos</div>
+        </div>
+        <div class="kpi-card blue">
+            <i class="fas fa-heartbeat kpi-icon"></i>
+            <div class="kpi-value" id="kpi-avg" style="color: #06B6D4;">-</div>
+            <div class="kpi-label">Score Medio</div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="charts-row">
+        <div class="chart-card">
+            <h6><i class="fas fa-chart-pie me-2" style="color: #8B5CF6;"></i>Distribuicao por Risco</h6>
+            <canvas id="riskChart" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+            <h6><i class="fas fa-chart-bar me-2" style="color: #06B6D4;"></i>Frequencia de Check-ins (30d)</h6>
+            <canvas id="freqChart" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-bar">
+        <select class="filter-select" id="riskFilter">
+            <option value="">Todos os riscos</option>
+            <option value="CRITICAL">Critico</option>
+            <option value="HIGH">Alto</option>
+            <option value="MEDIUM">Medio</option>
+            <option value="LOW">Baixo</option>
+        </select>
+        <select class="filter-select" id="daysFilter">
+            <option value="">Dias sem check-in</option>
+            <option value="7">7+ dias</option>
+            <option value="14">14+ dias</option>
+            <option value="30">30+ dias</option>
+        </select>
+        <select class="filter-select" id="sortFilter">
+            <option value="score-asc">Score (menor)</option>
+            <option value="score-desc">Score (maior)</option>
+            <option value="last-checkin">Ultimo check-in</option>
+        </select>
+        <button class="filter-btn primary" onclick="applyFilters()">
+            <i class="fas fa-filter me-1"></i>Filtrar
+        </button>
+        <span id="resultCount" style="color: #94A3B8; font-size: 0.8rem; margin-left: auto;"></span>
+    </div>
+
+    <!-- Students Table -->
+    <div class="students-card">
+        <div class="card-top">
+            <h5><i class="fas fa-users me-2"></i>Alunos Monitorados</h5>
+        </div>
+        <table class="student-table">
+            <thead>
+                <tr>
+                    <th>Aluno</th>
+                    <th>Health Score</th>
+                    <th>Risco</th>
+                    <th>Ultimo Check-in</th>
+                    <th>Freq. 30d</th>
+                    <th>Acoes</th>
+                </tr>
+            </thead>
+            <tbody id="studentsTbody">
+                <tr><td colspan="6" style="text-align: center; padding: 40px; color: #94A3B8;">
+                    <i class="fas fa-spinner fa-spin me-2"></i>Carregando...
+                </td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Student Detail Modal -->
+<div class="modal fade detail-modal" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="student-avatar" id="modalAvatar" style="width: 48px; height: 48px; font-size: 1.1rem;"></div>
+                    <div>
+                        <h5 class="mb-0" id="modalName" style="font-weight: 700;"></h5>
+                        <small id="modalEmail" style="color: #94A3B8;"></small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Score Breakdown -->
+                <h6 style="font-weight: 700; margin-bottom: 12px;">Score Detalhado</h6>
+                <div class="score-breakdown">
+                    <div class="score-component">
+                        <div class="label">Frequencia (40%)</div>
+                        <div class="value" id="modalFreqScore">-</div>
+                        <div class="bar"><div class="bar-fill" id="modalFreqBar" style="background: #10B981;"></div></div>
+                    </div>
+                    <div class="score-component">
+                        <div class="label">Engajamento (30%)</div>
+                        <div class="value" id="modalEngScore">-</div>
+                        <div class="bar"><div class="bar-fill" id="modalEngBar" style="background: #06B6D4;"></div></div>
+                    </div>
+                    <div class="score-component">
+                        <div class="label">Financeiro (20%)</div>
+                        <div class="value" id="modalFinScore">-</div>
+                        <div class="bar"><div class="bar-fill" id="modalFinBar" style="background: #8B5CF6;"></div></div>
+                    </div>
+                    <div class="score-component">
+                        <div class="label">Historico (10%)</div>
+                        <div class="value" id="modalTenScore">-</div>
+                        <div class="bar"><div class="bar-fill" id="modalTenBar" style="background: #F59E0B;"></div></div>
+                    </div>
+                </div>
+
+                <!-- Score History Chart -->
+                <h6 style="font-weight: 700; margin-bottom: 12px;">Evolucao do Score (30 dias)</h6>
+                <canvas id="historyChart" height="150"></canvas>
+
+                <!-- Recent Automations -->
+                <h6 style="font-weight: 700; margin: 20px 0 12px;">Automacoes Recentes</h6>
+                <div id="modalAutomations" style="max-height: 160px; overflow-y: auto;">
+                    <p style="color: #94A3B8; font-size: 0.85rem;">Carregando...</p>
+                </div>
+
+                <!-- Quick Actions -->
+                <h6 style="font-weight: 700; margin: 20px 0 12px;">Acoes Rapidas</h6>
+                <div class="quick-actions">
+                    <div class="quick-action" onclick="sendAction('RECOVERY')">
+                        <i class="fab fa-whatsapp" style="color: #25D366;"></i>
+                        <span>Mensagem Recuperacao</span>
+                    </div>
+                    <div class="quick-action" onclick="sendAction('DISCOUNT')">
+                        <i class="fas fa-tag" style="color: #F59E0B;"></i>
+                        <span>Oferecer Desconto</span>
+                    </div>
+                    <div class="quick-action" onclick="sendAction('CALL')">
+                        <i class="fas fa-phone" style="color: #06B6D4;"></i>
+                        <span>Agendar Ligacao</span>
+                    </div>
+                    <div class="quick-action" onclick="goToProfile()">
+                        <i class="fas fa-user" style="color: #8B5CF6;"></i>
+                        <span>Ver Perfil Completo</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="crm-toast" id="crmToast"></div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <script>
-    let studentsData = [];
+    var studentsData = [];
+    var currentStudentId = null;
+    var riskChartInstance = null;
+    var freqChartInstance = null;
+    var historyChartInstance = null;
 
-    $(document).ready(async () => {
-        await loadDashboardData();
-        await loadStudents();
+    document.addEventListener('DOMContentLoaded', function() {
+        loadDashboard();
+        loadStudents();
     });
 
-    async function loadDashboardData() {
-        try {
-            const response = await fetch('/api/crm/dashboard/summary');
-            const data = await response.json();
-
-            $('#total-students').text(data.total_students);
-            $('#at-risk').text(data.at_risk);
-            $('#critical').text(data.critical);
-            $('#avg-score').text(data.avg_score.toFixed(1));
-        } catch (err) {
-            console.error('Erro ao carregar resumo:', err);
-        }
+    function refreshAll() {
+        loadDashboard();
+        loadStudents();
     }
 
-    async function loadStudents() {
-        try {
-            const response = await fetch('/api/crm/students/at-risk');
-            studentsData = await response.json();
-            renderStudents();
-        } catch (err) {
-            console.error('Erro ao carregar alunos:', err);
-        }
+    // Load KPIs
+    function loadDashboard() {
+        fetch('/api/crm/dashboard/summary')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                document.getElementById('kpi-total').textContent = data.total_students;
+                document.getElementById('kpi-risk').textContent = data.at_risk;
+                document.getElementById('kpi-critical').textContent = data.critical;
+                document.getElementById('kpi-avg').textContent = data.avg_score.toFixed(1);
+            });
+    }
+
+    // Load students
+    function loadStudents() {
+        fetch('/api/crm/students/at-risk')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                studentsData = data;
+                renderStudents();
+                renderCharts();
+            });
     }
 
     function renderStudents() {
-        const tbody = $('#students-tbody');
-        tbody.empty();
-
-        const filtered = applyClientFilters(studentsData);
+        var filtered = filterStudents(studentsData);
+        var tbody = document.getElementById('studentsTbody');
+        document.getElementById('resultCount').textContent = filtered.length + ' aluno(s)';
 
         if (filtered.length === 0) {
-            tbody.html('<tr><td colspan="5" class="text-center">Nenhum aluno encontrado</td></tr>');
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:#94A3B8;">Nenhum aluno encontrado</td></tr>';
             return;
         }
 
-        filtered.forEach(student => {
-            const row = $(`
-            <tr>
-                <td>
-                    <div class="d-flex align-items-center">
-                        <img src="${student.avatar_url || '/static/img/default-avatar.png'}" 
-                             class="rounded-circle mr-2" width="40" height="40" 
-                             onerror="this.src='/static/img/default-avatar.png'">
-                        <div>
-                            <strong>${student.name}</strong><br>
-                            <small class="text-muted">${student.email}</small>
-                        </div>
-                    </div>
-                </td>
-                <td>
-                    <div class="d-flex align-items-center">
-                        <div class="progress flex-grow-1 mr-2" style="height: 20px;">
-                            <div class="progress-bar ${getScoreColor(student.health_score)}" 
-                                 role="progressbar" 
-                                 style="width: ${student.health_score}%">
-                                ${student.health_score.toFixed(0)}
-                            </div>
-                        </div>
-                        <span class="risk-badge ${student.risk_level.toLowerCase()}">
-                            ${getRiskLabel(student.risk_level)}
-                        </span>
-                    </div>
-                </td>
-                <td>
-                    ${student.last_checkin ?
-                    formatDate(student.last_checkin) :
-                    '<span class="text-danger">Nunca</span>'}
-                </td>
-                <td>${student.frequency_30d} check-ins</td>
-                <td>
-                    <button class="btn btn-sm btn-primary" 
-                            onclick="showActions(${student.id}, '${student.name.replace(/'/g, "\\'")}')">
-                        <i class="fas fa-ellipsis-v"></i>
-                    </button>
-                </td>
-            </tr>
-        `);
+        var html = '';
+        filtered.forEach(function(s) {
+            var scoreColor = s.health_score >= 70 ? 'green' : (s.health_score >= 40 ? 'yellow' : 'red');
+            var riskClass = s.risk_level.toLowerCase();
+            var riskLabel = { LOW: 'Baixo', MEDIUM: 'Medio', HIGH: 'Alto', CRITICAL: 'Critico' }[s.risk_level] || s.risk_level;
+            var initial = s.name ? s.name.charAt(0).toUpperCase() : '?';
+            var checkinHtml = '';
 
-            tbody.append(row);
+            if (s.last_checkin) {
+                var days = s.days_since_checkin;
+                var label = days === 0 ? 'Hoje' : (days === 1 ? 'Ontem' : days + ' dias atras');
+                var cls = days > 14 ? 'danger' : '';
+                checkinHtml = '<span class="checkin-date ' + cls + '">' + label + '</span>';
+            } else {
+                checkinHtml = '<span class="checkin-date danger">Nunca</span>';
+            }
+
+            html += '<tr onclick="showDetail(' + s.id + ')" style="cursor:pointer;">' +
+                '<td><div class="student-info">' +
+                    '<div class="student-avatar">' + initial + '</div>' +
+                    '<div><div class="student-name">' + s.name + '</div>' +
+                    '<div class="student-email">' + (s.email || '') + '</div></div>' +
+                '</div></td>' +
+                '<td><div class="score-cell">' +
+                    '<span class="score-number">' + Math.round(s.health_score) + '</span>' +
+                    '<div class="score-bar-bg"><div class="score-bar-fill ' + scoreColor + '" style="width:' + s.health_score + '%"></div></div>' +
+                '</div></td>' +
+                '<td><span class="risk-badge ' + riskClass + '">' + riskLabel + '</span></td>' +
+                '<td>' + checkinHtml + '</td>' +
+                '<td>' + s.frequency_30d + '</td>' +
+                '<td><div class="action-btns">' +
+                    '<button class="action-btn-sm whatsapp" onclick="event.stopPropagation();quickSend(' + s.id + ',\'' + s.name.replace(/'/g, "\\'") + '\',\'RECOVERY\')" title="WhatsApp"><i class="fab fa-whatsapp"></i></button>' +
+                    '<button class="action-btn-sm discount" onclick="event.stopPropagation();quickSend(' + s.id + ',\'' + s.name.replace(/'/g, "\\'") + '\',\'DISCOUNT\')" title="Desconto"><i class="fas fa-tag"></i></button>' +
+                    '<button class="action-btn-sm history" onclick="event.stopPropagation();showDetail(' + s.id + ')" title="Detalhes"><i class="fas fa-chart-line"></i></button>' +
+                '</div></td>' +
+            '</tr>';
         });
+
+        tbody.innerHTML = html;
     }
 
-    function applyClientFilters(data) {
-        let filtered = [...data];
+    function filterStudents(data) {
+        var filtered = data.slice();
+        var risk = document.getElementById('riskFilter').value;
+        var days = document.getElementById('daysFilter').value;
+        var sort = document.getElementById('sortFilter').value;
 
-        // Aplicar filtros conforme seleção do usuário
-        const riskFilter = $('#risk-filter').val();
-        const daysFilter = $('#days-filter').val();
-        const sortFilter = $('#sort-filter').val();
+        if (risk) filtered = filtered.filter(function(s) { return s.risk_level === risk; });
+        if (days) filtered = filtered.filter(function(s) { return s.days_since_checkin >= parseInt(days); });
 
-        if (riskFilter) {
-            filtered = filtered.filter(s => s.risk_level === riskFilter);
-        }
-
-        if (daysFilter) {
-            filtered = filtered.filter(s => s.days_since_checkin >= parseInt(daysFilter));
-        }
-
-        // Ordenar
-        if (sortFilter === 'score-asc') {
-            filtered.sort((a, b) => a.health_score - b.health_score);
-        } else if (sortFilter === 'score-desc') {
-            filtered.sort((a, b) => b.health_score - a.health_score);
-        } else if (sortFilter === 'last-checkin') {
-            filtered.sort((a, b) => {
-                // Sort by days_since (ascending means smaller days since = more recent)
-                // But usually we want most recent first? "Último check-in" usually means show recent.
-                // Wait, "last-checkin" sort filter usually implies time.
-                const dateA = a.last_checkin ? new Date(a.last_checkin) : new Date(0);
-                const dateB = b.last_checkin ? new Date(b.last_checkin) : new Date(0);
-                return dateB - dateA; // Descending
-            });
-        }
+        if (sort === 'score-asc') filtered.sort(function(a, b) { return a.health_score - b.health_score; });
+        else if (sort === 'score-desc') filtered.sort(function(a, b) { return b.health_score - a.health_score; });
+        else if (sort === 'last-checkin') filtered.sort(function(a, b) { return b.days_since_checkin - a.days_since_checkin; });
 
         return filtered;
     }
 
-    function applyFilters() {
-        renderStudents();
+    function applyFilters() { renderStudents(); }
+
+    // Charts
+    function renderCharts() {
+        var counts = { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 };
+        var freqBuckets = { '0': 0, '1-4': 0, '5-8': 0, '9-12': 0, '13+': 0 };
+
+        studentsData.forEach(function(s) {
+            counts[s.risk_level] = (counts[s.risk_level] || 0) + 1;
+            var f = s.frequency_30d;
+            if (f === 0) freqBuckets['0']++;
+            else if (f <= 4) freqBuckets['1-4']++;
+            else if (f <= 8) freqBuckets['5-8']++;
+            else if (f <= 12) freqBuckets['9-12']++;
+            else freqBuckets['13+']++;
+        });
+
+        // Risk Doughnut
+        if (riskChartInstance) riskChartInstance.destroy();
+        riskChartInstance = new Chart(document.getElementById('riskChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Baixo', 'Medio', 'Alto', 'Critico'],
+                datasets: [{ data: [counts.LOW, counts.MEDIUM, counts.HIGH, counts.CRITICAL],
+                    backgroundColor: ['#10B981', '#F59E0B', '#FB923C', '#F43F5E'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 16 } } },
+                cutout: '65%'
+            }
+        });
+
+        // Frequency Bar
+        if (freqChartInstance) freqChartInstance.destroy();
+        freqChartInstance = new Chart(document.getElementById('freqChart'), {
+            type: 'bar',
+            data: {
+                labels: ['0 vezes', '1-4x', '5-8x', '9-12x', '13+'],
+                datasets: [{ data: Object.values(freqBuckets),
+                    backgroundColor: ['#F43F5E', '#FB923C', '#F59E0B', '#10B981', '#06B6D4'],
+                    borderRadius: 6, borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
     }
 
-    function showActions(studentId, studentName) {
-        $('#modal-student-id').val(studentId);
-        $('#modal-student-name').text(studentName);
-        $('#actionModal').modal('show');
-    }
+    // Student Detail
+    function showDetail(studentId) {
+        currentStudentId = studentId;
+        var s = studentsData.find(function(x) { return x.id === studentId; });
+        if (!s) return;
 
-    async function sendMessage(type) {
-        const studentId = $('#modal-student-id').val();
+        document.getElementById('modalName').textContent = s.name;
+        document.getElementById('modalEmail').textContent = s.email || '';
+        document.getElementById('modalAvatar').textContent = s.name ? s.name.charAt(0).toUpperCase() : '?';
 
-        try {
-            const response = await fetch('/api/crm/send-message', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    student_id: studentId,
-                    message_type: type
-                })
+        // Load history
+        fetch('/api/crm/student/' + studentId + '/history')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                // Score breakdown from latest
+                if (data.scores.length > 0) {
+                    var latest = data.scores[0];
+                    document.getElementById('modalFreqScore').textContent = latest.frequency_score + '/40';
+                    document.getElementById('modalEngScore').textContent = latest.engagement_score + '/30';
+                    document.getElementById('modalFinScore').textContent = latest.financial_score + '/20';
+                    document.getElementById('modalTenScore').textContent = latest.tenure_score + '/10';
+                    document.getElementById('modalFreqBar').style.width = (latest.frequency_score / 40 * 100) + '%';
+                    document.getElementById('modalEngBar').style.width = (latest.engagement_score / 30 * 100) + '%';
+                    document.getElementById('modalFinBar').style.width = (latest.financial_score / 20 * 100) + '%';
+                    document.getElementById('modalTenBar').style.width = (latest.tenure_score / 10 * 100) + '%';
+                }
+
+                // History chart
+                var labels = data.scores.map(function(sc) {
+                    return new Date(sc.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                }).reverse();
+                var values = data.scores.map(function(sc) { return sc.total_score; }).reverse();
+
+                if (historyChartInstance) historyChartInstance.destroy();
+                historyChartInstance = new Chart(document.getElementById('historyChart'), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Health Score',
+                            data: values,
+                            borderColor: '#06B6D4',
+                            backgroundColor: 'rgba(6,182,212,0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 2,
+                            pointRadius: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { min: 0, max: 100, ticks: { stepSize: 25 } }
+                        }
+                    }
+                });
+
+                // Automations
+                var autoHtml = '';
+                if (data.automations.length === 0) {
+                    autoHtml = '<p style="color:#94A3B8;font-size:0.85rem;">Nenhuma automacao registrada</p>';
+                } else {
+                    data.automations.forEach(function(a) {
+                        var date = new Date(a.sent_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                        var typeLabel = a.type.replace('_', ' ').toLowerCase();
+                        autoHtml += '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #F1F5F9;font-size:0.8rem;">' +
+                            '<span>' + typeLabel + '</span>' +
+                            '<span style="color:#94A3B8;">' + date + '</span>' +
+                        '</div>';
+                    });
+                }
+                document.getElementById('modalAutomations').innerHTML = autoHtml;
             });
 
-            const result = await response.json();
+        var modal = new bootstrap.Modal(document.getElementById('detailModal'));
+        modal.show();
+    }
 
-            if (result.success) {
-                alert('Mensagem enviada com sucesso!');
-                $('#actionModal').modal('hide');
+    // Quick Actions
+    function quickSend(studentId, name, type) {
+        if (!confirm('Enviar mensagem de ' + type + ' para ' + name + '?')) return;
+
+        fetch('/api/crm/send-message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ student_id: studentId, message_type: type })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                showToast(data.message, 'success');
+            } else {
+                showToast('Erro: ' + (data.error || 'Falha ao enviar'), 'error');
             }
-        } catch (err) {
-            alert('Erro: ' + err.message);
-        }
+        })
+        .catch(function() { showToast('Erro de conexao', 'error'); });
     }
 
-    function getScoreColor(score) {
-        if (score >= 70) return 'bg-success';
-        if (score >= 40) return 'bg-warning';
-        return 'bg-danger';
+    function sendAction(type) {
+        if (!currentStudentId) return;
+        var s = studentsData.find(function(x) { return x.id === currentStudentId; });
+        if (s) quickSend(currentStudentId, s.name, type);
     }
 
-    function getRiskLabel(level) {
-        const labels = {
-            'LOW': 'Baixo',
-            'MEDIUM': 'Médio',
-            'HIGH': 'Alto',
-            'CRITICAL': 'Crítico'
-        };
-        return labels[level] || level;
+    function goToProfile() {
+        if (currentStudentId) window.location.href = '/admin/users/' + currentStudentId;
     }
 
-    function formatDate(dateString) {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-
-        if (diffDays === 0) return 'Hoje';
-        if (diffDays === 1) return 'Ontem';
-        if (diffDays < 7) return `${diffDays} dias atrás`;
-        return date.toLocaleDateString('pt-BR');
-    }
-
-    function scheduleCall() {
-        alert('Funcionalidade de agendamento em desenvolvimento.');
-    }
-
-    function offerDiscount() {
-        alert('Funcionalidade de desconto em desenvolvimento.');
-    }
-
-    function viewHistory() {
-        const id = $('#modal-student-id').val();
-        window.location.href = `/admin/users/${id}`;
+    function showToast(msg, type) {
+        var toast = document.getElementById('crmToast');
+        toast.textContent = msg;
+        toast.className = 'crm-toast ' + type + ' show';
+        setTimeout(function() { toast.classList.remove('show'); }, 4000);
     }
 </script>
 {% endblock %}
