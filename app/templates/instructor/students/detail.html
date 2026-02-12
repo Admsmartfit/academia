@@ -23,6 +23,20 @@
         </div>
     </div>
 
+    {% if pain_alert %}
+    <div class="alert alert-danger d-flex align-items-center shadow-sm mb-4 border-danger" role="alert"
+        style="background-color: #fef2f2; border-left: 5px solid #dc2626;">
+        <i class="fas fa-exclamation-circle fa-2x me-3 text-danger"></i>
+        <div>
+            <h5 class="alert-heading fw-bold mb-1 text-danger">ALERTA DE SEGURANÇA: RELATO DE DOR</h5>
+            <p class="mb-0 text-dark">O aluno reportou dor/desconforto em <strong>{{ pain_alert.sent_at.strftime('%d/%m
+                    às %H:%M') }}</strong> (nas últimas 48h).
+                <br>Verifique a condição física e adapte o treino se necessário.
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="row g-4">
         <!-- Sidebar: User Info -->
         <div class="col-lg-4">
@@ -182,6 +196,60 @@
                                     </td>
                                 </tr>
                                 {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WhatsApp Logs -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fab fa-whatsapp me-2 text-success"></i>Histórico de Mensagens WhatsApp
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Data/Hora</th>
+                                    <th>Mensagem</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if whatsapp_logs %}
+                                {% for log in whatsapp_logs %}
+                                <tr>
+                                    <td style="white-space: nowrap;">{{ log.created_at.strftime('%d/%m/%Y %H:%M') }}
+                                    </td>
+                                    <td class="text-truncate" style="max-width: 300px;"
+                                        title="{{ log.message_content }}">
+                                        {{ log.message_content[:50] }}...
+                                    </td>
+                                    <td>
+                                        {% if log.status.name == 'SENT' %}
+                                        <span class="badge bg-primary">Enviado</span>
+                                        {% elif log.status.name == 'DELIVERED' %}
+                                        <span class="badge bg-info">Entregue</span>
+                                        {% elif log.status.name == 'READ' %}
+                                        <span class="badge bg-success"><i
+                                                class="fas fa-check-double me-1"></i>Lido</span>
+                                        {% elif log.status.name == 'FAILED' %}
+                                        <span class="badge bg-danger">Falha</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Pendente</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="3" class="text-center py-3 text-muted">Nenhuma mensagem registrada.
+                                    </td>
+                                </tr>
+                                {% endif %}
                             </tbody>
                         </table>
                     </div>

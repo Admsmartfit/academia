@@ -10,25 +10,39 @@ from app.services.megaapi import megaapi
 megaapi_config_bp = Blueprint('admin_megaapi', __name__, url_prefix='/admin/megaapi')
 
 
-def get_instance_status() -> dict:
+def get_instance_status(host=None, token=None, instance_key=None) -> dict:
     """
     Busca status da instancia MegaAPI.
+    
+    Args:
+        host: URL base opcional override
+        token: Token opcional override
+        instance_key: Instance Key opcional override
 
     Returns:
         dict com status da conexao e dados da instancia
     """
-    if not megaapi.base_url or not megaapi.token:
+    
+    # Use overrides or current config
+    base_url = (host or megaapi.base_url or '').rstrip('/')
+    current_token = token or megaapi.token
+    
+    if not base_url or not current_token:
         return {
             'connected': False,
             'error': 'Credenciais nao configuradas'
         }
+        
+    headers = {
+        'Authorization': f'Bearer {current_token}',
+        'Content-Type': 'application/json'
+    }
 
     try:
         # Usar endpoint de status da instancia
-        # A MegaAPI geralmente tem um endpoint /instance/{key} ou similar
         response = requests.get(
-            f"{megaapi.base_url}/instance/status",
-            headers=megaapi.headers,
+            f"{base_url}/instance/status",
+            headers=headers,
             timeout=10
         )
 
@@ -62,7 +76,52 @@ def get_instance_status() -> dict:
             'connected': False,
             'error': str(e)
         }
+    except Exception as e:
+        return {
+            'connected': False,
+            'error': str(e)
+        }
 
+
+@megaapi_config_bp.route('/check-status', methods=['POST'])
+@login_required
+@admin_required
+def check_status_ajax():
+    """Verifica status via AJAX (real-time validation)"""
+    # Se receber dados no form, atualiza temporariamente a instancia para teste
+    if request.json:
+        temp_host = request.json.get('host')
+        temp_token = request.json.get('token')
+        temp_key = request.json.get('instance_key')
+        
+        # Backup
+        original_host = megaapi.base_url
+        original_token = megaapi.token
+        original_key = getattr(megaapi, 'instance_key', None)
+        original_headers = megaapi.headers
+        
+        # Apply Temp
+        if temp_host: megaapi.base_url = temp_host.rstrip('/')
+        if temp_token: 
+            megaapi.token = temp_token
+            megaapi.headers = {
+                'Authorization': f'Bearer {temp_token}',
+                'Content-Type': 'application/json'
+            }
+        if temp_key: megaapi.instance_key = temp_key
+        
+        # Check
+        status = get_instance_status()
+        
+        # Restore
+        megaapi.base_url = original_host
+        megaapi.token = original_token
+        megaapi.instance_key = original_key
+        megaapi.headers = original_headers
+        
+        return jsonify(status)
+        
+    return jsonify(get_instance_status())
 
 @megaapi_config_bp.route('/', methods=['GET', 'POST'])
 @login_required

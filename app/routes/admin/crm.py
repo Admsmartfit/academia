@@ -149,3 +149,37 @@ def delete_lead(lead_id):
     db.session.commit()
     flash('Lead removido.', 'info')
     return redirect(url_for('crm.leads'))
+
+
+@crm_bp.route('/health-overview')
+@login_required
+def health_overview():
+    """Visao geral da Saude da Academia (Health Score)"""
+    if not _check_access():
+        return "Acesso negado", 403
+        
+    from app.models.crm import StudentHealthScore, RiskLevel
+    from sqlalchemy import func
+    
+    # Counts by risk
+    risk_counts = db.session.query(
+        StudentHealthScore.risk_level, 
+        func.count(StudentHealthScore.id)
+    ).group_by(StudentHealthScore.risk_level).all()
+    
+    # Convert to dict
+    stats = {r.value: 0 for r in RiskLevel}
+    for r, count in risk_counts:
+        stats[r.value] = count
+        
+    # Lists of at-risk students
+    critical_students = StudentHealthScore.query.filter(
+        StudentHealthScore.risk_level.in_([RiskLevel.CRITICAL, RiskLevel.HIGH])
+    ).order_by(StudentHealthScore.total_score.asc()).limit(50).all()
+    
+    total_students = StudentHealthScore.query.count()
+    
+    return render_template('admin/crm/health_overview.html', 
+                          stats=stats, 
+                          critical_students=critical_students,
+                          total_students=total_students)

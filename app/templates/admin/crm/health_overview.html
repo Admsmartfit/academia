@@ -1,0 +1,201 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Check-up da Academia{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Health Score Overview -->
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-chart-pie me-2 text-primary"></i>Distribuição de Risco ({{
+                    total_students }} Alunos com Score)</h5>
+                <button class="btn btn-sm btn-outline-secondary" onclick="window.location.reload()">
+                    <i class="fas fa-sync-alt"></i> Atualizar
+                </button>
+            </div>
+            <div class="card-body">
+                {% if total_students > 0 %}
+                <div class="mb-4">
+                    <label class="mb-2 fw-bold text-muted text-uppercase small">Visão Geral da Base</label>
+                    <div class="progress" style="height: 40px; border-radius: 8px; font-size: 0.9rem;">
+                        <!-- Low Risk -->
+                        {% set low_pct = (stats.low / total_students * 100)|round(1) %}
+                        {% if stats.low > 0 %}
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ low_pct }}%;"
+                            title="Saudável: {{ stats.low }} ({{ low_pct }}%)">
+                            <span class="d-none d-md-inline">{{ stats.low }} Saudáveis</span>
+                        </div>
+                        {% endif %}
+
+                        <!-- Medium Risk -->
+                        {% set med_pct = (stats.medium / total_students * 100)|round(1) %}
+                        {% if stats.medium > 0 %}
+                        <div class="progress-bar bg-warning text-dark" role="progressbar" style="width: {{ med_pct }}%;"
+                            title="Em Risco: {{ stats.medium }} ({{ med_pct }}%)">
+                            <span class="d-none d-md-inline">{{ stats.medium }} Em Risco</span>
+                        </div>
+                        {% endif %}
+
+                        <!-- High Risk -->
+                        {% set high_pct = (stats.high / total_students * 100)|round(1) %}
+                        {% if stats.high > 0 %}
+                        <div class="progress-bar bg-danger" role="progressbar" style="width: {{ high_pct }}%;"
+                            title="Crítico: {{ stats.high }} ({{ high_pct }}%)">
+                            <span class="d-none d-md-inline">{{ stats.high }} Críticos</span>
+                        </div>
+                        {% endif %}
+
+                        <!-- Critical Risk -->
+                        {% set crit_pct = (stats.critical / total_students * 100)|round(1) %}
+                        {% if stats.critical > 0 %}
+                        <div class="progress-bar bg-dark" role="progressbar" style="width: {{ crit_pct }}%;"
+                            title="Urgente: {{ stats.critical }} ({{ crit_pct }}%)">
+                            <span class="d-none d-md-inline">{{ stats.critical }} Urgentes</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Legend for Mobile -->
+                    <div class="d-flex d-md-none justify-content-between mt-2 small text-muted">
+                        <span class="text-success"><i class="fas fa-circle"></i> {{ stats.low }}</span>
+                        <span class="text-warning"><i class="fas fa-circle"></i> {{ stats.medium }}</span>
+                        <span class="text-danger"><i class="fas fa-circle"></i> {{ stats.high }}</span>
+                        <span class="text-dark"><i class="fas fa-circle"></i> {{ stats.critical }}</span>
+                    </div>
+                </div>
+
+                <div class="row text-center border-top pt-3">
+                    <div class="col-3 border-end">
+                        <h3 class="mb-0 text-success">{{ stats.low }}</h3>
+                        <small class="text-uppercase text-muted" style="font-size: 0.7rem;">Saudáveis</small>
+                    </div>
+                    <div class="col-3 border-end">
+                        <h3 class="mb-0 text-warning">{{ stats.medium }}</h3>
+                        <small class="text-uppercase text-muted" style="font-size: 0.7rem;">Atenção</small>
+                    </div>
+                    <div class="col-3 border-end">
+                        <h3 class="mb-0 text-danger">{{ stats.high }}</h3>
+                        <small class="text-uppercase text-muted" style="font-size: 0.7rem;">Alto Risco</small>
+                    </div>
+                    <div class="col-3">
+                        <h3 class="mb-0 text-dark">{{ stats.critical }}</h3>
+                        <small class="text-uppercase text-muted" style="font-size: 0.7rem;">Urgente</small>
+                    </div>
+                </div>
+
+                {% else %}
+                <div class="text-center py-5">
+                    <p class="text-muted">Nenhum Health Score calculado ainda.</p>
+                    <button class="btn btn-primary" disabled>Calcular Health Scores</button>
+                    <small class="d-block mt-2">Execute o job de cálculo manualmente via CLI.</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- At-Risk Students List -->
+    <div class="col-12">
+        <div class="card shadow-sm border-danger">
+            <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-ambulance me-2"></i>Alunos em Risco (Crítico + Alto)</h5>
+                <span class="badge bg-white text-danger border">{{ stats.high + stats.critical }} Alunos</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">Aluno</th>
+                                <th class="text-center">Score</th>
+                                <th class="text-center">Risco</th>
+                                <th>Fatores Negativos</th>
+                                <th>Último Treino</th>
+                                <th class="text-end pe-4">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if critical_students %}
+                            {% for score in critical_students %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-light text-secondary rounded-circle d-flex align-items-center justify-content-center me-3"
+                                            style="width: 36px; height: 36px;">
+                                            {{ score.user.name[:1] }}
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 fw-bold">{{ score.user.name }}</h6>
+                                            <small class="text-muted">{{ score.user.phone }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <h5
+                                        class="mb-0 fw-bold {{ 'text-dark' if score.total_score < 20 else 'text-danger' }}">
+                                        {{ score.total_score|int }}
+                                    </h5>
+                                </td>
+                                <td class="text-center">
+                                    {% if score.risk_level.value == 'critical' %}
+                                    <span class="badge bg-dark rounded-pill">CRÍTICO</span>
+                                    {% else %}
+                                    <span class="badge bg-danger rounded-pill">ALTO</span>
+                                    {% endif %}
+                                </td>
+                                <td class="small text-muted">
+                                    {% if score.frequency_score < 10 %} <span class="text-danger d-block"><i
+                                            class="fas fa-times me-1"></i>Baixa Frequência</span>
+                                        {% endif %}
+                                        {% if score.financial_score < 10 %} <span class="text-danger d-block"><i
+                                                class="fas fa-times me-1"></i>Risco Financeiro</span>
+                                            {% endif %}
+                                            {% if score.engagement_score < 10 %} <span class="text-danger d-block"><i
+                                                    class="fas fa-times me-1"></i>Pouco Engajamento</span>
+                                                {% endif %}
+                                </td>
+                                <td class="small">
+                                    {% set last_booking = score.user.bookings|sort(attribute='date', reverse=True)|first
+                                    %}
+                                    {% if last_booking %}
+                                    {{ last_booking.date.strftime('%d/%m') }}
+                                    <br><span class="text-muted days-ago-calc">{{ (now().date() -
+                                        last_booking.date).days }} dias atrás</span>
+                                    {% else %}
+                                    <span class="text-danger">Nunca treinou</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end pe-4">
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('instructor.student_detail', id=score.user.id) }}"
+                                            class="btn btn-sm btn-outline-secondary" title="Ver Perfil">
+                                            <i class="fas fa-user"></i>
+                                        </a>
+                                        <a href="#" class="btn btn-sm btn-outline-success" title="WhatsApp">
+                                            <i class="fab fa-whatsapp"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-5">
+                                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                    <h5>Nenhum aluno em risco crítico detectado!</h5>
+                                    <p class="text-muted">Ótimo trabalho na retenção.</p>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-light text-center small text-muted">
+                Mostrando os 50 casos mais críticos. Calcule o score diariamente para manter atualizado.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

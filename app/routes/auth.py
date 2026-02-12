@@ -166,6 +166,8 @@ def register():
                 gender = Gender.FEMALE
             else:
                 errors.append('Sexo inválido.')
+        else:
+            errors.append('Selecione o sexo.')
 
         # Validar e formatar telefone
         phone_formatted = None

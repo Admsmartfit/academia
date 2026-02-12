@@ -8,10 +8,11 @@ from app.models import (
     PaymentStatusEnum, ClassSchedule, User, RecurringBooking, FrequencyType,
     ConversionRule, CreditWallet, ScheduleSlotGender, Gender, ScreeningType
 )
-from app.models.crm import StudentHealthScore
+from app.models.crm import StudentHealthScore, AutomationLog
 from app.models.xp_ledger import XPLedger
 from app.services.credit_service import CreditService
 from app.services.gender_distribution_service import GenderDistributionService
+from app.models.conversion_rule import ConversionRule
 from app import db
 from datetime import datetime, timedelta
 from sqlalchemy import func
@@ -23,6 +24,10 @@ student_bp = Blueprint('student', __name__, url_prefix='/student')
 @student_bp.route('/dashboard')
 @login_required
 def dashboard():
+    # Check profile completion for alert
+    if not current_user.cpf or not current_user.gender:
+        flash('Complete seu perfil (CPF e Sexo) para desbloquear todas as funcionalidades.', 'warning')
+        
     """Dashboard do aluno"""
     # Buscar assinaturas ativas
     active_subscriptions = Subscription.query.filter_by(
@@ -101,6 +106,36 @@ def dashboard():
                     else:
                         break
 
+                    else:
+                        break
+
+    # Proxima Recompensa (Gamificacao)
+    # Busca regra com XP > xp_available
+    next_reward_rule = ConversionRule.query.filter(
+        ConversionRule.is_active == True,
+        ConversionRule.xp_required > xp_available
+    ).order_by(ConversionRule.xp_required.asc()).first()
+
+    # Se nao tiver proxima (ja tem XP para todas ou nao tem regras), pega a menor regra que ele PODE comprar
+    # Ou se ele tem XP suficiente para uma regra, mostre como "Disponivel"
+    reward_status = None
+    xp_to_reward = 0
+    
+    if next_reward_rule:
+        xp_to_reward = next_reward_rule.xp_required - xp_available
+        reward_status = 'locked'
+    else:
+        # Se nao tem reward maior, ve se tem algum disponivel
+        available_reward = ConversionRule.query.filter(
+            ConversionRule.is_active == True,
+            ConversionRule.xp_required <= xp_available
+        ).order_by(ConversionRule.xp_required.desc()).first()
+        
+        if available_reward:
+            next_reward_rule = available_reward
+            reward_status = 'available'
+            xp_to_reward = 0
+
     return render_template('student/dashboard.html',
                          active_subscriptions=active_subscriptions,
                          total_credits=total_credits,
@@ -114,7 +149,10 @@ def dashboard():
                          total_classes=total_classes,
                          screening_status=screening_status,
                          health_score=health_score,
-                         streak=streak)
+                         streak=streak,
+                         next_reward_rule=next_reward_rule,
+                         xp_to_reward=xp_to_reward,
+                         reward_status=reward_status)
 
 
 @student_bp.route('/subscriptions')
@@ -144,6 +182,11 @@ def subscription_detail(id):
 @login_required
 def schedule():
     """Grade de agendamento"""
+    
+    # Enforce Profile Completion
+    if not current_user.cpf or not current_user.gender:
+        flash('Por favor, complete seu cadastro (CPF e Sexo) antes de agendar aulas.', 'warning')
+        return redirect(url_for('student.profile'))
 
     # Data selecionada (hoje por padrao)
     selected_date_str = request.args.get('date')
@@ -231,11 +274,17 @@ def schedule():
     for i in range(7):
         week_dates.append(start_of_week + timedelta(days=i))
 
+    # Verificar status global do PAR-Q
+    from app.models.health import ScreeningType, ScreeningStatus
+    parq_status = current_user.get_screening_status(ScreeningType.PARQ)
+    parq_ok = parq_status == ScreeningStatus.APTO
+
     return render_template('student/schedule.html',
         schedules=schedules,
         selected_date=selected_date,
         active_subscriptions=active_subscriptions,
-        week_dates=week_dates
+        week_dates=week_dates,
+        parq_ok=parq_ok
     )
 
 
@@ -470,6 +519,20 @@ def report_pain():
     except Exception:
         pass  # WhatsApp notification is best-effort
 
+    # Log pain report for Instructor Alert
+    try:
+        pain_log = AutomationLog(
+            user_id=current_user.id,
+            automation_type='pain_report',
+            sent_at=datetime.utcnow(),
+            opened=False, # Reusing fields: opened=False means 'not resolved' maybe? Or just ignore.
+            clicked=False
+        )
+        db.session.add(pain_log)
+        db.session.commit()
+    except Exception:
+        pass
+
     flash(f'Relato enviado com sucesso! {instructor_name} será notificado.', 'success')
     return redirect(url_for('student.my_training'))
 
@@ -701,6 +764,48 @@ def update_cpf():
         return {'success': True}
     except Exception as e:
         return {'success': False, 'error': 'Erro ao salvar CPF.'}, 500
+
+
+@student_bp.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    """Perfil do aluno - Edição de dados"""
+    if request.method == 'POST':
+        name = request.form.get('name')
+        phone = request.form.get('phone')
+        cpf = request.form.get('cpf')
+        gender_str = request.form.get('gender')
+        
+        try:
+            if name: current_user.name = name
+            
+            # Phone validation if changed
+            if phone and phone != current_user.phone:
+                # Basic cleanup
+                import re
+                clean_phone = re.sub(r'\D', '', phone)
+                if not clean_phone.startswith('55'): clean_phone = '55' + clean_phone
+                current_user.phone = clean_phone
+                
+            if cpf:
+                if User.validate_cpf(cpf): 
+                    current_user.cpf = User.format_cpf(cpf)
+                else:
+                    flash('CPF inválido.', 'danger')
+                    return redirect(url_for('student.profile'))
+
+            if gender_str:
+                current_user.gender = Gender.MALE if gender_str == 'male' else Gender.FEMALE
+            
+            db.session.commit()
+            flash('Perfil atualizado com sucesso.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao atualizar perfil: {str(e)}', 'danger')
+            
+        return redirect(url_for('student.profile'))
+        
+    return render_template('student/profile.html')
 
 
 # ==================== XP E CREDITOS ====================

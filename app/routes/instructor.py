@@ -376,6 +376,20 @@ def student_detail(id):
     parq = HealthScreening.query.filter_by(user_id=student.id, screening_type=ScreeningType.PARQ).order_by(HealthScreening.created_at.desc()).first()
     ems = HealthScreening.query.filter_by(user_id=student.id, screening_type=ScreeningType.EMS).order_by(HealthScreening.created_at.desc()).first()
     
+    # Alerta de Dor (Ultimas 48h)
+    from app.models.crm import AutomationLog
+    pain_alert = AutomationLog.query.filter(
+        AutomationLog.user_id == student.id,
+        AutomationLog.automation_type == 'pain_report',
+        AutomationLog.sent_at >= datetime.utcnow() - timedelta(hours=48)
+    ).first()
+
+    # Logs de WhatsApp
+    from app.models.whatsapp_log import WhatsAppLog
+    whatsapp_logs = WhatsAppLog.query.filter_by(
+        user_id=student.id
+    ).order_by(WhatsAppLog.created_at.desc()).limit(15).all()
+    
     # Historico de aulas
     bookings = Booking.query.filter_by(user_id=student.id).order_by(Booking.date.desc()).limit(20).all()
     
@@ -385,7 +399,9 @@ def student_detail(id):
                           past_plans=past_plans,
                           parq=parq,
                           ems=ems,
-                          bookings=bookings)
+                          bookings=bookings,
+                          pain_alert=pain_alert,
+                          whatsapp_logs=whatsapp_logs)
 
 
 @instructor_bp.route('/student/<int:id>/face', methods=['GET'])
