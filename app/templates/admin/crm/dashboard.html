@@ -805,22 +805,39 @@
             });
     }
 
-    // Automation Toggles (persisted in localStorage)
+    // Automation Toggles (persisted in backend via SystemConfig)
     function loadAutomationToggles() {
-        var mapping = { welcome: 'toggleWelcome', recovery: 'toggleRecovery', nps: 'toggleNPS' };
-        Object.keys(mapping).forEach(function(key) {
-            var saved = localStorage.getItem('automation_' + key);
-            var el = document.getElementById(mapping[key]);
-            if (el && saved !== null) {
-                el.checked = saved === 'true';
-            }
-        });
+        fetch('/api/crm/settings/automation')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                document.getElementById('toggleWelcome').checked = data.welcome;
+                document.getElementById('toggleRecovery').checked = data.recovery;
+                document.getElementById('toggleNPS').checked = data.nps;
+            })
+            .catch(function() {
+                showToast('Erro ao carregar estado das automacoes', 'error');
+            });
     }
 
     function toggleAutomation(type, enabled) {
-        localStorage.setItem('automation_' + type, enabled);
         var label = { welcome: 'Boas-vindas', recovery: 'Recuperacao', nps: 'NPS' }[type] || type;
-        showToast(label + (enabled ? ' ativada' : ' desativada'), 'success');
+
+        fetch('/api/crm/settings/automation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: 'automation_' + type, value: enabled })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                showToast(label + (enabled ? ' ativada' : ' desativada'), 'success');
+            } else {
+                showToast('Erro: ' + (data.error || 'Falha ao salvar'), 'error');
+            }
+        })
+        .catch(function() {
+            showToast('Erro de conexao ao salvar ' + label, 'error');
+        });
     }
 </script>
 {% endblock %}

@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from flask import current_app
 from app.models import User, Booking, StudentHealthScore, Lead, AutomationLog
+from app.models.system_config import SystemConfig
 from app.services.megaapi import megaapi, Button, ListMessage, ListSection
 from app import db
 import logging
@@ -42,26 +43,46 @@ class RetentionAutomation:
             'nps_sent': 0
         }
 
+        # Verificar toggles de automacao no SystemConfig
+        welcome_enabled = SystemConfig.get('automation_welcome', 'true') == 'true'
+        recovery_enabled = SystemConfig.get('automation_recovery', 'true') == 'true'
+        nps_enabled = SystemConfig.get('automation_nps', 'true') == 'true'
+
         # 1. Boas-vindas (usuários cadastrados ontem)
-        results['welcome_sent'] = self.send_welcome_messages()
+        if welcome_enabled:
+            results['welcome_sent'] = self.send_welcome_messages()
+        else:
+            logger.info("Automação de boas-vindas desativada via config")
 
         # 2. Engajamento (usuários com 15 dias)
-        results['engagement_sent'] = self.send_engagement_survey()
+        if welcome_enabled:
+            results['engagement_sent'] = self.send_engagement_survey()
+        else:
+            logger.info("Automação de engajamento desativada via config")
 
         # 3. Recuperação leve (5 dias sem check-in)
-        results['recovery_light_sent'] = self.send_light_recovery()
+        if recovery_enabled:
+            results['recovery_light_sent'] = self.send_light_recovery()
+        else:
+            logger.info("Automação de recuperação desativada via config")
 
         # 4. Recuperação crítica (10 dias sem check-in) - PRD D+10
-        results['recovery_critical_sent'] = self.send_critical_recovery()
+        if recovery_enabled:
+            results['recovery_critical_sent'] = self.send_critical_recovery()
 
         # 5. Última tentativa (20 dias sem check-in)
-        results['last_attempt_sent'] = self.send_last_attempt()
+        if recovery_enabled:
+            results['last_attempt_sent'] = self.send_last_attempt()
 
         # 6. Renovação de Plano (3 dias antes) - PRD
-        results['plan_renewal_sent'] = self.send_plan_renewal()
+        if recovery_enabled:
+            results['plan_renewal_sent'] = self.send_plan_renewal()
 
         # 7. Pesquisa NPS Mensal - PRD
-        results['nps_sent'] = self.send_nps_survey()
+        if nps_enabled:
+            results['nps_sent'] = self.send_nps_survey()
+        else:
+            logger.info("Automação de NPS desativada via config")
 
         logger.info(f"Automações concluídas: {results}")
         return results

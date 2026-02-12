@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from datetime import datetime, timedelta
 from sqlalchemy import func
-from app.models import User, StudentHealthScore, Booking, AutomationLog
+from app.models import User, StudentHealthScore, Booking, AutomationLog, SystemConfig
 from app import db
 
 crm_api_bp = Blueprint('crm_api', __name__, url_prefix='/api/crm')
@@ -263,4 +263,30 @@ def nps_average():
         'total_responses': total_responses,
         'total_sent': total_sent,
         'response_rate': round(total_responses / total_sent * 100, 1) if total_sent > 0 else 0
+    })
+
+
+@crm_api_bp.route('/settings/automation', methods=['GET', 'POST'])
+@login_required
+def automation_settings():
+    """GET: retorna estado dos toggles. POST: salva um toggle."""
+    if not current_user.is_admin and current_user.role != 'manager':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    if request.method == 'POST':
+        data = request.json
+        key = data.get('key')
+        value = data.get('value')
+
+        valid_keys = ['automation_welcome', 'automation_recovery', 'automation_nps']
+        if key not in valid_keys:
+            return jsonify({'success': False, 'error': 'Chave invalida'}), 400
+
+        SystemConfig.set(key, str(value).lower(), description=f'Toggle automacao {key}')
+        return jsonify({'success': True})
+
+    return jsonify({
+        'welcome': SystemConfig.get('automation_welcome', 'true') == 'true',
+        'recovery': SystemConfig.get('automation_recovery', 'true') == 'true',
+        'nps': SystemConfig.get('automation_nps', 'true') == 'true'
     })
