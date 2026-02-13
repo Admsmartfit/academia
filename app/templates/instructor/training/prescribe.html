@@ -244,12 +244,29 @@
                             </div>
                         </div>
 
-                        <!-- Exercise library -->
-                        <div id="exercises-library" class="mb-3" style="max-height: 400px; overflow-y: auto;">
-                            <p class="text-muted">Carregando exercicios...</p>
+                        <div class="row">
+                            <!-- Exercise library (left) -->
+                            <div class="col-md-5">
+                                <h6 class="mb-2"><i class="fas fa-book me-1"></i>Biblioteca</h6>
+                                <div id="exercises-library" class="mb-3" style="max-height: 500px; overflow-y: auto;">
+                                    <p class="text-muted">Carregando exercicios...</p>
+                                </div>
+                            </div>
+
+                            <!-- Session exercises with editable fields (right) -->
+                            <div class="col-md-7">
+                                <h6 class="mb-2"><i class="fas fa-list-ol me-1"></i>Exercicios da Sessao</h6>
+                                <div id="step3-exercises-list" style="max-height: 500px; overflow-y: auto;">
+                                    <div class="text-center py-4 border rounded bg-light" id="step3EmptyMsg">
+                                        <i class="fas fa-arrow-left fa-2x text-muted mb-2 d-block"></i>
+                                        <p class="text-muted mb-0">Selecione exercicios da biblioteca ao lado</p>
+                                        <small class="text-muted">Aqui voce podera ajustar series, repeticoes e carga</small>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div>
+                        <div class="mt-3">
                             <button class="btn btn-secondary me-2" onclick="goToStep(2)">
                                 <i class="fas fa-arrow-left me-1"></i>Voltar
                             </button>

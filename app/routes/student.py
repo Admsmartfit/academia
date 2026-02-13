@@ -106,9 +106,6 @@ def dashboard():
                     else:
                         break
 
-                    else:
-                        break
-
     # Proxima Recompensa (Gamificacao)
     # Busca regra com XP > xp_available
     next_reward_rule = ConversionRule.query.filter(

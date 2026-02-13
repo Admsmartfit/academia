@@ -392,6 +392,7 @@ function addExerciseToSession(exerciseId) {
 
     session.exercises.push(workoutExercise);
     renderSessionExercises(targetSessionId);
+    renderStep3Exercises();
     updatePreview();
     showPrescriptionAlert(exercise.name + ' adicionado a ' + session.name, 'success');
 }
@@ -468,8 +469,81 @@ function removeExerciseFromSession(sessionId, exerciseIndex) {
     if (session) {
         session.exercises.splice(exerciseIndex, 1);
         renderSessionExercises(sessionId);
+        renderStep3Exercises();
         updatePreview();
     }
+}
+
+// Render exercises in the Step 3 visible panel
+function renderStep3Exercises() {
+    var container = document.getElementById('step3-exercises-list');
+    if (!container) return;
+
+    var targetSelect = document.getElementById('targetSession');
+    var targetSessionId = targetSelect ? targetSelect.value : '';
+    var session = sessions.find(function (s) { return s.id === targetSessionId; });
+
+    if (!session || session.exercises.length === 0) {
+        container.innerHTML =
+            '<div class="text-center py-4 border rounded bg-light" id="step3EmptyMsg">' +
+            '<i class="fas fa-arrow-left fa-2x text-muted mb-2 d-block"></i>' +
+            '<p class="text-muted mb-0">Selecione exercicios da biblioteca ao lado</p>' +
+            '<small class="text-muted">Aqui voce podera ajustar series, repeticoes e carga</small>' +
+            '</div>';
+        return;
+    }
+
+    var html = '';
+    session.exercises.forEach(function (ex, idx) {
+        html += '<div class="exercise-item mb-3 shadow-sm" data-index="' + idx + '">' +
+            '<div class="d-flex justify-content-between align-items-center mb-2">' +
+            '<div class="d-flex align-items-center gap-2">' +
+            '<span class="badge bg-secondary rounded-circle" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center;">' + (idx + 1) + '</span>' +
+            '<strong class="small">' + ex.name + '</strong>' +
+            '<small class="text-muted">(' + ex.muscle_group_label + ')</small>' +
+            '</div>' +
+            '<button class="btn btn-sm btn-outline-danger border-0" ' +
+            'onclick="removeExerciseFromSession(\'' + targetSessionId + '\',' + idx + ')">' +
+            '<i class="fas fa-trash-alt"></i>' +
+            '</button>' +
+            '</div>' +
+            '<div class="row g-2">' +
+            '<div class="col-4 col-md-2">' +
+            '<label class="small text-muted mb-0">Series</label>' +
+            '<input type="number" class="form-control form-control-sm" value="' + ex.sets + '" min="1" max="20" ' +
+            'oninput="updateExerciseFieldStep3(\'' + targetSessionId + '\',' + idx + ',\'sets\',this.value)">' +
+            '</div>' +
+            '<div class="col-8 col-md-3">' +
+            '<label class="small text-muted mb-0">Repeticoes</label>' +
+            '<input type="text" class="form-control form-control-sm" value="' + ex.reps + '" placeholder="Ex: 10-12" ' +
+            'oninput="updateExerciseFieldStep3(\'' + targetSessionId + '\',' + idx + ',\'reps\',this.value)">' +
+            '</div>' +
+            '<div class="col-4 col-md-2">' +
+            '<label class="small text-muted mb-0">Desc.(s)</label>' +
+            '<input type="number" class="form-control form-control-sm" value="' + ex.rest + '" step="10" ' +
+            'oninput="updateExerciseFieldStep3(\'' + targetSessionId + '\',' + idx + ',\'rest\',this.value)">' +
+            '</div>' +
+            '<div class="col-8 col-md-2">' +
+            '<label class="small text-muted mb-0">Carga</label>' +
+            '<input type="text" class="form-control form-control-sm" value="' + (ex.weight || '') + '" placeholder="20kg" ' +
+            'oninput="updateExerciseFieldStep3(\'' + targetSessionId + '\',' + idx + ',\'weight\',this.value)">' +
+            '</div>' +
+            '<div class="col-12 col-md-3">' +
+            '<label class="small text-muted mb-0">Notas</label>' +
+            '<input type="text" class="form-control form-control-sm" value="' + (ex.notes || '') + '" placeholder="Opcional" ' +
+            'oninput="updateExerciseFieldStep3(\'' + targetSessionId + '\',' + idx + ',\'notes\',this.value)">' +
+            '</div>' +
+            '</div>' +
+            '</div>';
+    });
+
+    container.innerHTML = html;
+}
+
+function updateExerciseFieldStep3(sessionId, exerciseIndex, field, value) {
+    updateExerciseField(sessionId, exerciseIndex, field, value);
+    // Also sync the step 2 card
+    renderSessionExercises(sessionId);
 }
 
 function updateTargetSessionDropdown() {
@@ -487,6 +561,14 @@ function updateTargetSessionDropdown() {
         option.textContent = session.name + ' (' + session.exercises.length + ' exercicios)';
         select.appendChild(option);
     });
+
+    // Listen for changes to refresh step 3 exercises
+    select.onchange = function () {
+        renderStep3Exercises();
+    };
+
+    // Render current session exercises
+    renderStep3Exercises();
 }
 
 // Save prescription
