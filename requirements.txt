@@ -31,3 +31,6 @@ pytest-flask==1.3.0
 
 # Database (producao)
 # psycopg2-binary==2.9.9
+
+# Utils
+deep-translator>=1.11.4

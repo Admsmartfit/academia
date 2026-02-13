@@ -2,20 +2,20 @@
 
 """
 Wger API integration service for exercise catalog.
-Fetches exercises from the open-source Wger API (wger.readthedocs.io).
+Fetches exercises from the open-source Wger API (wger.de).
 """
 
 import requests
 import logging
 import random
+import re
 from app.models.training import Exercise, MuscleGroup, DifficultyLevel
 from app import db
 
 logger = logging.getLogger(__name__)
 
 WGER_BASE_URL = 'https://wger.de/api/v2'
-WGER_LANGUAGE_PT = 10  # Portuguese
-WGER_LANGUAGE_EN = 2   # English fallback
+WGER_LANGUAGE_EN = 2
 
 # Wger category -> local muscle_group mapping
 CATEGORY_MAP = {
@@ -29,154 +29,183 @@ CATEGORY_MAP = {
     15: MuscleGroup.CORE,      # Abs
 }
 
-
-def fetch_exercises(language='pt', limit=100, offset=0, category=None):
-    """
-    Fetch exercises from Wger API.
-    Returns list of exercises with name, description, category, images.
-    """
-    lang_id = WGER_LANGUAGE_PT if language == 'pt' else WGER_LANGUAGE_EN
-
-    params = {
-        'language': lang_id,
-        'limit': limit,
-        'offset': offset,
-        'format': 'json',
-        'status': 2,  # Only approved exercises
-    }
-    if category:
-        params['category'] = category
-
-    try:
-        resp = requests.get(f'{WGER_BASE_URL}/exercise/', params=params, timeout=10)
-        resp.raise_for_status()
-        data = resp.json()
-
-        exercises = []
-        for item in data.get('results', []):
-            cat_id = item.get('category')
-            muscle = CATEGORY_MAP.get(cat_id, MuscleGroup.FULL_BODY)
-            
-            exercises.append({
-                'wger_id': item['id'],
-                'name': item.get('name', '').strip(),
-                'description': _clean_html(item.get('description', '')),
-                'category_id': cat_id,
-                'muscle_group': muscle,
-                'equipment': [e for e in item.get('equipment', [])],
-            })
-
-        return {
-            'exercises': [e for e in exercises if e['name']],
-            'count': data.get('count', 0),
-            'next': data.get('next'),
-        }
-    except requests.RequestException as e:
-        logger.error(f'Wger API error: {e}')
-        return {'exercises': [], 'count': 0, 'next': None, 'error': str(e)}
+# Cache de equipamentos (id -> nome)
+_equipment_cache = {}
 
 
-def fetch_exercise_images(exercise_id):
-    """Fetch images for a specific exercise from Wger."""
+def _get_equipment_names():
+    """Busca todos os equipamentos da API e cacheia."""
+    global _equipment_cache
+    if _equipment_cache:
+        return _equipment_cache
     try:
         resp = requests.get(
-            f'{WGER_BASE_URL}/exerciseimage/',
-            params={'exercise': exercise_id, 'format': 'json', 'is_main': True},
+            f'{WGER_BASE_URL}/equipment/',
+            params={'format': 'json', 'limit': 100},
             timeout=10
         )
         resp.raise_for_status()
-        data = resp.json()
-        images = [img['image'] for img in data.get('results', []) if img.get('image')]
-        return images
-    except requests.RequestException as e:
-        logger.error(f'Wger image fetch error: {e}')
-        return []
+        for item in resp.json().get('results', []):
+            _equipment_cache[item['id']] = item['name']
+    except Exception as e:
+        logger.warning(f'Erro ao buscar equipamentos: {e}')
+    return _equipment_cache
 
 
-def fetch_categories():
-    """Fetch exercise categories from Wger."""
-    try:
-        resp = requests.get(f'{WGER_BASE_URL}/exercisecategory/', params={'format': 'json'}, timeout=10)
-        resp.raise_for_status()
-        return resp.json().get('results', [])
-    except requests.RequestException as e:
-        logger.error(f'Wger categories error: {e}')
-        return []
+def _fetch_all_images():
+    """Busca TODAS as imagens de exercicios de uma vez (muito mais rapido)."""
+    images = {}
+    url = f'{WGER_BASE_URL}/exerciseimage/'
+    params = {'format': 'json', 'limit': 100, 'is_main': 'True'}
 
-
-def import_exercises_to_db(language='pt', max_exercises=50):
-    """
-    Import exercises from Wger into local Exercise model.
-    Skips duplicates by name.
-    Returns count of imported exercises.
-    """
-    imported = 0
-    offset = 0
-    batch_size = 20
-    
-    # Simple heuristic distribution for difficulty if not provided
-    difficulties = [DifficultyLevel.BEGINNER, DifficultyLevel.INTERMEDIATE, DifficultyLevel.ADVANCED]
-
-    while imported < max_exercises:
-        result = fetch_exercises(language=language, limit=batch_size, offset=offset)
-        
-        # Stop if no more results or error
-        if not result['exercises'] and not result.get('next'):
+    while url:
+        try:
+            resp = requests.get(url, params=params, timeout=15)
+            resp.raise_for_status()
+            data = resp.json()
+            for img in data.get('results', []):
+                ex_id = img.get('exercise_base') or img.get('exercise')
+                if ex_id and img.get('image') and ex_id not in images:
+                    images[ex_id] = img['image']
+            url = data.get('next')
+            params = {}  # next URL already has params
+        except Exception as e:
+            logger.warning(f'Erro ao buscar imagens (batch): {e}')
             break
-            
-        # Try English fallback if Portuguese has no results strictly on first call
-        if not result['exercises'] and language == 'pt' and offset == 0:
-            result = fetch_exercises(language='en', limit=batch_size, offset=offset)
-            if not result['exercises']:
-                break
 
-        for ex_data in result['exercises']:
-            if imported >= max_exercises:
-                break
+    logger.info(f'Carregadas {len(images)} imagens de exercicios')
+    return images
 
-            # Skip if already exists
-            existing = Exercise.query.filter_by(name=ex_data['name']).first()
-            if existing:
-                continue
 
-            # Fetch thumbnail
-            images = fetch_exercise_images(ex_data['wger_id'])
-            thumbnail = images[0] if images else None
-            
-            # Randomly assign difficulty since Wger doesn't provide it easily
-            # In a real app, this should be curated manually later
-            difficulty = random.choice(difficulties)
+def _fetch_all_videos():
+    """Busca TODOS os videos de exercicios de uma vez."""
+    videos = {}
+    url = f'{WGER_BASE_URL}/video/'
+    params = {'format': 'json', 'limit': 100}
 
-            exercise = Exercise(
-                name=ex_data['name'],
-                muscle_group=ex_data['muscle_group'],
-                description=ex_data.get('description', '')[:500], # Trucate if too long
-                thumbnail_url=thumbnail,
-                difficulty_level=difficulty,
-                is_active=True,
-                equipment_needed=", ".join([str(e) for e in ex_data['equipment']]) if ex_data['equipment'] else None
-            )
-            db.session.add(exercise)
-            imported += 1
-
-        db.session.commit()
-        
-        if not result.get('next'):
+    while url:
+        try:
+            resp = requests.get(url, params=params, timeout=15)
+            resp.raise_for_status()
+            data = resp.json()
+            for vid in data.get('results', []):
+                ex_id = vid.get('exercise_base') or vid.get('exercise')
+                if ex_id and vid.get('video') and ex_id not in videos:
+                    videos[ex_id] = vid['video']
+            url = data.get('next')
+            params = {}
+        except Exception as e:
+            logger.warning(f'Erro ao buscar videos (batch): {e}')
             break
-            
-        offset += batch_size
 
-    logger.info(f'Imported {imported} exercises from Wger')
-    return imported
+    logger.info(f'Carregados {len(videos)} videos de exercicios')
+    return videos
 
 
 def _clean_html(text):
     """Remove basic HTML tags from Wger descriptions."""
     if not text:
         return ''
-    import re
-    # Remove all HTML tags
     clean = re.sub(r'<[^>]+>', '', text)
-    # Replace common HTML entities
     clean = clean.replace('&nbsp;', ' ').replace('&amp;', '&').replace('&quot;', '"')
     return clean.strip()
+
+
+def import_exercises_to_db(max_exercises=9999):
+    """
+    Importa exercicios da API Wger para o banco local.
+    Busca em ingles, com imagens e videos.
+    Pula duplicatas pelo nome.
+    Retorna contagem de exercicios importados.
+    """
+    logger.info('Iniciando importacao de exercicios do Wger...')
+
+    # 1) Pre-carregar equipamentos, imagens e videos em batch (muito mais rapido)
+    equipment_map = _get_equipment_names()
+    logger.info(f'Equipamentos carregados: {len(equipment_map)}')
+
+    images_map = _fetch_all_images()
+    videos_map = _fetch_all_videos()
+
+    # 2) Nomes que ja existem no banco (evita queries repetidas)
+    existing_names = set(
+        name for (name,) in db.session.query(Exercise.name).all()
+    )
+
+    # 3) Buscar exercicios paginados
+    difficulties = [DifficultyLevel.BEGINNER, DifficultyLevel.INTERMEDIATE, DifficultyLevel.ADVANCED]
+    imported = 0
+    offset = 0
+    batch_size = 100
+
+    while imported < max_exercises:
+        try:
+            resp = requests.get(
+                f'{WGER_BASE_URL}/exercise/',
+                params={
+                    'language': WGER_LANGUAGE_EN,
+                    'limit': batch_size,
+                    'offset': offset,
+                    'format': 'json',
+                    'status': 2,
+                },
+                timeout=20
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            logger.error(f'Wger API error na pagina offset={offset}: {e}')
+            break
+
+        results = data.get('results', [])
+        if not results:
+            break
+
+        for item in results:
+            if imported >= max_exercises:
+                break
+
+            name = (item.get('name') or '').strip()
+            if not name or name in existing_names:
+                continue
+
+            cat_id = item.get('category')
+            muscle = CATEGORY_MAP.get(cat_id, MuscleGroup.FULL_BODY)
+            description = _clean_html(item.get('description', ''))
+
+            # Resolver equipamentos: IDs -> nomes
+            equip_ids = item.get('equipment', [])
+            equip_names = [equipment_map.get(eid, '') for eid in equip_ids]
+            equip_str = ', '.join(n for n in equip_names if n) or None
+
+            # exercise_base para buscar imagem/video
+            ex_base_id = item.get('exercise_base') or item.get('id')
+
+            thumbnail = images_map.get(ex_base_id)
+            video_url = videos_map.get(ex_base_id)
+
+            exercise = Exercise(
+                name=name,
+                muscle_group=muscle,
+                description=description[:500] if description else None,
+                thumbnail_url=thumbnail,
+                video_url=video_url,
+                difficulty_level=random.choice(difficulties),
+                is_active=True,
+                equipment_needed=equip_str
+            )
+            db.session.add(exercise)
+            existing_names.add(name)
+            imported += 1
+
+        # Commit por pagina
+        db.session.commit()
+        logger.info(f'Importados ate agora: {imported} (offset={offset})')
+
+        if not data.get('next'):
+            break
+
+        offset += batch_size
+
+    logger.info(f'Importacao concluida: {imported} exercicios do Wger')
+    return imported

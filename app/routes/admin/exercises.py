@@ -2,7 +2,6 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for
 from flask_login import login_required
 from app.models.training import Exercise, MuscleGroup, DifficultyLevel
 from app.routes.admin.dashboard import admin_required
-from app.services import wger_service
 from app import db
 
 exercises_bp = Blueprint('admin_exercises', __name__, url_prefix='/admin/exercises')
@@ -53,7 +52,8 @@ def list_exercises():
 def import_exercises():
     """Importa exercicios da API Wger"""
     try:
-        count = wger_service.import_exercises_to_db(language='pt', max_exercises=50)
+        from app.services import wger_service
+        count = wger_service.import_exercises_to_db()
         flash(f'{count} novos exercicios importados com sucesso!', 'success')
     except Exception as e:
         flash(f'Erro ao importar exercicios: {str(e)}', 'error')
