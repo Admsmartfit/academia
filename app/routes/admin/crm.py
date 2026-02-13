@@ -179,7 +179,82 @@ def health_overview():
     
     total_students = StudentHealthScore.query.count()
     
-    return render_template('admin/crm/health_overview.html', 
-                          stats=stats, 
+    return render_template('admin/crm/health_overview.html',
+                          stats=stats,
                           critical_students=critical_students,
                           total_students=total_students)
+
+
+@crm_bp.route('/retention')
+@login_required
+def retention():
+    """Gestao de Retencao - Health Scores e Automacoes"""
+    if not _check_access():
+        return "Acesso negado", 403
+
+    from app.models.crm import StudentHealthScore, RiskLevel
+    from sqlalchemy import func
+
+    # Ultimo score de cada aluno (subquery)
+    subquery = db.session.query(
+        StudentHealthScore.user_id,
+        func.max(StudentHealthScore.calculated_at).label('max_date')
+    ).group_by(StudentHealthScore.user_id).subquery()
+
+    recent_scores = db.session.query(StudentHealthScore).join(
+        subquery,
+        (StudentHealthScore.user_id == subquery.c.user_id) &
+        (StudentHealthScore.calculated_at == subquery.c.max_date)
+    ).all()
+
+    # Alunos criticos e alto risco
+    at_risk_students = [s for s in recent_scores
+                        if s.risk_level in (RiskLevel.CRITICAL, RiskLevel.HIGH)]
+    at_risk_students.sort(key=lambda s: s.total_score)
+
+    # Stats
+    total_scored = len(recent_scores)
+    critical_count = sum(1 for s in recent_scores if s.risk_level == RiskLevel.CRITICAL)
+    high_count = sum(1 for s in recent_scores if s.risk_level == RiskLevel.HIGH)
+    avg_score = round(sum(s.total_score for s in recent_scores) / total_scored, 1) if total_scored else 0
+
+    return render_template('admin/crm/retention.html',
+                           at_risk_students=at_risk_students,
+                           total_scored=total_scored,
+                           critical_count=critical_count,
+                           high_count=high_count,
+                           avg_score=avg_score)
+
+
+@crm_bp.route('/retention/calculate-scores', methods=['POST'])
+@login_required
+def calculate_scores():
+    """Dispara calculo de Health Scores em massa"""
+    if not _check_access():
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    from app.services.health_score_calculator import HealthScoreCalculator
+    calculator = HealthScoreCalculator()
+    results = calculator.calculate_all_students()
+    return jsonify({
+        'success': True,
+        'message': f"Processados: {results['total']}, Atualizados: {results['updated']}, "
+                   f"Criticos: {results['critical']}, Alto Risco: {results['high_risk']}"
+    })
+
+
+@crm_bp.route('/retention/run-automations', methods=['POST'])
+@login_required
+def run_automations():
+    """Executa automacoes diarias manualmente"""
+    if not _check_access():
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    from app.services.retention_automation import RetentionAutomation
+    automation = RetentionAutomation()
+    results = automation.run_daily_automations()
+    return jsonify({
+        'success': True,
+        'results': results,
+        'message': 'Automacoes executadas com sucesso!'
+    })

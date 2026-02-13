@@ -273,6 +273,30 @@
         color: #334155;
         margin-bottom: 20px;
     }
+
+    .btn-complete-session {
+        background: linear-gradient(135deg, #10B981, #059669);
+        color: white;
+        border: none;
+        padding: 12px 32px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.3s;
+        width: 100%;
+        max-width: 320px;
+    }
+    .btn-complete-session:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(16,185,129,0.4);
+        color: white;
+    }
+    .btn-complete-session.completed {
+        background: #1E293B;
+        border: 2px solid #10B981;
+        color: #10B981;
+        pointer-events: none;
+    }
 </style>
 {% endblock %}
 
@@ -392,6 +416,16 @@
                 <p style="color: #64748b;">Nenhum exercicio nesta sessao.</p>
             </div>
             {% endfor %}
+
+            <!-- Botao Marcar como Concluido -->
+            {% if session.exercises %}
+            <div class="text-center mt-3 mb-2">
+                <button class="btn btn-complete-session" id="completeBtn-{{ session.id }}"
+                        onclick="completeSession({{ session.id }}, this)">
+                    <i class="fas fa-check-circle me-2"></i>Marcar como Concluido
+                </button>
+            </div>
+            {% endif %}
         </div>
         {% endfor %}
     </div>
@@ -539,5 +573,28 @@
     document.getElementById('videoModal').addEventListener('hidden.bs.modal', function() {
         document.getElementById('videoFrame').src = '';
     });
+
+    function completeSession(sessionId, btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Salvando...';
+
+        fetch('/api/training/session/' + sessionId + '/complete', { method: 'POST' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    btn.classList.add('completed');
+                    btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Concluido!';
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Marcar como Concluido';
+                    alert(data.error || 'Erro ao salvar');
+                }
+            })
+            .catch(function() {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Marcar como Concluido';
+                alert('Erro de conexao');
+            });
+    }
 </script>
 {% endblock %}

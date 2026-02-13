@@ -3,6 +3,20 @@
 {% block page_title %}Configuracoes do Sistema{% endblock %}
 
 {% block content %}
+<!-- Tabs de Navegacao -->
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <a class="nav-link active" href="{{ url_for('admin_settings.index') }}">
+            <i class="fas fa-cogs me-1"></i>Geral
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('admin_settings.notifications') }}">
+            <i class="fas fa-bell me-1"></i>Notificacoes
+        </a>
+    </li>
+</ul>
+
 <div class="row">
     <div class="col-lg-8">
         <div class="card">

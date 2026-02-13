@@ -156,6 +156,13 @@
             </li>
 
             <li class="nav-item">
+                <a href="{{ url_for('admin_exercises.list_exercises') }}"
+                    class="nav-link {% if 'exercises' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-dumbbell"></i> Exercicios
+                </a>
+            </li>
+
+            <li class="nav-item">
                 <a href="{{ url_for('admin_conversion_rules.list_rules') }}"
                     class="nav-link {% if 'conversion_rules' in request.endpoint %}active{% endif %}">
                     <i class="fas fa-exchange-alt"></i> Conversao XP
@@ -208,6 +215,13 @@
                 <a href="{{ url_for('admin_settings.index') }}"
                     class="nav-link {% if 'settings' in request.endpoint and 'megaapi' not in request.endpoint %}active{% endif %}">
                     <i class="fas fa-cogs"></i> Configuracoes
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="{{ url_for('admin_maintenance.index') }}"
+                    class="nav-link {% if 'maintenance' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-tools"></i> Manutencao
                 </a>
             </li>
         </ul>

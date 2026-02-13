@@ -1,0 +1,146 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Exercicios{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-dumbbell me-2"></i>Biblioteca de Exercicios</h4>
+    <div class="d-flex align-items-center gap-2">
+        <form action="{{ url_for('admin_exercises.import_exercises') }}" method="POST" class="d-inline">
+            <button type="submit" class="btn btn-primary btn-sm"
+                onclick="return confirm('Isso ira importar novos exercicios da base de dados online. Pode levar alguns segundos. Deseja continuar?')">
+                <i class="fas fa-cloud-download-alt me-1"></i>Importar API
+            </button>
+        </form>
+        <span class="badge bg-secondary fs-6">{{ exercises|length }} exercicio(s)</span>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-4">
+    <div class="card-body py-3">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Grupo Muscular</label>
+                <select name="muscle_group" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">Todos</option>
+                    {% for mg in muscle_groups %}
+                    <option value="{{ mg.value }}" {% if current_muscle==mg.value %}selected{% endif %}>
+                        {{ mg.value|replace('_', ' ')|title }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Dificuldade</label>
+                <select name="difficulty" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">Todas</option>
+                    {% for dl in difficulty_levels %}
+                    <option value="{{ dl.value }}" {% if current_difficulty==dl.value %}selected{% endif %}>
+                        {{ dl.value|replace('_', ' ')|title }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small mb-1">Buscar</label>
+                <div class="input-group input-group-sm">
+                    <input type="text" name="search" class="form-control" placeholder="Nome do exercicio..."
+                        value="{{ current_search }}">
+                    <button class="btn btn-outline-primary" type="submit">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-2">
+                {% if current_muscle or current_difficulty or current_search %}
+                <a href="{{ url_for('admin_exercises.list_exercises') }}"
+                    class="btn btn-sm btn-outline-secondary w-100">
+                    <i class="fas fa-times me-1"></i>Limpar
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Cards de Exercicios -->
+{% if exercises %}
+<div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
+    {% for ex in exercises %}
+    <div class="col">
+        <div class="card h-100 {{ 'border-secondary opacity-50' if not ex.is_active }}">
+            <div style="position: relative;">
+                {% if ex.thumbnail_url %}
+                <img src="{{ ex.thumbnail_url }}" class="card-img-top" alt="{{ ex.name }}"
+                    style="height: 160px; object-fit: cover;">
+                {% else %}
+                <div class="card-img-top bg-light d-flex align-items-center justify-content-center"
+                    style="height: 160px;">
+                    <i class="fas fa-image fa-3x text-muted"></i>
+                </div>
+                {% endif %}
+
+                {% if not ex.is_active %}
+                <div
+                    class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-50 text-white fw-bold">
+                    PAUSADO
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="card-body p-3">
+                <h6 class="card-title mb-2 text-truncate" title="{{ ex.name }}">{{ ex.name }}</h6>
+                <div class="d-flex flex-wrap gap-1 mb-2">
+                    <span class="badge bg-primary">{{ ex.muscle_group_label }}</span>
+                    <span
+                        class="badge bg-{% if ex.difficulty_level.value == 'beginner' %}success{% elif ex.difficulty_level.value == 'intermediate' %}warning text-dark{% else %}danger{% endif %}">
+                        {{ ex.difficulty_label }}
+                    </span>
+                </div>
+                {% if ex.equipment_needed %}
+                <small class="text-muted d-block mb-1 text-truncate" title="{{ ex.equipment_needed }}">
+                    <i class="fas fa-toolbox me-1"></i>{{ ex.equipment_needed }}
+                </small>
+                {% endif %}
+            </div>
+
+            <div class="card-footer bg-transparent p-2">
+                <div class="d-flex gap-2 justify-content-center">
+                    {% if ex.video_url %}
+                    <a href="{{ ex.video_url }}" target="_blank" class="btn btn-sm btn-outline-danger flex-grow-1"
+                        title="Ver Video">
+                        <i class="fab fa-youtube"></i>
+                    </a>
+                    {% endif %}
+
+                    <form action="{{ url_for('admin_exercises.toggle_exercise', id=ex.id) }}" method="POST"
+                        class="d-inline flex-grow-1">
+                        <button type="submit"
+                            class="btn btn-sm btn-outline-{{ 'secondary' if ex.is_active else 'success' }} w-100"
+                            title="{{ 'Pausar' if ex.is_active else 'Ativar' }}">
+                            <i class="fas fa-{{ 'pause' if ex.is_active else 'play' }}"></i>
+                        </button>
+                    </form>
+
+                    <form action="{{ url_for('admin_exercises.delete_exercise', id=ex.id) }}" method="POST"
+                        class="d-inline flex-grow-1"
+                        onsubmit="return confirm('Tem certeza que deseja excluir este exercicio?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger w-100" title="Excluir">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="fas fa-dumbbell fa-4x text-muted mb-3 d-block"></i>
+    <h5 class="text-muted">Nenhum exercicio encontrado</h5>
+    <p class="text-muted">Tente ajustar os filtros ou adicione novos exercicios.</p>
+</div>
+{% endif %}
+{% endblock %}

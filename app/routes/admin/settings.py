@@ -70,3 +70,97 @@ def credits_calculator():
         'credits': credits,
         'credits_per_real': credits_per_real
     }
+
+
+@settings_bp.route('/notifications')
+@login_required
+@admin_required
+def notifications():
+    """Aba de notificacoes - creditos expirando"""
+    from datetime import datetime, timedelta
+    from app.models.credit_wallet import CreditWallet
+
+    target_date = datetime.now() + timedelta(days=7)
+
+    wallets = CreditWallet.query.filter(
+        CreditWallet.is_expired == False,
+        CreditWallet.credits_remaining > 0,
+        CreditWallet.expires_at <= target_date,
+        CreditWallet.expires_at > datetime.now()
+    ).all()
+
+    # Agrupar por usuario
+    user_expiring = {}
+    for wallet in wallets:
+        if wallet.user_id not in user_expiring:
+            user_expiring[wallet.user_id] = {
+                'user': wallet.user,
+                'credits': 0,
+                'earliest_expiry': wallet.expires_at,
+                'days': wallet.days_until_expiry
+            }
+        user_expiring[wallet.user_id]['credits'] += wallet.credits_remaining
+        if wallet.expires_at < user_expiring[wallet.user_id]['earliest_expiry']:
+            user_expiring[wallet.user_id]['earliest_expiry'] = wallet.expires_at
+            user_expiring[wallet.user_id]['days'] = wallet.days_until_expiry
+
+    expiring_list = sorted(user_expiring.values(), key=lambda x: x['days'])
+
+    return render_template('admin/settings/notifications.html',
+                           expiring_list=expiring_list,
+                           total_expiring=len(expiring_list))
+
+
+@settings_bp.route('/notifications/send', methods=['POST'])
+@login_required
+@admin_required
+def send_expiring_notifications():
+    """Dispara notificacoes de creditos expirando via WhatsApp"""
+    from datetime import datetime, timedelta
+    from app.models.credit_wallet import CreditWallet
+    from app.services.notification_service import NotificationService
+
+    target_date = datetime.now() + timedelta(days=7)
+
+    wallets = CreditWallet.query.filter(
+        CreditWallet.is_expired == False,
+        CreditWallet.credits_remaining > 0,
+        CreditWallet.expires_at <= target_date,
+        CreditWallet.expires_at > datetime.now()
+    ).all()
+
+    user_expiring = {}
+    for wallet in wallets:
+        if wallet.user_id not in user_expiring:
+            user_expiring[wallet.user_id] = {
+                'credits': 0,
+                'earliest_expiry': wallet.expires_at,
+                'days': wallet.days_until_expiry
+            }
+        user_expiring[wallet.user_id]['credits'] += wallet.credits_remaining
+        if wallet.expires_at < user_expiring[wallet.user_id]['earliest_expiry']:
+            user_expiring[wallet.user_id]['earliest_expiry'] = wallet.expires_at
+            user_expiring[wallet.user_id]['days'] = wallet.days_until_expiry
+
+    sent = 0
+    errors = 0
+    for user_id, info in user_expiring.items():
+        if info['credits'] >= 1:
+            try:
+                NotificationService.notify_credits_expiring(
+                    user_id=user_id,
+                    credits_amount=info['credits'],
+                    days_remaining=info['days'],
+                    expires_at=info['earliest_expiry']
+                )
+                sent += 1
+            except Exception:
+                errors += 1
+
+    from flask import jsonify
+    return jsonify({
+        'success': True,
+        'sent': sent,
+        'errors': errors,
+        'message': f'{sent} notificacao(oes) enviada(s), {errors} erro(s).'
+    })

@@ -9,7 +9,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.models.training import (
     Exercise, TrainingPlan, WorkoutSession, WorkoutExercise,
-    MuscleGroup, TrainingGoal
+    TrainingSession, MuscleGroup, TrainingGoal
 )
 from app.models.user import User
 
@@ -317,6 +317,48 @@ def delete_training_plan(plan_id):
     plan = TrainingPlan.query.get_or_404(plan_id)
     plan.is_active = False
     db.session.commit()
+
+    return jsonify({'success': True, 'message': 'Plano desativado'})
+
+
+@training_api_bp.route('/session/<int:session_id>/complete', methods=['POST'])
+@login_required
+def complete_session(session_id):
+    """Marca uma sessao de treino como concluida pelo aluno."""
+    session = WorkoutSession.query.get_or_404(session_id)
+    plan = session.training_plan
+
+    # Verificar que o aluno e dono do plano
+    if plan.user_id != current_user.id:
+        return jsonify({'success': False, 'error': 'Nao autorizado'}), 403
+
+    from datetime import datetime
+
+    # Criar ou atualizar registro de TrainingSession
+    ts = TrainingSession.query.filter_by(
+        user_id=current_user.id,
+        workout_session_id=session_id
+    ).order_by(TrainingSession.viewed_at.desc()).first()
+
+    if ts and ts.completed_at is None:
+        ts.completed_at = datetime.utcnow()
+    else:
+        ts = TrainingSession(
+            user_id=current_user.id,
+            workout_session_id=session_id,
+            viewed_at=datetime.utcnow(),
+            completed_at=datetime.utcnow()
+        )
+        db.session.add(ts)
+
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': f'{session.name} concluido!',
+        'completed_at': ts.completed_at.isoformat()
+    })
+
 
 @training_api_bp.route('/templates/list', methods=['GET'])
 @login_required

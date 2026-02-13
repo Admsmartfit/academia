@@ -7,6 +7,9 @@ Fetches exercises from the open-source Wger API (wger.readthedocs.io).
 
 import requests
 import logging
+import random
+from app.models.training import Exercise, MuscleGroup, DifficultyLevel
+from app import db
 
 logger = logging.getLogger(__name__)
 
@@ -16,14 +19,14 @@ WGER_LANGUAGE_EN = 2   # English fallback
 
 # Wger category -> local muscle_group mapping
 CATEGORY_MAP = {
-    8: 'arms',       # Biceps
-    9: 'legs',       # Calves
-    10: 'chest',     # Chest
-    11: 'back',      # Back (Lats)
-    12: 'shoulders', # Shoulders
-    13: 'arms',      # Triceps
-    14: 'legs',      # Legs (Quads/Hamstrings/Glutes)
-    15: 'core',      # Abs
+    8: MuscleGroup.ARMS,       # Biceps
+    9: MuscleGroup.LEGS,       # Calves
+    10: MuscleGroup.CHEST,     # Chest
+    11: MuscleGroup.BACK,      # Back (Lats)
+    12: MuscleGroup.SHOULDERS, # Shoulders
+    13: MuscleGroup.ARMS,      # Triceps
+    14: MuscleGroup.LEGS,      # Legs (Quads/Hamstrings/Glutes)
+    15: MuscleGroup.CORE,      # Abs
 }
 
 
@@ -51,12 +54,15 @@ def fetch_exercises(language='pt', limit=100, offset=0, category=None):
 
         exercises = []
         for item in data.get('results', []):
+            cat_id = item.get('category')
+            muscle = CATEGORY_MAP.get(cat_id, MuscleGroup.FULL_BODY)
+            
             exercises.append({
                 'wger_id': item['id'],
                 'name': item.get('name', '').strip(),
                 'description': _clean_html(item.get('description', '')),
-                'category_id': item.get('category'),
-                'muscle_group': CATEGORY_MAP.get(item.get('category'), 'full_body'),
+                'category_id': cat_id,
+                'muscle_group': muscle,
                 'equipment': [e for e in item.get('equipment', [])],
             })
 
@@ -98,59 +104,67 @@ def fetch_categories():
         return []
 
 
-def import_exercises_to_db(language='pt', max_exercises=200):
+def import_exercises_to_db(language='pt', max_exercises=50):
     """
     Import exercises from Wger into local Exercise model.
     Skips duplicates by name.
     Returns count of imported exercises.
     """
-    from app.models.training import Exercise, MuscleGroup
-    from app import db
-
     imported = 0
     offset = 0
-    batch_size = 50
+    batch_size = 20
+    
+    # Simple heuristic distribution for difficulty if not provided
+    difficulties = [DifficultyLevel.BEGINNER, DifficultyLevel.INTERMEDIATE, DifficultyLevel.ADVANCED]
 
-    while offset < max_exercises:
+    while imported < max_exercises:
         result = fetch_exercises(language=language, limit=batch_size, offset=offset)
-        if not result['exercises']:
-            # Try English fallback if Portuguese has no results
-            if language == 'pt' and offset == 0:
-                result = fetch_exercises(language='en', limit=batch_size, offset=offset)
+        
+        # Stop if no more results or error
+        if not result['exercises'] and not result.get('next'):
+            break
+            
+        # Try English fallback if Portuguese has no results strictly on first call
+        if not result['exercises'] and language == 'pt' and offset == 0:
+            result = fetch_exercises(language='en', limit=batch_size, offset=offset)
             if not result['exercises']:
                 break
 
         for ex_data in result['exercises']:
+            if imported >= max_exercises:
+                break
+
             # Skip if already exists
             existing = Exercise.query.filter_by(name=ex_data['name']).first()
             if existing:
                 continue
 
-            muscle_group_str = ex_data.get('muscle_group', 'full_body')
-            try:
-                muscle_group = MuscleGroup(muscle_group_str)
-            except ValueError:
-                muscle_group = MuscleGroup.FULL_BODY
-
             # Fetch thumbnail
             images = fetch_exercise_images(ex_data['wger_id'])
             thumbnail = images[0] if images else None
+            
+            # Randomly assign difficulty since Wger doesn't provide it easily
+            # In a real app, this should be curated manually later
+            difficulty = random.choice(difficulties)
 
             exercise = Exercise(
                 name=ex_data['name'],
-                muscle_group=muscle_group,
-                description=ex_data.get('description', ''),
+                muscle_group=ex_data['muscle_group'],
+                description=ex_data.get('description', '')[:500], # Trucate if too long
                 thumbnail_url=thumbnail,
+                difficulty_level=difficulty,
                 is_active=True,
+                equipment_needed=", ".join([str(e) for e in ex_data['equipment']]) if ex_data['equipment'] else None
             )
             db.session.add(exercise)
             imported += 1
 
         db.session.commit()
-        offset += batch_size
-
+        
         if not result.get('next'):
             break
+            
+        offset += batch_size
 
     logger.info(f'Imported {imported} exercises from Wger')
     return imported
@@ -161,6 +175,8 @@ def _clean_html(text):
     if not text:
         return ''
     import re
+    # Remove all HTML tags
     clean = re.sub(r'<[^>]+>', '', text)
-    clean = clean.replace('&nbsp;', ' ').replace('&amp;', '&')
+    # Replace common HTML entities
+    clean = clean.replace('&nbsp;', ' ').replace('&amp;', '&').replace('&quot;', '"')
     return clean.strip()
