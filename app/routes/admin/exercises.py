@@ -46,19 +46,39 @@ def list_exercises():
     )
 
 
-@exercises_bp.route('/import', methods=['POST'])
+@exercises_bp.route('/import', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def import_exercises():
-    """Importa exercicios da API Wger"""
-    try:
-        from app.services import wger_service
-        count = wger_service.import_exercises_to_db()
-        flash(f'{count} novos exercicios importados com sucesso!', 'success')
-    except Exception as e:
-        flash(f'Erro ao importar exercicios: {str(e)}', 'error')
+    """Importa exercicios da API Wger (Preview e Execucao)"""
+    from app.services import wger_service
     
-    return redirect(url_for('admin_exercises.list_exercises'))
+    if request.method == 'POST':
+        # Recebe IDs selecionados
+        selected_ids = request.form.getlist('exercise_ids')
+        if not selected_ids:
+            flash('Nenhum exercicio selecionado para importacao.', 'warning')
+            return redirect(url_for('admin_exercises.import_exercises'))
+            
+        try:
+            count = wger_service.import_selected_exercises(selected_ids)
+            flash(f'{count} novos exercicios importados com sucesso!', 'success')
+            return redirect(url_for('admin_exercises.list_exercises'))
+        except Exception as e:
+            flash(f'Erro ao importar exercicios selecionados: {str(e)}', 'error')
+            return redirect(url_for('admin_exercises.import_exercises'))
+    
+    # GET: Mostra preview
+    try:
+        preview_exercises = wger_service.get_api_exercises_preview()
+        return render_template(
+            'admin/exercises/import_preview.html',
+            exercises=preview_exercises,
+            muscle_groups=MuscleGroup
+        )
+    except Exception as e:
+        flash(f'Erro ao carregar preview da API: {str(e)}', 'error')
+        return redirect(url_for('admin_exercises.list_exercises'))
 
 
 @exercises_bp.route('/<int:id>/toggle', methods=['POST'])

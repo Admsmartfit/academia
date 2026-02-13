@@ -11,6 +11,7 @@ import random
 import re
 from app.models.training import Exercise, MuscleGroup, DifficultyLevel
 from app import db
+from deep_translator import GoogleTranslator
 
 logger = logging.getLogger(__name__)
 
@@ -29,78 +30,15 @@ CATEGORY_MAP = {
     15: MuscleGroup.CORE,      # Abs
 }
 
-# Cache de equipamentos (id -> nome)
-_equipment_cache = {}
-
-
-def _get_equipment_names():
-    """Busca todos os equipamentos da API e cacheia."""
-    global _equipment_cache
-    if _equipment_cache:
-        return _equipment_cache
+def translate_text(text, source='en', target='pt'):
+    """Translate text using deep_translator."""
+    if not text:
+        return ""
     try:
-        resp = requests.get(
-            f'{WGER_BASE_URL}/equipment/',
-            params={'format': 'json', 'limit': 100},
-            timeout=10
-        )
-        resp.raise_for_status()
-        for item in resp.json().get('results', []):
-            _equipment_cache[item['id']] = item['name']
+        return GoogleTranslator(source=source, target=target).translate(text)
     except Exception as e:
-        logger.warning(f'Erro ao buscar equipamentos: {e}')
-    return _equipment_cache
-
-
-def _fetch_all_images():
-    """Busca TODAS as imagens de exercicios de uma vez (muito mais rapido)."""
-    images = {}
-    url = f'{WGER_BASE_URL}/exerciseimage/'
-    params = {'format': 'json', 'limit': 100, 'is_main': 'True'}
-
-    while url:
-        try:
-            resp = requests.get(url, params=params, timeout=15)
-            resp.raise_for_status()
-            data = resp.json()
-            for img in data.get('results', []):
-                ex_id = img.get('exercise_base') or img.get('exercise')
-                if ex_id and img.get('image') and ex_id not in images:
-                    images[ex_id] = img['image']
-            url = data.get('next')
-            params = {}  # next URL already has params
-        except Exception as e:
-            logger.warning(f'Erro ao buscar imagens (batch): {e}')
-            break
-
-    logger.info(f'Carregadas {len(images)} imagens de exercicios')
-    return images
-
-
-def _fetch_all_videos():
-    """Busca TODOS os videos de exercicios de uma vez."""
-    videos = {}
-    url = f'{WGER_BASE_URL}/video/'
-    params = {'format': 'json', 'limit': 100}
-
-    while url:
-        try:
-            resp = requests.get(url, params=params, timeout=15)
-            resp.raise_for_status()
-            data = resp.json()
-            for vid in data.get('results', []):
-                ex_id = vid.get('exercise_base') or vid.get('exercise')
-                if ex_id and vid.get('video') and ex_id not in videos:
-                    videos[ex_id] = vid['video']
-            url = data.get('next')
-            params = {}
-        except Exception as e:
-            logger.warning(f'Erro ao buscar videos (batch): {e}')
-            break
-
-    logger.info(f'Carregados {len(videos)} videos de exercicios')
-    return videos
-
+        logger.warning(f"Translation failed for '{text[:20]}...': {e}")
+        return text
 
 def _clean_html(text):
     """Remove basic HTML tags from Wger descriptions."""
@@ -110,102 +48,145 @@ def _clean_html(text):
     clean = clean.replace('&nbsp;', ' ').replace('&amp;', '&').replace('&quot;', '"')
     return clean.strip()
 
-
-def import_exercises_to_db(max_exercises=9999):
+def get_api_exercises_preview(limit=30):
     """
-    Importa exercicios da API Wger para o banco local.
-    Busca em ingles, com imagens e videos.
-    Pula duplicatas pelo nome.
-    Retorna contagem de exercicios importados.
+    Busca dados basicos da API para preview.
+    Busca uma quantidade maior da API para filtrar os ja existentes e retornar apenas novos.
     """
-    logger.info('Iniciando importacao de exercicios do Wger...')
-
-    # 1) Pre-carregar equipamentos, imagens e videos em batch (muito mais rapido)
-    equipment_map = _get_equipment_names()
-    logger.info(f'Equipamentos carregados: {len(equipment_map)}')
-
-    images_map = _fetch_all_images()
-    videos_map = _fetch_all_videos()
-
-    # 2) Nomes que ja existem no banco (evita queries repetidas)
-    existing_names = set(
-        name for (name,) in db.session.query(Exercise.name).all()
-    )
-
-    # 3) Buscar exercicios paginados
-    difficulties = [DifficultyLevel.BEGINNER, DifficultyLevel.INTERMEDIATE, DifficultyLevel.ADVANCED]
-    imported = 0
-    offset = 0
-    batch_size = 100
-
-    while imported < max_exercises:
+    def fetch_from_api(status_code=2):
         try:
             resp = requests.get(
                 f'{WGER_BASE_URL}/exercise/',
                 params={
                     'language': WGER_LANGUAGE_EN,
-                    'limit': batch_size,
-                    'offset': offset,
+                    'limit': 60, # Busca mais para ter margem de filtro
                     'format': 'json',
-                    'status': 2,
+                    'status': status_code,
                 },
                 timeout=20
             )
             resp.raise_for_status()
-            data = resp.json()
+            return resp.json().get('results', [])
         except Exception as e:
-            logger.error(f'Wger API error na pagina offset={offset}: {e}')
-            break
+            logger.error(f"Erro na sub-busca API (status={status_code}): {e}")
+            return []
 
-        results = data.get('results', [])
+    try:
+        logger.info(f"Iniciando busca de preview (limite {limit} novos)...")
+        results = fetch_from_api(status_code=2)
+        
+        # Fallback se não encontrar nada com status=2 (Published)
         if not results:
-            break
+            logger.warning("Nenhum exercicio 'Published' encontrado. Tentando sem filtro de status...")
+            results = fetch_from_api(status_code=None)
 
+        if not results:
+            return []
+
+        # Pega nomes ja existentes para filtrar
+        existing_names = {e.name.lower().strip() for e in Exercise.query.all()}
+        
+        preview_list = []
         for item in results:
-            if imported >= max_exercises:
-                break
-
-            name = (item.get('name') or '').strip()
-            if not name or name in existing_names:
+            name_en = item.get('name', '').strip()
+            if not name_en:
                 continue
-
+            
+            # Tradução rápida (ou retorno do original se falhar)
+            try:
+                translated_name = translate_text(name_en)
+            except:
+                translated_name = name_en
+                
+            # Filtro de duplicatas (case-insensitive)
+            if translated_name.lower().strip() in existing_names:
+                continue
+            
+            # Mapeia categoria
             cat_id = item.get('category')
-            muscle = CATEGORY_MAP.get(cat_id, MuscleGroup.FULL_BODY)
-            description = _clean_html(item.get('description', ''))
+            muscle_group = CATEGORY_MAP.get(cat_id, MuscleGroup.FULL_BODY)
+            
+            preview_list.append({
+                'wger_id': item['id'],
+                'name': translated_name,
+                'muscle_group': muscle_group
+            })
+            
+            if len(preview_list) >= limit:
+                break
+                
+        logger.info(f"Encontrados {len(preview_list)} novos exercicios para preview.")
+        return preview_list
+    except Exception as e:
+        logger.error(f'Erro geral ao buscar preview da API: {e}')
+        return []
 
-            # Resolver equipamentos: IDs -> nomes
-            equip_ids = item.get('equipment', [])
-            equip_names = [equipment_map.get(eid, '') for eid in equip_ids]
-            equip_str = ', '.join(n for n in equip_names if n) or None
+def import_selected_exercises(exercise_ids):
+    """
+    Busca detalhes completos de uma lista de IDs e salva no banco.
+    """
+    imported_count = 0
+    difficulties = [DifficultyLevel.BEGINNER, DifficultyLevel.INTERMEDIATE, DifficultyLevel.ADVANCED]
+    
+    # Cache de equipamentos para evitar muitas requests
+    equipment_resp = requests.get(f'{WGER_BASE_URL}/equipment/', params={'format': 'json', 'limit': 100})
+    equipment_map = {item['id']: item['name'] for item in equipment_resp.json().get('results', [])} if equipment_resp.ok else {}
 
-            # exercise_base para buscar imagem/video
-            ex_base_id = item.get('exercise_base') or item.get('id')
-
-            thumbnail = images_map.get(ex_base_id)
-            video_url = videos_map.get(ex_base_id)
-
-            exercise = Exercise(
+    for wger_id in exercise_ids:
+        try:
+            # 1. Busca dados base do exercicio
+            ex_resp = requests.get(f'{WGER_BASE_URL}/exercise/{wger_id}/', params={'format': 'json'})
+            if not ex_resp.ok: continue
+            ex_data = ex_resp.json()
+            
+            # 2. Traduz nome e descricao
+            name = translate_text(ex_data.get('name', ''))
+            description = translate_text(_clean_html(ex_data.get('description', '')))
+            
+            # Pula se ja existir um com esse nome
+            if Exercise.query.filter_by(name=name).first():
+                continue
+                
+            # 3. Busca imagem
+            img_resp = requests.get(f'{WGER_BASE_URL}/exerciseimage/', params={'exercise': wger_id, 'format': 'json'})
+            thumbnail = None
+            if img_resp.ok:
+                img_results = img_resp.json().get('results', [])
+                if img_results:
+                    thumbnail = img_results[0].get('image')
+                    
+            # 4. Busca video
+            vid_resp = requests.get(f'{WGER_BASE_URL}/video/', params={'exercise': wger_id, 'format': 'json'})
+            video_url = None
+            if vid_resp.ok:
+                vid_results = vid_resp.json().get('results', [])
+                if vid_results:
+                    video_url = vid_results[0].get('video')
+            
+            # 5. Processa equipamentos
+            equip_ids = ex_data.get('equipment', [])
+            equipment_needed = ", ".join([equipment_map.get(eid, str(eid)) for eid in equip_ids]) if equip_ids else None
+            
+            # 6. Salva
+            cat_id = ex_data.get('category')
+            muscle_group = CATEGORY_MAP.get(cat_id, MuscleGroup.FULL_BODY)
+            
+            new_ex = Exercise(
                 name=name,
-                muscle_group=muscle,
+                muscle_group=muscle_group,
                 description=description[:500] if description else None,
                 thumbnail_url=thumbnail,
                 video_url=video_url,
                 difficulty_level=random.choice(difficulties),
                 is_active=True,
-                equipment_needed=equip_str
+                equipment_needed=equipment_needed
             )
-            db.session.add(exercise)
-            existing_names.add(name)
-            imported += 1
-
-        # Commit por pagina
-        db.session.commit()
-        logger.info(f'Importados ate agora: {imported} (offset={offset})')
-
-        if not data.get('next'):
-            break
-
-        offset += batch_size
-
-    logger.info(f'Importacao concluida: {imported} exercicios do Wger')
-    return imported
+            db.session.add(new_ex)
+            imported_count += 1
+            
+        except Exception as e:
+            logger.error(f'Erro ao importar exercicio ID {wger_id}: {e}')
+            continue
+            
+    db.session.commit()
+    return imported_count

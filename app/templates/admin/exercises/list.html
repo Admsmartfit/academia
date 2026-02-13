@@ -6,12 +6,9 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0"><i class="fas fa-dumbbell me-2"></i>Biblioteca de Exercicios</h4>
     <div class="d-flex align-items-center gap-2">
-        <form action="{{ url_for('admin_exercises.import_exercises') }}" method="POST" class="d-inline">
-            <button type="submit" class="btn btn-primary btn-sm"
-                onclick="return confirm('Isso ira importar novos exercicios da base de dados online. Pode levar alguns segundos. Deseja continuar?')">
-                <i class="fas fa-cloud-download-alt me-1"></i>Importar API
-            </button>
-        </form>
+        <a href="{{ url_for('admin_exercises.import_exercises') }}" class="btn btn-primary btn-sm">
+            <i class="fas fa-cloud-download-alt me-1"></i>Importar da API
+        </a>
         <span class="badge bg-secondary fs-6">{{ exercises|length }} exercicio(s)</span>
     </div>
 </div>
