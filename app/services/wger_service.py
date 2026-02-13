@@ -51,20 +51,18 @@ def _clean_html(text):
 def get_api_exercises_preview(limit=30):
     """
     Busca dados basicos da API para preview.
-    Busca uma quantidade maior da API para filtrar os ja existentes e retornar apenas novos.
+    Otimizado para velocidade: sem tradução loop e com filtro de oficiais.
     """
     def fetch_from_api(status_code=2):
         try:
-            resp = requests.get(
-                f'{WGER_BASE_URL}/exercise/',
-                params={
-                    'language': WGER_LANGUAGE_EN,
-                    'limit': 60, # Busca mais para ter margem de filtro
-                    'format': 'json',
-                    'status': status_code,
-                },
-                timeout=20
-            )
+            params = {
+                'language': WGER_LANGUAGE_EN,
+                'limit': 60,  # Busca mais para filtrar duplicatas
+                'format': 'json',
+                'status': status_code,
+                'is_main': True # Apenas exercicios principais/oficiais
+            }
+            resp = requests.get(f'{WGER_BASE_URL}/exercise/', params=params, timeout=10)
             resp.raise_for_status()
             return resp.json().get('results', [])
         except Exception as e:
@@ -75,40 +73,37 @@ def get_api_exercises_preview(limit=30):
         logger.info(f"Iniciando busca de preview (limite {limit} novos)...")
         results = fetch_from_api(status_code=2)
         
-        # Fallback se não encontrar nada com status=2 (Published)
+        # Fallback: Se nao encontrar oficiais, busca qualquer um
         if not results:
-            logger.warning("Nenhum exercicio 'Published' encontrado. Tentando sem filtro de status...")
+            logger.warning("Nenhum exercicio oficial encontrado. Tentando geral...")
             results = fetch_from_api(status_code=None)
 
         if not results:
             return []
 
-        # Pega nomes ja existentes para filtrar
-        existing_names = {e.name.lower().strip() for e in Exercise.query.all()}
+        # Otimizacao: Set de nomes existentes para busca O(1)
+        existing_names = {e.name.lower().strip() for e in Exercise.query.with_entities(Exercise.name).all()}
         
         preview_list = []
         for item in results:
-            name_en = item.get('name', '').strip()
+            # Pega nome original se disponivel, senao name normal
+            name_en = item.get('name_original') or item.get('name', '')
+            name_en = name_en.strip()
+            
             if not name_en:
                 continue
             
-            # Tradução rápida (ou retorno do original se falhar)
-            try:
-                translated_name = translate_text(name_en)
-            except:
-                translated_name = name_en
-                
-            # Filtro de duplicatas (case-insensitive)
-            if translated_name.lower().strip() in existing_names:
+            # Filtro de duplicatas (check simples contra o nome em ingles por enquanto)
+            # A traducao real so ocorre na importacao para nao travar o preview
+            if name_en.lower() in existing_names:
                 continue
             
-            # Mapeia categoria
             cat_id = item.get('category')
             muscle_group = CATEGORY_MAP.get(cat_id, MuscleGroup.FULL_BODY)
             
             preview_list.append({
                 'wger_id': item['id'],
-                'name': translated_name,
+                'name': name_en, # Exibe em Ingles no preview para performance
                 'muscle_group': muscle_group
             })
             
@@ -124,31 +119,37 @@ def get_api_exercises_preview(limit=30):
 def import_selected_exercises(exercise_ids):
     """
     Busca detalhes completos de uma lista de IDs e salva no banco.
+    Realiza tradução aqui, sob demanda.
     """
     imported_count = 0
     difficulties = [DifficultyLevel.BEGINNER, DifficultyLevel.INTERMEDIATE, DifficultyLevel.ADVANCED]
     
-    # Cache de equipamentos para evitar muitas requests
-    equipment_resp = requests.get(f'{WGER_BASE_URL}/equipment/', params={'format': 'json', 'limit': 100})
-    equipment_map = {item['id']: item['name'] for item in equipment_resp.json().get('results', [])} if equipment_resp.ok else {}
+    # Cache rapido de equipamentos
+    try:
+        equipment_resp = requests.get(f'{WGER_BASE_URL}/equipment/', params={'format': 'json', 'limit': 100}, timeout=10)
+        equipment_map = {item['id']: item['name'] for item in equipment_resp.json().get('results', [])} if equipment_resp.ok else {}
+    except:
+        equipment_map = {}
 
     for wger_id in exercise_ids:
         try:
-            # 1. Busca dados base do exercicio
-            ex_resp = requests.get(f'{WGER_BASE_URL}/exercise/{wger_id}/', params={'format': 'json'})
+            # 1. Busca dados do exercicio
+            ex_resp = requests.get(f'{WGER_BASE_URL}/exercise/{wger_id}/', params={'format': 'json'}, timeout=10)
             if not ex_resp.ok: continue
             ex_data = ex_resp.json()
             
-            # 2. Traduz nome e descricao
-            name = translate_text(ex_data.get('name', ''))
+            # 2. Traducao (AQUI e seguro demorar um pouco mais)
+            original_name = ex_data.get('name', '')
+            name = translate_text(original_name)
             description = translate_text(_clean_html(ex_data.get('description', '')))
             
-            # Pula se ja existir um com esse nome
-            if Exercise.query.filter_by(name=name).first():
+            # Check final de duplicidade apos traducao
+            if Exercise.query.filter(Exercise.name.ilike(name)).first():
+                logger.info(f"Pussando {name} (ja existe)")
                 continue
                 
             # 3. Busca imagem
-            img_resp = requests.get(f'{WGER_BASE_URL}/exerciseimage/', params={'exercise': wger_id, 'format': 'json'})
+            img_resp = requests.get(f'{WGER_BASE_URL}/exerciseimage/', params={'exercise': wger_id, 'format': 'json'}, timeout=10)
             thumbnail = None
             if img_resp.ok:
                 img_results = img_resp.json().get('results', [])
@@ -156,7 +157,7 @@ def import_selected_exercises(exercise_ids):
                     thumbnail = img_results[0].get('image')
                     
             # 4. Busca video
-            vid_resp = requests.get(f'{WGER_BASE_URL}/video/', params={'exercise': wger_id, 'format': 'json'})
+            vid_resp = requests.get(f'{WGER_BASE_URL}/video/', params={'exercise': wger_id, 'format': 'json'}, timeout=10)
             video_url = None
             if vid_resp.ok:
                 vid_results = vid_resp.json().get('results', [])
