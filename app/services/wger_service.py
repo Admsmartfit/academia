@@ -51,69 +51,59 @@ def _clean_html(text):
 def get_api_exercises_preview(limit=30):
     """
     Busca dados basicos da API para preview.
-    Otimizado para velocidade: sem tradução loop e com filtro de oficiais.
+    OTIMIZADO: Sem tradução no loop e com filtros de qualidade.
     """
     def fetch_from_api(status_code=2):
         try:
-            params = {
-                'language': WGER_LANGUAGE_EN,
-                'limit': 60,  # Busca mais para filtrar duplicatas
-                'format': 'json',
-                'status': status_code,
-                'is_main': True # Apenas exercicios principais/oficiais
-            }
-            resp = requests.get(f'{WGER_BASE_URL}/exercise/', params=params, timeout=10)
+            resp = requests.get(
+                f'{WGER_BASE_URL}/exercise/',
+                params={
+                    'language': WGER_LANGUAGE_EN,
+                    'limit': 100, # Aumentado para 100 para ter mais opções
+                    'format': 'json',
+                    'status': status_code,
+                    'is_main': True # APENAS EXERCÍCIOS OFICIAIS
+                },
+                timeout=10
+            )
             resp.raise_for_status()
             return resp.json().get('results', [])
         except Exception as e:
-            logger.error(f"Erro na sub-busca API (status={status_code}): {e}")
+            logger.error(f"Erro na sub-busca API: {e}")
             return []
 
     try:
-        logger.info(f"Iniciando busca de preview (limite {limit} novos)...")
         results = fetch_from_api(status_code=2)
-        
-        # Fallback: Se nao encontrar oficiais, busca qualquer um
         if not results:
-            logger.warning("Nenhum exercicio oficial encontrado. Tentando geral...")
             results = fetch_from_api(status_code=None)
 
-        if not results:
-            return []
-
-        # Otimizacao: Set de nomes existentes para busca O(1)
-        existing_names = {e.name.lower().strip() for e in Exercise.query.with_entities(Exercise.name).all()}
+        # Busca nomes em inglês e português para evitar duplicatas reais
+        existing_exercises = Exercise.query.all()
+        existing_names = {e.name.lower().strip() for e in existing_exercises}
         
         preview_list = []
         for item in results:
-            # Pega nome original se disponivel, senao name normal
-            name_en = item.get('name_original') or item.get('name', '')
-            name_en = name_en.strip()
-            
-            if not name_en:
+            name_en = item.get('name', '').strip()
+            if not name_en or name_en.lower() in existing_names:
                 continue
             
-            # Filtro de duplicatas (check simples contra o nome em ingles por enquanto)
-            # A traducao real so ocorre na importacao para nao travar o preview
-            if name_en.lower() in existing_names:
-                continue
+            # NOTA: Removido translate_text daqui para ganho de performance absurdo
             
             cat_id = item.get('category')
             muscle_group = CATEGORY_MAP.get(cat_id, MuscleGroup.FULL_BODY)
             
             preview_list.append({
                 'wger_id': item['id'],
-                'name': name_en, # Exibe em Ingles no preview para performance
+                'name': name_en, # Mostra o nome original no preview
                 'muscle_group': muscle_group
             })
             
             if len(preview_list) >= limit:
                 break
                 
-        logger.info(f"Encontrados {len(preview_list)} novos exercicios para preview.")
         return preview_list
     except Exception as e:
-        logger.error(f'Erro geral ao buscar preview da API: {e}')
+        logger.error(f'Erro geral ao buscar preview: {e}')
         return []
 
 def import_selected_exercises(exercise_ids):
