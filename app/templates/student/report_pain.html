@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}Reportar Dor - Academia{% endblock %}
+
+{% block extra_css %}
+<style>
+    body.dark-pain {
+        background-color: #0F172A !important;
+        color: #f1f5f9;
+    }
+    body.dark-pain .card {
+        background-color: #1E293B;
+        border: 1px solid rgba(255,255,255,0.06);
+        color: #f1f5f9;
+    }
+
+    .pain-header {
+        background: linear-gradient(135deg, #1E293B, rgba(244,63,94,0.1));
+        border: 1px solid rgba(244,63,94,0.15);
+        color: white;
+        padding: 20px;
+        border-radius: 16px;
+        margin-bottom: 20px;
+    }
+
+    .body-map {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-bottom: 20px;
+    }
+    .body-part-btn {
+        padding: 12px 8px;
+        border: 2px solid rgba(255,255,255,0.08);
+        background: rgba(255,255,255,0.03);
+        border-radius: 12px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #94a3b8;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    .body-part-btn:hover {
+        border-color: rgba(244,63,94,0.3);
+        color: #f1f5f9;
+    }
+    .body-part-btn.selected {
+        border-color: #F43F5E;
+        background: rgba(244,63,94,0.1);
+        color: #F43F5E;
+        font-weight: 700;
+    }
+    .body-part-btn i {
+        display: block;
+        font-size: 1.3rem;
+        margin-bottom: 4px;
+    }
+
+    .pain-scale {
+        margin: 20px 0;
+    }
+    .pain-scale-labels {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-top: 4px;
+    }
+    .pain-value-display {
+        text-align: center;
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin: 10px 0;
+    }
+
+    .form-section {
+        background: #1E293B;
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .section-title {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: #64748b;
+        font-weight: 700;
+        margin-bottom: 14px;
+    }
+
+    .history-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .history-item:last-child { border-bottom: none; }
+
+    .pain-indicator {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+    }
+
+    .btn-send-pain {
+        background: linear-gradient(135deg, #F43F5E, #E11D48);
+        color: white;
+        border: none;
+        padding: 14px 32px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 1rem;
+        width: 100%;
+        transition: all 0.3s;
+    }
+    .btn-send-pain:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(244,63,94,0.4);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+    <!-- Header -->
+    <div class="pain-header">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width:48px;height:48px;border-radius:50%;background:rgba(244,63,94,0.2);border:2px solid rgba(244,63,94,0.3);display:flex;align-items:center;justify-content:center;color:#F43F5E;">
+                <i class="fas fa-exclamation-triangle fa-lg"></i>
+            </div>
+            <div>
+                <h5 class="mb-0">Reportar Dor ou Desconforto</h5>
+                {% if instructor_name %}
+                <small style="opacity:0.6;"><i class="fas fa-user-tie me-1"></i>{{ instructor_name }} sera notificado</small>
+                {% else %}
+                <small style="opacity:0.6;">O instrutor sera notificado</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario -->
+    <form action="{{ url_for('student.report_pain') }}" method="POST">
+        <!-- Selecao do local -->
+        <div class="form-section">
+            <div class="section-title"><i class="fas fa-body me-2"></i>Onde esta a dor?</div>
+            <input type="hidden" name="body_part" id="bodyPartInput" value="Ombro">
+
+            <div class="body-map">
+                <div class="body-part-btn selected" data-part="Ombro" onclick="selectPart(this)">
+                    <i class="fas fa-hand-point-up"></i>Ombro
+                </div>
+                <div class="body-part-btn" data-part="Pescoco" onclick="selectPart(this)">
+                    <i class="fas fa-head-side-virus"></i>Pescoco
+                </div>
+                <div class="body-part-btn" data-part="Costas (lombar)" onclick="selectPart(this)">
+                    <i class="fas fa-bone"></i>Lombar
+                </div>
+                <div class="body-part-btn" data-part="Costas (dorsal)" onclick="selectPart(this)">
+                    <i class="fas fa-arrows-alt-v"></i>Dorsal
+                </div>
+                <div class="body-part-btn" data-part="Joelho" onclick="selectPart(this)">
+                    <i class="fas fa-walking"></i>Joelho
+                </div>
+                <div class="body-part-btn" data-part="Quadril" onclick="selectPart(this)">
+                    <i class="fas fa-circle"></i>Quadril
+                </div>
+                <div class="body-part-btn" data-part="Cotovelo" onclick="selectPart(this)">
+                    <i class="fas fa-hand-point-right"></i>Cotovelo
+                </div>
+                <div class="body-part-btn" data-part="Punho" onclick="selectPart(this)">
+                    <i class="fas fa-hand-paper"></i>Punho
+                </div>
+                <div class="body-part-btn" data-part="Tornozelo" onclick="selectPart(this)">
+                    <i class="fas fa-shoe-prints"></i>Tornozelo
+                </div>
+            </div>
+        </div>
+
+        <!-- Escala de dor -->
+        <div class="form-section">
+            <div class="section-title"><i class="fas fa-thermometer-half me-2"></i>Intensidade da dor</div>
+            <div class="pain-value-display" id="painDisplay" style="color: #FBBF24;">5</div>
+            <input type="range" name="pain_level" class="form-range" min="1" max="10" value="5"
+                   id="painRange" style="accent-color: #F43F5E;">
+            <div class="pain-scale-labels">
+                <span>Leve</span>
+                <span>Moderada</span>
+                <span>Intensa</span>
+            </div>
+        </div>
+
+        <!-- Descricao -->
+        <div class="form-section">
+            <div class="section-title"><i class="fas fa-comment-medical me-2"></i>Descricao (opcional)</div>
+            <textarea name="description" class="form-control" rows="3"
+                      placeholder="Descreva quando sente dor, se e ao movimento, em repouso..."
+                      style="background: #0F172A; border-color: rgba(255,255,255,0.1); color: #f1f5f9;"></textarea>
+        </div>
+
+        <!-- Botao -->
+        <button type="submit" class="btn-send-pain">
+            <i class="fas fa-paper-plane me-2"></i>Enviar Relato
+        </button>
+    </form>
+
+    <!-- Historico -->
+    {% if pain_history %}
+    <div class="form-section mt-4">
+        <div class="section-title"><i class="fas fa-history me-2"></i>Relatos Anteriores</div>
+        {% for log in pain_history %}
+        <div class="history-item">
+            <div class="pain-indicator" style="background: rgba(244,63,94,0.15); color: #F43F5E;">
+                <i class="fas fa-exclamation"></i>
+            </div>
+            <div>
+                <div style="font-weight:600;font-size:0.9rem;">Relato de dor</div>
+                <div style="font-size:0.8rem;color:#64748b;">{{ log.sent_at.strftime('%d/%m/%Y %H:%M') }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Voltar -->
+    <div class="text-center mt-3 mb-4">
+        <a href="{{ url_for('student.my_training') }}" class="btn btn-outline-light btn-sm">
+            <i class="fas fa-arrow-left me-2"></i>Voltar ao Treino
+        </a>
+    </div>
+</div>
+
+<script>
+    document.body.classList.add('dark-pain');
+
+    function selectPart(el) {
+        document.querySelectorAll('.body-part-btn').forEach(function(b) { b.classList.remove('selected'); });
+        el.classList.add('selected');
+        document.getElementById('bodyPartInput').value = el.dataset.part;
+    }
+
+    var painRange = document.getElementById('painRange');
+    var painDisplay = document.getElementById('painDisplay');
+    painRange.addEventListener('input', function() {
+        var val = parseInt(this.value);
+        painDisplay.textContent = val;
+        if (val <= 3) painDisplay.style.color = '#10B981';
+        else if (val <= 6) painDisplay.style.color = '#FBBF24';
+        else painDisplay.style.color = '#F43F5E';
+    });
+</script>
+{% endblock %}

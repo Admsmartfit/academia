@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Erro interno{% endblock %}
+
+{% block content %}
+<div class="min-vh-100 d-flex align-items-center justify-content-center"
+    style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
+    <div class="text-center text-white">
+        <i class="fas fa-exclamation-triangle fa-4x mb-4 text-warning"></i>
+        <h1 class="display-1 fw-bold">500</h1>
+        <h4 class="mb-3">Erro interno do servidor</h4>
+        <p class="text-white-50 mb-4">Algo deu errado. Tente novamente em alguns instantes.</p>
+        <div class="d-flex gap-3 justify-content-center">
+            <a href="javascript:history.back()" class="btn btn-outline-light">
+                <i class="fas fa-arrow-left me-2"></i>Voltar
+            </a>
+            <a href="/" class="btn btn-primary">
+                <i class="fas fa-home me-2"></i>Inicio
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

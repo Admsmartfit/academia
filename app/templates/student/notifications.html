@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Notificacoes - Academia{% endblock %}
+
+{% block extra_css %}
+<style>
+    body.dark-notif {
+        background-color: #0F172A !important;
+        color: #f1f5f9;
+    }
+
+    .notif-header {
+        background: linear-gradient(135deg, #1E293B, rgba(139,92,246,0.15));
+        border: 1px solid rgba(139,92,246,0.2);
+        color: white;
+        padding: 20px;
+        border-radius: 16px;
+        margin-bottom: 20px;
+    }
+
+    .notif-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .notif-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        padding: 16px 20px;
+        background: #1E293B;
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 12px;
+        margin-bottom: 10px;
+        transition: border-color 0.2s;
+    }
+    .notif-item:hover {
+        border-color: rgba(255,255,255,0.12);
+    }
+    .notif-item.unread {
+        border-left: 3px solid #8B5CF6;
+    }
+
+    .notif-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 1rem;
+    }
+
+    .notif-content {
+        flex: 1;
+    }
+    .notif-title {
+        font-weight: 600;
+        font-size: 0.95rem;
+        margin-bottom: 2px;
+    }
+    .notif-message {
+        font-size: 0.85rem;
+        color: #94a3b8;
+    }
+    .notif-time {
+        font-size: 0.75rem;
+        color: #64748b;
+        white-space: nowrap;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+    }
+    .empty-state i {
+        font-size: 3rem;
+        color: #334155;
+        margin-bottom: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+    <!-- Header -->
+    <div class="notif-header">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width:48px;height:48px;border-radius:50%;background:rgba(139,92,246,0.2);border:2px solid rgba(139,92,246,0.3);display:flex;align-items:center;justify-content:center;color:#a78bfa;">
+                <i class="fas fa-bell fa-lg"></i>
+            </div>
+            <div>
+                <h5 class="mb-0">Notificacoes</h5>
+                <small style="opacity:0.6;">{{ notifications|length }} notificacao{{ 's' if notifications|length != 1 else '' }}</small>
+            </div>
+        </div>
+    </div>
+
+    {% if notifications %}
+    <ul class="notif-list">
+        {% for n in notifications %}
+        <li class="notif-item {% if not n.is_read %}unread{% endif %}">
+            <div class="notif-icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">
+                <i class="{{ n.type_icon }}"></i>
+            </div>
+            <div class="notif-content">
+                <div class="notif-title">
+                    {% if n.link %}
+                    <a href="{{ n.link }}" style="color: #f1f5f9; text-decoration: none;">{{ n.title }}</a>
+                    {% else %}
+                    {{ n.title }}
+                    {% endif %}
+                </div>
+                {% if n.message %}
+                <div class="notif-message">{{ n.message }}</div>
+                {% endif %}
+            </div>
+            <span class="notif-time">{{ n.time_ago }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-bell-slash"></i>
+        <h5>Nenhuma notificacao</h5>
+        <p style="color: #64748b;">Quando houver novidades, elas aparecerão aqui.</p>
+    </div>
+    {% endif %}
+
+    <!-- Voltar -->
+    <div class="text-center mt-3 mb-4">
+        <a href="{{ url_for('student.dashboard') }}" class="btn btn-outline-light btn-sm">
+            <i class="fas fa-arrow-left me-2"></i>Voltar ao Painel
+        </a>
+    </div>
+</div>
+
+<script>
+    document.body.classList.add('dark-notif');
+</script>
+{% endblock %}

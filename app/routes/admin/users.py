@@ -5,6 +5,7 @@ from flask_login import login_required, current_user
 from app.models import User
 from app import db
 from app.routes.admin.dashboard import admin_required
+from app.routes.auth import validate_phone
 
 users_bp = Blueprint('admin_users', __name__, url_prefix='/admin/users')
 
@@ -35,7 +36,7 @@ def create_user():
     if request.method == 'POST':
         name = request.form.get('name')
         email = request.form.get('email', '').strip().lower()
-        phone = request.form.get('phone')
+        phone = request.form.get('phone', '').strip()
         password = request.form.get('password')
         role = request.form.get('role', 'student')
 
@@ -43,10 +44,19 @@ def create_user():
             flash('Este e-mail já está cadastrado.', 'danger')
             return redirect(url_for('admin_users.create_user'))
 
+        # Validar telefone
+        phone_formatted = phone
+        if phone:
+            try:
+                phone_formatted = validate_phone(phone)
+            except ValueError as e:
+                flash(str(e), 'danger')
+                return redirect(url_for('admin_users.create_user'))
+
         user = User(
             name=name,
             email=email,
-            phone=phone,
+            phone=phone_formatted,
             role=role,
             is_active=True
         )
@@ -68,11 +78,20 @@ def edit_user(id):
     user = User.query.get_or_404(id)
 
     if request.method == 'POST':
+        phone = request.form.get('phone', '').strip()
+        phone_formatted = phone
+        if phone:
+            try:
+                phone_formatted = validate_phone(phone)
+            except ValueError as e:
+                flash(str(e), 'danger')
+                return redirect(url_for('admin_users.edit_user', id=id))
+
         user.name = request.form.get('name')
         user.email = request.form.get('email', '').strip().lower()
-        user.phone = request.form.get('phone')
+        user.phone = phone_formatted
         user.role = request.form.get('role')
-        
+
         password = request.form.get('password')
         if password:
             user.set_password(password)

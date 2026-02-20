@@ -47,9 +47,11 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Telefone *</label>
-                        <input type="text" name="phone" class="form-control" value="{{ user.phone if user else '' }}"
-                            placeholder="Ex: 11999999999" required>
+                        <label class="form-label">Telefone (WhatsApp) *</label>
+                        <input type="tel" name="phone" id="phone" class="form-control"
+                            value="{{ user.phone if user else '' }}"
+                            placeholder="(11) 99999-9999" required>
+                        <small class="text-muted">DDD + numero com 9 digitos</small>
                     </div>
 
                     <div class="mb-3">
@@ -74,4 +76,21 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const phoneInput = document.getElementById('phone');
+        phoneInput.addEventListener('input', function (e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.startsWith('55') && value.length > 11) value = value.slice(2);
+            if (value.length > 11) value = value.slice(0, 11);
+            if (value.length > 6) {
+                value = value.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3");
+            } else if (value.length > 2) {
+                value = value.replace(/(\d{2})(\d{0,5})/, "($1) $2");
+            }
+            e.target.value = value;
+        });
+    });
+</script>
 {% endblock %}

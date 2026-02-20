@@ -258,3 +258,152 @@ def run_automations():
         'results': results,
         'message': 'Automacoes executadas com sucesso!'
     })
+
+
+@crm_bp.route('/nps')
+@login_required
+def nps_dashboard():
+    """Dashboard de NPS - Pesquisa de satisfacao."""
+    if not _check_access():
+        return "Acesso negado", 403
+
+    from app.models.crm import AutomationLog
+    from sqlalchemy import func, extract
+
+    # NPS responses are stored as automation_type = 'nps_response' or 'satisfaction_*'
+    # Get all NPS-related logs
+    nps_logs = AutomationLog.query.filter(
+        AutomationLog.automation_type.like('nps%')
+    ).order_by(AutomationLog.sent_at.desc()).all()
+
+    # Satisfaction responses (rating-based)
+    satisfaction_logs = AutomationLog.query.filter(
+        AutomationLog.automation_type.like('satisfaction%')
+    ).order_by(AutomationLog.sent_at.desc()).all()
+
+    # Calculate NPS if we have data
+    # Promoters (9-10), Passives (7-8), Detractors (0-6)
+    promoters = 0
+    passives = 0
+    detractors = 0
+    total_responses = len(nps_logs) + len(satisfaction_logs)
+
+    for log in nps_logs + satisfaction_logs:
+        # Try to extract rating from automation_type (e.g. 'nps_9', 'satisfaction_5')
+        parts = log.automation_type.split('_')
+        try:
+            rating = int(parts[-1])
+            if rating >= 9:
+                promoters += 1
+            elif rating >= 7:
+                passives += 1
+            else:
+                detractors += 1
+        except (ValueError, IndexError):
+            pass
+
+    nps_score = 0
+    if total_responses > 0:
+        nps_score = round(((promoters - detractors) / total_responses) * 100)
+
+    # Monthly trend (last 6 months)
+    from datetime import timedelta
+    monthly_nps = []
+    today = datetime.now().date()
+    for i in range(5, -1, -1):
+        month_date = today.replace(day=1) - timedelta(days=i * 30)
+        month_start = month_date.replace(day=1)
+        if month_start.month == 12:
+            month_end = month_start.replace(year=month_start.year + 1, month=1, day=1)
+        else:
+            month_end = month_start.replace(month=month_start.month + 1, day=1)
+
+        month_logs = [l for l in nps_logs + satisfaction_logs
+                      if l.sent_at and month_start <= l.sent_at.date() < month_end]
+        mp, md = 0, 0
+        for l in month_logs:
+            parts = l.automation_type.split('_')
+            try:
+                r = int(parts[-1])
+                if r >= 9: mp += 1
+                elif r < 7: md += 1
+            except (ValueError, IndexError):
+                pass
+
+        m_total = len(month_logs)
+        m_nps = round(((mp - md) / m_total) * 100) if m_total > 0 else 0
+        month_names = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+                       'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+        monthly_nps.append({
+            'month': month_names[month_start.month - 1],
+            'score': m_nps,
+            'responses': m_total
+        })
+
+    # Recent detractors (to alert)
+    recent_detractors = []
+    for log in (nps_logs + satisfaction_logs)[:50]:
+        parts = log.automation_type.split('_')
+        try:
+            rating = int(parts[-1])
+            if rating < 7:
+                recent_detractors.append({
+                    'user': User.query.get(log.user_id),
+                    'rating': rating,
+                    'date': log.sent_at
+                })
+        except (ValueError, IndexError):
+            pass
+
+    return render_template('admin/crm/nps_dashboard.html',
+                         nps_score=nps_score,
+                         promoters=promoters,
+                         passives=passives,
+                         detractors=detractors,
+                         total_responses=total_responses,
+                         monthly_nps=monthly_nps,
+                         recent_detractors=recent_detractors[:10])
+
+
+@crm_bp.route('/funnel')
+@login_required
+def funnel():
+    """Funil de conversao de visitantes."""
+    if not _check_access():
+        return "Acesso negado", 403
+
+    from app.models.crm import Lead, LeadStatus
+    from sqlalchemy import func
+
+    # Funnel counts
+    funnel_data = {}
+    funnel_stages = [
+        ('new', 'Novo Lead', '#6c757d'),
+        ('contacted', 'Contatado', '#0d6efd'),
+        ('visited', 'Visitou', '#ffc107'),
+        ('trial', 'Aula Experimental', '#fd7e14'),
+        ('proposal', 'Proposta', '#20c997'),
+        ('won', 'Matriculado', '#198754'),
+        ('lost', 'Perdido', '#dc3545'),
+    ]
+
+    for status_val, label, color in funnel_stages:
+        try:
+            count = Lead.query.filter_by(status=LeadStatus(status_val)).count()
+        except ValueError:
+            count = 0
+        funnel_data[status_val] = {'label': label, 'count': count, 'color': color}
+
+    total_leads = Lead.query.count()
+    won_count = funnel_data.get('won', {}).get('count', 0)
+    conversion_rate = round((won_count / total_leads * 100), 1) if total_leads > 0 else 0
+
+    # Recent leads
+    recent_leads = Lead.query.order_by(Lead.created_at.desc()).limit(10).all()
+
+    return render_template('admin/crm/funnel.html',
+                         funnel_data=funnel_data,
+                         funnel_stages=funnel_stages,
+                         total_leads=total_leads,
+                         conversion_rate=conversion_rate,
+                         recent_leads=recent_leads)

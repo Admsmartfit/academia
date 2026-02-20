@@ -1,0 +1,119 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}NPS - Satisfacao{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-smile me-2"></i>NPS - Pesquisa de Satisfacao</h4>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('crm.dashboard') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i>CRM
+        </a>
+    </div>
+</div>
+
+<!-- NPS Score Card -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card text-center py-4">
+            <div class="display-2 fw-bold {% if nps_score >= 50 %}text-success{% elif nps_score >= 0 %}text-warning{% else %}text-danger{% endif %}">
+                {{ nps_score }}
+            </div>
+            <h5 class="text-muted">NPS Score</h5>
+            <small class="text-muted">{{ total_responses }} respostas</small>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card h-100">
+            <div class="card-body">
+                <h6 class="text-muted mb-3">Distribuicao</h6>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-success fw-bold">Promotores (9-10)</span>
+                        <span>{{ promoters }}</span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-success" style="width: {{ (promoters / total_responses * 100)|int if total_responses > 0 else 0 }}%;"></div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-warning fw-bold">Neutros (7-8)</span>
+                        <span>{{ passives }}</span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-warning" style="width: {{ (passives / total_responses * 100)|int if total_responses > 0 else 0 }}%;"></div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-danger fw-bold">Detratores (0-6)</span>
+                        <span>{{ detractors }}</span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-danger" style="width: {{ (detractors / total_responses * 100)|int if total_responses > 0 else 0 }}%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monthly Trend -->
+<div class="card mb-4">
+    <div class="card-header"><h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Tendencia Mensal</h6></div>
+    <div class="card-body">
+        {% if monthly_nps %}
+        <div class="d-flex align-items-end gap-3" style="height: 150px;">
+            {% for m in monthly_nps %}
+            <div class="flex-fill text-center">
+                {% set bar_h = ((m.score + 100) / 200 * 100)|int %}
+                <div class="small fw-bold {% if m.score >= 50 %}text-success{% elif m.score >= 0 %}text-warning{% else %}text-danger{% endif %}">
+                    {{ m.score }}
+                </div>
+                <div style="height: {{ bar_h if bar_h > 5 else 5 }}px; background: {% if m.score >= 50 %}#198754{% elif m.score >= 0 %}#ffc107{% else %}#dc3545{% endif %}; border-radius: 4px 4px 0 0; min-height: 4px;" class="mx-auto" aria-hidden="true"></div>
+                <div class="small text-muted mt-1">{{ m.month }}</div>
+                <div class="small text-muted">{{ m.responses }}r</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-3 text-muted">Sem dados de NPS ainda.</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Detractors Alert -->
+{% if recent_detractors %}
+<div class="card border-danger">
+    <div class="card-header bg-danger text-white">
+        <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Detratores Recentes - Atencao!</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead>
+                    <tr><th>Aluno</th><th>Nota</th><th>Data</th><th>Acao</th></tr>
+                </thead>
+                <tbody>
+                    {% for d in recent_detractors %}
+                    <tr>
+                        <td>{{ d.user.name if d.user else 'N/A' }}</td>
+                        <td><span class="badge bg-danger">{{ d.rating }}/10</span></td>
+                        <td>{{ d.date.strftime('%d/%m/%Y') if d.date else '-' }}</td>
+                        <td>
+                            {% if d.user and d.user.phone %}
+                            <a href="https://wa.me/{{ d.user.phone }}" target="_blank" class="btn btn-sm btn-outline-success">
+                                <i class="fab fa-whatsapp"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

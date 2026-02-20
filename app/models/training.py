@@ -6,6 +6,31 @@ from sqlalchemy.orm import validates
 import enum
 
 
+MUSCLE_GROUP_LABELS = {
+    "chest": "Peito",
+    "back": "Costas",
+    "legs": "Pernas",
+    "shoulders": "Ombros",
+    "arms": "Bracos",
+    "core": "Core/Abdomen",
+    "full_body": "Corpo Inteiro",
+}
+
+DIFFICULTY_LABELS = {
+    "beginner": "Iniciante",
+    "intermediate": "Intermediario",
+    "advanced": "Avancado",
+}
+
+GOAL_LABELS = {
+    "hypertrophy": "Hipertrofia",
+    "fat_loss": "Emagrecimento",
+    "strength": "Forca",
+    "health": "Saude",
+    "sport": "Esporte",
+}
+
+
 class MuscleGroup(enum.Enum):
     CHEST = "chest"
     BACK = "back"
@@ -15,11 +40,19 @@ class MuscleGroup(enum.Enum):
     CORE = "core"
     FULL_BODY = "full_body"
 
+    @property
+    def label(self):
+        return MUSCLE_GROUP_LABELS.get(self.value, self.value)
+
 
 class DifficultyLevel(enum.Enum):
     BEGINNER = "beginner"
     INTERMEDIATE = "intermediate"
     ADVANCED = "advanced"
+
+    @property
+    def label(self):
+        return DIFFICULTY_LABELS.get(self.value, self.value)
 
 
 class TrainingGoal(enum.Enum):
@@ -28,6 +61,10 @@ class TrainingGoal(enum.Enum):
     STRENGTH = "strength"
     HEALTH = "health"
     SPORT = "sport"
+
+    @property
+    def label(self):
+        return GOAL_LABELS.get(self.value, self.value)
 
 
 class Exercise(db.Model):
@@ -51,25 +88,11 @@ class Exercise(db.Model):
 
     @property
     def muscle_group_label(self):
-        labels = {
-            MuscleGroup.CHEST: 'Peito',
-            MuscleGroup.BACK: 'Costas',
-            MuscleGroup.LEGS: 'Pernas',
-            MuscleGroup.SHOULDERS: 'Ombros',
-            MuscleGroup.ARMS: 'Bracos',
-            MuscleGroup.CORE: 'Core/Abdomen',
-            MuscleGroup.FULL_BODY: 'Corpo Inteiro',
-        }
-        return labels.get(self.muscle_group, str(self.muscle_group))
+        return self.muscle_group.label if self.muscle_group else ''
 
     @property
     def difficulty_label(self):
-        labels = {
-            DifficultyLevel.BEGINNER: 'Iniciante',
-            DifficultyLevel.INTERMEDIATE: 'Intermediario',
-            DifficultyLevel.ADVANCED: 'Avancado',
-        }
-        return labels.get(self.difficulty_level, str(self.difficulty_level))
+        return self.difficulty_level.label if self.difficulty_level else ''
 
     def __repr__(self):
         return f'<Exercise {self.name}>'
@@ -103,14 +126,7 @@ class TrainingPlan(db.Model):
 
     @property
     def goal_label(self):
-        labels = {
-            TrainingGoal.HYPERTROPHY: 'Hipertrofia',
-            TrainingGoal.FAT_LOSS: 'Emagrecimento',
-            TrainingGoal.STRENGTH: 'Forca',
-            TrainingGoal.HEALTH: 'Saude',
-            TrainingGoal.SPORT: 'Esporte',
-        }
-        return labels.get(self.goal, str(self.goal))
+        return self.goal.label if self.goal else ''
 
     @property
     def is_valid(self):

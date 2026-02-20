@@ -1,4 +1,5 @@
 <!-- app/templates/includes/navbar.html -->
+{% set ep = request.endpoint or '' %}
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow">
     <div class="container">
         <a class="navbar-brand d-flex align-items-center" href="{{ url_for('marketing.index') }}">
@@ -22,55 +23,55 @@
                 {% if current_user.is_authenticated %}
                 {% if current_user.is_admin %}
                 <li class="nav-item">
-                    <a class="nav-link {% if 'admin.dashboard' in request.endpoint %}active{% endif %}"
+                    <a class="nav-link {% if request.endpoint and 'admin.dashboard' in request.endpoint %}active{% endif %}"
                         href="{{ url_for('admin.dashboard') }}">Painel Admin</a>
                 </li>
                 {% elif current_user.is_instructor %}
                 <li class="nav-item">
-                    <a class="nav-link {% if 'instructor.dashboard' in request.endpoint %}active{% endif %}"
+                    <a class="nav-link {% if request.endpoint and 'instructor.dashboard' in request.endpoint %}active{% endif %}"
                         href="{{ url_for('instructor.dashboard') }}"><i class="fas fa-calendar-alt me-1"></i>Minhas
                         Aulas</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if 'training' in request.endpoint %}active{% endif %}"
+                    <a class="nav-link {% if request.endpoint and 'training' in request.endpoint %}active{% endif %}"
                         href="{{ url_for('instructor.training_list') }}"><i class="fas fa-dumbbell me-1"></i>Prescrever
                         Treino</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if 'totem' in request.endpoint %}active{% endif %}"
+                    <a class="nav-link {% if request.endpoint and 'totem' in request.endpoint %}active{% endif %}"
                         href="{{ url_for('instructor.totem_view') }}"><i class="fas fa-camera me-1"></i>Modo Totem</a>
                 </li>
                 {% else %}
                 <li class="nav-item">
-                    <a class="nav-link {% if request.endpoint == 'student.dashboard' %}active{% endif %}"
+                    <a class="nav-link {% if ep == 'student.dashboard' %}active{% endif %}"
                         href="{{ url_for('student.dashboard') }}">Meu Painel</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if request.endpoint == 'student.schedule' %}active{% endif %}"
+                    <a class="nav-link {% if ep == 'student.schedule' %}active{% endif %}"
                         href="{{ url_for('student.schedule') }}">Agendar Aulas</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if request.endpoint in ['student.my_bookings', 'student.my_recurring'] %}active{% endif %}"
+                    <a class="nav-link {% if ep in ['student.my_bookings', 'student.my_recurring'] %}active{% endif %}"
                         href="{{ url_for('student.my_bookings') }}">Minhas Aulas</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if request.endpoint == 'student.ranking' %}active{% endif %}"
+                    <a class="nav-link {% if ep == 'student.ranking' %}active{% endif %}"
                         href="{{ url_for('student.ranking') }}">Ranking</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if request.endpoint == 'student.xp_credits' %}active{% endif %}"
+                    <a class="nav-link {% if ep == 'student.xp_credits' %}active{% endif %}"
                         href="{{ url_for('student.xp_credits') }}">
                         <i class="fas fa-exchange-alt me-1"></i>XP
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if 'shop' in request.endpoint %}active{% endif %}"
+                    <a class="nav-link {% if request.endpoint and 'shop' in request.endpoint %}active{% endif %}"
                         href="{{ url_for('shop.packages') }}">Comprar Creditos</a>
                 </li>
                 {% endif %}
                 {% else %}
                 <li class="nav-item">
-                    <a class="nav-link {% if 'shop' in request.endpoint %}active{% endif %}"
+                    <a class="nav-link {% if request.endpoint and 'shop' in request.endpoint %}active{% endif %}"
                         href="{{ url_for('shop.packages') }}">Planos e Preços</a>
                 </li>
                 {% endif %}
@@ -78,6 +79,17 @@
 
             <div class="navbar-nav align-items-center">
                 {% if current_user.is_authenticated %}
+                {% if current_user.is_student %}
+                <a class="nav-link position-relative me-2" href="{{ url_for('student.notifications') }}"
+                    title="Notificacoes">
+                    <i class="fas fa-bell"></i>
+                    {% if unread_notifications > 0 %}
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                        style="font-size: 0.6rem;">
+                        {{ unread_notifications if unread_notifications < 100 else '99+' }} </span>
+                            {% endif %}
+                </a>
+                {% endif %}
                 <div class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown"
                         role="button" data-bs-toggle="dropdown">
@@ -99,8 +111,12 @@
                                     class="fas fa-sync me-2"></i>Agendamentos Recorrentes</a></li>
                         <li><a class="dropdown-item" href="{{ url_for('student.ranking') }}"><i
                                     class="fas fa-trophy me-2"></i>Ranking</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('student.progress') }}"><i
+                                    class="fas fa-chart-line me-2"></i>Minha Evolucao</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('student.my_qrcode') }}"><i
+                                    class="fas fa-qrcode me-2"></i>Meu QR Code</a></li>
                         <li><a class="dropdown-item" href="{{ url_for('health.fill_parq') }}"><i
-                                    class="fas fa-heartbeat me-2"></i>Saúde (PAR-Q)</a></li>
+                                    class="fas fa-heartbeat me-2"></i>Saude (PAR-Q)</a></li>
                         <li><a class="dropdown-item" href="{{ url_for('student.profile') }}"><i
                                     class="fas fa-user-edit me-2"></i>Meu Perfil</a></li>
                         <li>

@@ -157,6 +157,126 @@
                 </div>
             </div>
 
+            <!-- Observacoes do Instrutor -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-sticky-note me-2 text-warning"></i>Observacoes</h5>
+                    <button class="btn btn-sm btn-outline-warning" data-bs-toggle="collapse" data-bs-target="#addNoteForm">
+                        <i class="fas fa-plus me-1"></i>Nova
+                    </button>
+                </div>
+                <div class="collapse" id="addNoteForm">
+                    <div class="card-body border-bottom bg-light">
+                        <form method="POST" action="{{ url_for('instructor.add_student_note', student_id=student.id) }}">
+                            <div class="row g-2">
+                                <div class="col-md-3">
+                                    <select name="note_type" class="form-select form-select-sm">
+                                        <option value="general">Geral</option>
+                                        <option value="restriction">Restricao</option>
+                                        <option value="progress">Progresso</option>
+                                        <option value="behavior">Comportamento</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-7">
+                                    <textarea name="content" class="form-control form-control-sm" rows="2" placeholder="Escreva a observacao..." required></textarea>
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="submit" class="btn btn-sm btn-warning w-100">Salvar</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if student_notes %}
+                    {% for note in student_notes %}
+                    <div class="d-flex align-items-start gap-3 px-3 py-2 border-bottom">
+                        <span class="badge rounded-pill mt-1" style="background: {{ note.type_color }}; font-size: 0.65rem;">{{ note.type_label }}</span>
+                        <div class="flex-grow-1">
+                            <p class="mb-0 small">{{ note.content }}</p>
+                            <small class="text-muted">{{ note.instructor.name }} - {{ note.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-3 text-muted small">Nenhuma observacao registrada.</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Registro de Carga -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-weight-hanging me-2 text-success"></i>Registro de Carga</h5>
+                    {% if plan_exercises %}
+                    <button class="btn btn-sm btn-outline-success" data-bs-toggle="collapse" data-bs-target="#addLogForm">
+                        <i class="fas fa-plus me-1"></i>Registrar
+                    </button>
+                    {% endif %}
+                </div>
+                {% if plan_exercises %}
+                <div class="collapse" id="addLogForm">
+                    <div class="card-body border-bottom bg-light">
+                        <form method="POST" action="{{ url_for('instructor.log_workout', student_id=student.id) }}">
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <select name="exercise_id" class="form-select form-select-sm" required>
+                                        <option value="">Exercicio</option>
+                                        {% for ex in plan_exercises %}
+                                        <option value="{{ ex.id }}">{{ ex.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="number" name="weight_kg" class="form-control form-control-sm" placeholder="Peso (kg)" step="0.5">
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="number" name="reps" class="form-control form-control-sm" placeholder="Reps">
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="number" name="sets" class="form-control form-control-sm" placeholder="Series">
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="submit" class="btn btn-sm btn-success w-100">Salvar</button>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <input type="text" name="notes" class="form-control form-control-sm" placeholder="Observacao (opcional)">
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="card-body p-0">
+                    {% if recent_logs %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Exercicio</th>
+                                    <th>Carga</th>
+                                    <th>Reps x Series</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in recent_logs %}
+                                <tr>
+                                    <td>{{ log.logged_at.strftime('%d/%m') }}</td>
+                                    <td>{{ log.exercise.name }}</td>
+                                    <td>{{ log.weight_kg or '-' }}{% if log.weight_kg %}kg{% endif %}</td>
+                                    <td>{{ log.reps or '-' }} x {{ log.sets or '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-3 text-muted small">Nenhum registro de carga.</div>
+                    {% endif %}
+                </div>
+            </div>
+
             <!-- Booking History -->
             <div class="card shadow-sm">
                 <div class="card-header bg-white">

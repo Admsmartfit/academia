@@ -27,11 +27,14 @@ class ClassSchedule(db.Model):
     avg_occupancy_rate = db.Column(db.Numeric(5, 2), default=0.00)
 
     is_active = db.Column(db.Boolean, default=True)
+    is_approved = db.Column(db.Boolean, default=True)  # Por padrao admin cria aprovado
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     instructor = db.relationship('User', foreign_keys=[instructor_id], backref='instructor_schedules')
+    created_by = db.relationship('User', foreign_keys=[created_by_id], backref='created_schedules')
 
     @property
     def weekday_name(self):

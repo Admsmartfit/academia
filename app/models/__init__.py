@@ -38,6 +38,23 @@ from app.models.crm import (
     LeadSource, LeadStatus, RiskLevel
 )
 
+# Notificacoes
+from app.models.notification import Notification, NotificationType
+
+# Workout Logs e Observacoes
+from app.models.workout_log import WorkoutLog
+from app.models.student_note import StudentNote, NoteType
+
+# Campanhas
+from app.models.campaign import Campaign, CampaignStatus, CampaignTarget
+
+# Despesas
+from app.models.expense import Expense, ExpenseCategory
+
+# LGPD e Auditoria
+from app.models.consent_log import ConsentLog, ConsentType
+from app.models.audit_log import AuditLog, AuditAction
+
 # Split Bancario / Comissoes
 from app.models.commission import (
     CommissionEntry, CommissionStatus,
@@ -111,4 +128,23 @@ __all__ = [
     'CollaboratorBankInfo',
     'DemandLevel',
     'CommissionProfessionalType',
+    # Notificacoes
+    'Notification',
+    'NotificationType',
+    # Workout Logs e Observacoes
+    'WorkoutLog',
+    'StudentNote',
+    'NoteType',
+    # Campanhas
+    'Campaign',
+    'CampaignStatus',
+    'CampaignTarget',
+    # Despesas
+    'Expense',
+    'ExpenseCategory',
+    # LGPD e Auditoria
+    'ConsentLog',
+    'ConsentType',
+    'AuditLog',
+    'AuditAction',
 ]

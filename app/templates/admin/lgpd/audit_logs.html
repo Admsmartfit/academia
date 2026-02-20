@@ -1,0 +1,91 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Logs de Auditoria{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-history me-2"></i>Logs de Auditoria</h4>
+    <a href="{{ url_for('admin_lgpd.index') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i>LGPD
+    </a>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="GET" class="d-flex gap-3 align-items-center flex-wrap">
+            <select name="action" class="form-select form-select-sm" style="max-width: 200px;">
+                <option value="">Todas as acoes</option>
+                {% for a in actions %}
+                <option value="{{ a.value }}" {% if a.value == action_filter %}selected{% endif %}>{{ a.label }}</option>
+                {% endfor %}
+            </select>
+            <input type="number" name="user_id" class="form-control form-control-sm" style="max-width: 150px;"
+                   placeholder="ID do usuario" value="{{ user_filter }}">
+            <button type="submit" class="btn btn-sm btn-outline-primary"><i class="fas fa-filter me-1"></i>Filtrar</button>
+        </form>
+    </div>
+</div>
+
+<!-- Tabela -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Usuario</th>
+                        <th>Acao</th>
+                        <th>Entidade</th>
+                        <th>Descricao</th>
+                        <th>IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs.items %}
+                    <tr>
+                        <td><small>{{ log.created_at.strftime('%d/%m/%Y %H:%M:%S') }}</small></td>
+                        <td>
+                            {% if log.user %}
+                            <a href="{{ url_for('admin_lgpd.user_consents', user_id=log.user_id) }}" class="text-decoration-none">
+                                {{ log.user.name.split()[0] }}
+                            </a>
+                            {% else %}
+                            <small class="text-muted">-</small>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge bg-{{ log.action_color }}">{{ log.action_label }}</span></td>
+                        <td>
+                            <small>{{ log.entity_type or '' }}{% if log.entity_id %} #{{ log.entity_id }}{% endif %}</small>
+                        </td>
+                        <td><small class="text-muted">{{ log.description[:80] if log.description else '-' }}</small></td>
+                        <td><small class="text-muted">{{ log.ip_address or '-' }}</small></td>
+                    </tr>
+                    {% endfor %}
+                    {% if not logs.items %}
+                    <tr><td colspan="6" class="text-center text-muted py-4">Nenhum log encontrado</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Paginacao -->
+{% if logs.pages > 1 %}
+<nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center">
+        {% for p in logs.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+        {% if p %}
+        <li class="page-item {% if p == logs.page %}active{% endif %}">
+            <a class="page-link" href="{{ url_for('admin_lgpd.audit_logs', page=p, action=action_filter, user_id=user_filter) }}">{{ p }}</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">...</span></li>
+        {% endif %}
+        {% endfor %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

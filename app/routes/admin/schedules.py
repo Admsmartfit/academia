@@ -181,6 +181,36 @@ def delete_schedule(id):
     return redirect(url_for('admin_schedules.list_schedules'))
 
 
+@schedules_bp.route('/approve/<int:id>', methods=['POST'])
+@login_required
+@admin_required
+def approve_schedule(id):
+    """Aprova um horario sugerido por instrutor"""
+    schedule = ClassSchedule.query.get_or_404(id)
+    schedule.is_approved = True
+    db.session.commit()
+    flash(f'Horario das {schedule.start_time.strftime("%H:%M")} aprovado!', 'success')
+    return redirect(url_for('admin_schedules.list_schedules'))
+
+
+@schedules_bp.route('/reject/<int:id>', methods=['POST'])
+@login_required
+@admin_required
+def reject_schedule(id):
+    """Rejeita e exclui um horario sugerido"""
+    schedule = ClassSchedule.query.get_or_404(id)
+    if not schedule.is_approved:
+        # Estornar créditos se houver agendamentos (evitar perda de créditos do aluno)
+        for booking in schedule.bookings:
+            if booking.status == BookingStatus.CONFIRMED and booking.subscription:
+                booking.subscription.credits_used -= booking.cost_at_booking
+        
+        db.session.delete(schedule)
+        db.session.commit()
+        flash('Horario rejeitado e removido.', 'info')
+    return redirect(url_for('admin_schedules.list_schedules'))
+
+
 # ==================== GERENCIAMENTO DE GENERO ====================
 
 @schedules_bp.route('/gender-management')

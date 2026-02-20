@@ -48,7 +48,7 @@ class Booking(db.Model):
 
     # Relacionamentos
     user = db.relationship('User', backref='bookings')
-    schedule = db.relationship('ClassSchedule', backref='bookings')
+    schedule = db.relationship('ClassSchedule', backref=db.backref('bookings', cascade='all, delete-orphan'))
     recurring = db.relationship('RecurringBooking', backref='generated_bookings', foreign_keys=[recurring_booking_id])
 
     @property

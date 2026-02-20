@@ -1,0 +1,70 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Campanhas de WhatsApp{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fab fa-whatsapp me-2 text-success"></i>Campanhas de WhatsApp</h4>
+    <a href="{{ url_for('admin_whatsapp.create_campaign') }}" class="btn btn-success">
+        <i class="fas fa-plus me-1"></i>Nova Campanha
+    </a>
+</div>
+
+{% if campaigns %}
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Campanha</th>
+                <th>Publico</th>
+                <th>Status</th>
+                <th>Enviados</th>
+                <th>Erros</th>
+                <th>Data</th>
+                <th>Acoes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in campaigns %}
+            <tr>
+                <td>
+                    <strong>{{ c.name }}</strong>
+                    <br><small class="text-muted">{{ c.message[:60] }}...</small>
+                </td>
+                <td><span class="badge bg-light text-dark">{{ c.target_label }}</span></td>
+                <td><span class="badge bg-{{ c.status_color }}">{{ c.status.value|title }}</span></td>
+                <td>{{ c.total_sent }}/{{ c.total_recipients }}</td>
+                <td>{{ c.total_errors }}</td>
+                <td>
+                    {% if c.sent_at %}
+                    {{ c.sent_at.strftime('%d/%m/%Y %H:%M') }}
+                    {% elif c.scheduled_at %}
+                    <small class="text-warning">Agendada: {{ c.scheduled_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                    {% else %}
+                    {{ c.created_at.strftime('%d/%m/%Y') }}
+                    {% endif %}
+                </td>
+                <td>
+                    {% if c.status.value in ('draft', 'scheduled') %}
+                    <form method="POST" action="{{ url_for('admin_whatsapp.send_campaign', campaign_id=c.id) }}" class="d-inline"
+                          onsubmit="return confirm('Enviar campanha para {{ c.target_label }}?')">
+                        <button class="btn btn-sm btn-success"><i class="fas fa-paper-plane"></i></button>
+                    </form>
+                    <form method="POST" action="{{ url_for('admin_whatsapp.cancel_campaign', campaign_id=c.id) }}" class="d-inline">
+                        <button class="btn btn-sm btn-outline-danger"><i class="fas fa-times"></i></button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="fas fa-bullhorn fa-3x text-muted mb-3"></i>
+    <h5>Nenhuma campanha criada</h5>
+    <p class="text-muted">Crie campanhas para enviar mensagens em massa para seus alunos.</p>
+</div>
+{% endif %}
+{% endblock %}

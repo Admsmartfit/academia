@@ -282,3 +282,159 @@ def list_logs():
     )
 
     return render_template('admin/whatsapp/logs.html', logs=logs, status_filter=status_filter)
+
+
+# ==================== CAMPANHAS ====================
+
+@whatsapp_bp.route('/campaigns')
+@login_required
+@admin_required
+def list_campaigns():
+    """Lista campanhas de WhatsApp."""
+    from app.models.campaign import Campaign
+    campaigns = Campaign.query.order_by(Campaign.created_at.desc()).all()
+    return render_template('admin/whatsapp/campaigns.html', campaigns=campaigns)
+
+
+@whatsapp_bp.route('/campaigns/create', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def create_campaign():
+    """Criar nova campanha."""
+    from app.models.campaign import Campaign, CampaignStatus, CampaignTarget, CAMPAIGN_TARGET_LABELS
+
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        message = request.form.get('message', '').strip()
+        target = request.form.get('target', 'all_students')
+        scheduled_str = request.form.get('scheduled_at', '')
+
+        if not name or not message:
+            flash('Nome e mensagem sao obrigatorios.', 'danger')
+            return redirect(url_for('admin_whatsapp.create_campaign'))
+
+        campaign = Campaign(
+            name=name,
+            message=message,
+            target=CampaignTarget(target),
+            status=CampaignStatus.DRAFT,
+            created_by_id=current_user.id
+        )
+
+        if scheduled_str:
+            from datetime import datetime as dt
+            try:
+                campaign.scheduled_at = dt.strptime(scheduled_str, '%Y-%m-%dT%H:%M')
+                campaign.status = CampaignStatus.SCHEDULED
+            except ValueError:
+                pass
+
+        db.session.add(campaign)
+        db.session.commit()
+        flash(f'Campanha "{name}" criada!', 'success')
+        return redirect(url_for('admin_whatsapp.list_campaigns'))
+
+    targets = [{'value': t.value, 'label': CAMPAIGN_TARGET_LABELS.get(t.value, t.value)} for t in CampaignTarget]
+    return render_template('admin/whatsapp/campaign_form.html', campaign=None, targets=targets)
+
+
+@whatsapp_bp.route('/campaigns/<int:campaign_id>/send', methods=['POST'])
+@login_required
+@admin_required
+def send_campaign(campaign_id):
+    """Enviar campanha agora."""
+    from app.models.campaign import Campaign, CampaignStatus, CampaignTarget
+    from app.models.user import User
+    from app.models import Booking, BookingStatus
+    from datetime import datetime, timedelta
+
+    campaign = Campaign.query.get_or_404(campaign_id)
+
+    if campaign.status not in (CampaignStatus.DRAFT, CampaignStatus.SCHEDULED):
+        flash('Esta campanha ja foi enviada ou cancelada.', 'warning')
+        return redirect(url_for('admin_whatsapp.list_campaigns'))
+
+    # Resolve target to list of users
+    recipients = []
+    today = datetime.now().date()
+
+    if campaign.target == CampaignTarget.ALL_STUDENTS:
+        recipients = User.query.filter_by(role='student', is_active=True).all()
+
+    elif campaign.target == CampaignTarget.INACTIVE_30D:
+        from sqlalchemy import func
+        active_ids = db.session.query(Booking.user_id).filter(
+            Booking.date >= today - timedelta(days=30),
+            Booking.status == BookingStatus.COMPLETED
+        ).distinct().subquery()
+        recipients = User.query.filter(
+            User.role == 'student', User.is_active == True,
+            ~User.id.in_(db.session.query(active_ids))
+        ).all()
+
+    elif campaign.target == CampaignTarget.INACTIVE_60D:
+        from sqlalchemy import func
+        active_ids = db.session.query(Booking.user_id).filter(
+            Booking.date >= today - timedelta(days=60),
+            Booking.status == BookingStatus.COMPLETED
+        ).distinct().subquery()
+        recipients = User.query.filter(
+            User.role == 'student', User.is_active == True,
+            ~User.id.in_(db.session.query(active_ids))
+        ).all()
+
+    elif campaign.target == CampaignTarget.NEW_STUDENTS:
+        recipients = User.query.filter(
+            User.role == 'student', User.is_active == True,
+            User.created_at >= datetime.now() - timedelta(days=30)
+        ).all()
+
+    elif campaign.target == CampaignTarget.AT_RISK:
+        from app.models.crm import StudentHealthScore, RiskLevel
+        at_risk_ids = db.session.query(StudentHealthScore.user_id).filter(
+            StudentHealthScore.risk_level.in_([RiskLevel.CRITICAL, RiskLevel.HIGH])
+        ).distinct()
+        recipients = User.query.filter(
+            User.id.in_(at_risk_ids), User.is_active == True
+        ).all()
+
+    else:
+        recipients = User.query.filter_by(role='student', is_active=True).all()
+
+    campaign.total_recipients = len(recipients)
+    campaign.status = CampaignStatus.SENDING
+    campaign.sent_at = datetime.utcnow()
+
+    sent = 0
+    errors = 0
+    for user in recipients:
+        if not user.phone:
+            errors += 1
+            continue
+        try:
+            from app.services.megaapi import send_custom_message
+            send_custom_message(user.phone, campaign.message)
+            sent += 1
+        except Exception:
+            errors += 1
+
+    campaign.total_sent = sent
+    campaign.total_errors = errors
+    campaign.status = CampaignStatus.COMPLETED
+    db.session.commit()
+
+    flash(f'Campanha enviada! {sent} mensagens enviadas, {errors} erros.', 'success')
+    return redirect(url_for('admin_whatsapp.list_campaigns'))
+
+
+@whatsapp_bp.route('/campaigns/<int:campaign_id>/cancel', methods=['POST'])
+@login_required
+@admin_required
+def cancel_campaign(campaign_id):
+    """Cancelar campanha."""
+    from app.models.campaign import Campaign, CampaignStatus
+    campaign = Campaign.query.get_or_404(campaign_id)
+    campaign.status = CampaignStatus.CANCELLED
+    db.session.commit()
+    flash('Campanha cancelada.', 'info')
+    return redirect(url_for('admin_whatsapp.list_campaigns'))

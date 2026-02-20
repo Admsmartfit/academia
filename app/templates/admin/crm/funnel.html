@@ -1,0 +1,101 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Funil de Conversao{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-filter me-2"></i>Funil de Conversao</h4>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('crm.leads') }}" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-users me-1"></i>Gerenciar Leads
+        </a>
+        <a href="{{ url_for('crm.dashboard') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i>CRM
+        </a>
+    </div>
+</div>
+
+<!-- Summary -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card text-center py-3" style="border-left: 4px solid #0d6efd;">
+            <div class="fs-2 fw-bold text-primary">{{ total_leads }}</div>
+            <small class="text-muted">Total de Leads</small>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center py-3" style="border-left: 4px solid #198754;">
+            <div class="fs-2 fw-bold text-success">{{ funnel_data.won.count if funnel_data.won else 0 }}</div>
+            <small class="text-muted">Matriculados</small>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center py-3" style="border-left: 4px solid #ffc107;">
+            <div class="fs-2 fw-bold text-warning">{{ conversion_rate }}%</div>
+            <small class="text-muted">Taxa de Conversao</small>
+        </div>
+    </div>
+</div>
+
+<!-- Funnel Visualization -->
+<div class="card mb-4">
+    <div class="card-header"><h6 class="mb-0">Funil Visual</h6></div>
+    <div class="card-body">
+        {% set max_count = funnel_data.values()|map(attribute='count')|max if funnel_data else 1 %}
+        {% for status_val, label, color in funnel_stages %}
+        {% if status_val != 'lost' %}
+        {% set data = funnel_data.get(status_val, {'count': 0}) %}
+        <div class="mb-2">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="fw-bold" style="color: {{ color }};">{{ label }}</span>
+                <span class="fw-bold">{{ data.count }}</span>
+            </div>
+            <div class="progress" style="height: 28px; border-radius: 6px;">
+                <div class="progress-bar" role="progressbar"
+                     style="width: {{ (data.count / max_count * 100)|int if max_count > 0 else 0 }}%; background: {{ color }}; border-radius: 6px; font-size: 0.8rem; font-weight: 600;"
+                     aria-valuenow="{{ data.count }}">
+                    {% if data.count > 0 %}{{ data.count }}{% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+        {% if funnel_data.lost and funnel_data.lost.count > 0 %}
+        <div class="mt-3 pt-3 border-top">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="text-danger fw-bold"><i class="fas fa-times-circle me-1"></i>Perdidos</span>
+                <span class="badge bg-danger">{{ funnel_data.lost.count }}</span>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Recent Leads -->
+{% if recent_leads %}
+<div class="card">
+    <div class="card-header"><h6 class="mb-0"><i class="fas fa-clock me-2"></i>Leads Recentes</h6></div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr><th>Nome</th><th>Telefone</th><th>Origem</th><th>Status</th><th>Data</th></tr>
+                </thead>
+                <tbody>
+                    {% for lead in recent_leads %}
+                    <tr>
+                        <td><strong>{{ lead.full_name }}</strong></td>
+                        <td>{{ lead.phone or '-' }}</td>
+                        <td>{{ lead.source.value|replace('_', ' ')|title }}</td>
+                        <td><span class="badge bg-info">{{ lead.status.value|title }}</span></td>
+                        <td>{{ lead.created_at.strftime('%d/%m/%Y') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

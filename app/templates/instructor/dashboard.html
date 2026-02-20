@@ -145,8 +145,21 @@
                 </a>
             </div>
             <div class="col-md-2">
-                <a href="{{ url_for('instructor.totem_view') }}" class="btn w-100 btn-outline-warning border-0">
-                    <i class="fas fa-camera me-1"></i>Totem
+                <a href="{{ url_for('instructor.list_schedules') }}"
+                    class="btn w-100 {{ 'btn-primary' if 'schedules' in request.endpoint else 'btn-outline-dark' }} border-0">
+                    <i class="fas fa-calendar-alt me-1"></i>Grade
+                </a>
+            </div>
+            <div class="col-md-1">
+                <a href="{{ url_for('instructor.totem_view') }}" class="btn w-100 btn-outline-warning border-0"
+                    title="Totem">
+                    <i class="fas fa-camera"></i>
+                </a>
+            </div>
+            <div class="col-md-1">
+                <a href="{{ url_for('instructor.qr_checkin') }}" class="btn w-100 btn-outline-success border-0"
+                    title="QR Check-in">
+                    <i class="fas fa-qrcode"></i>
                 </a>
             </div>
         </div>
@@ -170,6 +183,36 @@
             Próxima <i class="fas fa-chevron-right"></i>
         </a>
     </div>
+
+    <!-- Metricas do Dia -->
+    {% if day_metrics and day_metrics.total > 0 %}
+    <div class="row g-2 mb-4">
+        <div class="col-3">
+            <div class="card text-center py-2" style="border-left: 4px solid #0d6efd;">
+                <div class="fw-bold fs-4 text-primary">{{ day_metrics.total }}</div>
+                <small class="text-muted">Agendados</small>
+            </div>
+        </div>
+        <div class="col-3">
+            <div class="card text-center py-2" style="border-left: 4px solid #198754;">
+                <div class="fw-bold fs-4 text-success">{{ day_metrics.completed }}</div>
+                <small class="text-muted">Presentes</small>
+            </div>
+        </div>
+        <div class="col-3">
+            <div class="card text-center py-2" style="border-left: 4px solid #dc3545;">
+                <div class="fw-bold fs-4 text-danger">{{ day_metrics.no_show }}</div>
+                <small class="text-muted">Faltas</small>
+            </div>
+        </div>
+        <div class="col-3">
+            <div class="card text-center py-2" style="border-left: 4px solid #6c757d;">
+                <div class="fw-bold fs-4 text-secondary">{{ day_metrics.cancelled }}</div>
+                <small class="text-muted">Cancelados</small>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     {% if schedules %}
     <div class="alert alert-info mb-3">

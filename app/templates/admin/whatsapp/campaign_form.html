@@ -1,0 +1,52 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Nova Campanha{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-bullhorn me-2"></i>Nova Campanha de WhatsApp</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nome da Campanha</label>
+                        <input type="text" name="name" class="form-control" placeholder="Ex: Promocao de Verao" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Publico-Alvo</label>
+                        <select name="target" class="form-select">
+                            {% for t in targets %}
+                            <option value="{{ t.value }}">{{ t.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Mensagem</label>
+                        <textarea name="message" class="form-control" rows="5"
+                                  placeholder="Digite a mensagem que sera enviada..." required></textarea>
+                        <small class="text-muted">Use {nome} para inserir o nome do aluno.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Agendar Envio (opcional)</label>
+                        <input type="datetime-local" name="scheduled_at" class="form-control">
+                        <small class="text-muted">Deixe vazio para enviar manualmente depois.</small>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-1"></i>Salvar Campanha
+                        </button>
+                        <a href="{{ url_for('admin_whatsapp.list_campaigns') }}" class="btn btn-outline-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

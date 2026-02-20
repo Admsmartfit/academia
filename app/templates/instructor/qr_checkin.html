@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Check-in por QR Code{% endblock %}
+
+{% block extra_css %}
+<style>
+    .checkin-header {
+        background: linear-gradient(135deg, #FF6B35 0%, #db592a 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 0 0 20px 20px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    .scanner-container {
+        max-width: 500px;
+        margin: 0 auto;
+        text-align: center;
+    }
+    #reader {
+        width: 100%;
+        border-radius: 16px;
+        overflow: hidden;
+    }
+    .result-card {
+        margin-top: 20px;
+        padding: 20px;
+        border-radius: 12px;
+        text-align: center;
+        display: none;
+    }
+    .result-card.success {
+        background: rgba(25,135,84,0.1);
+        border: 1px solid rgba(25,135,84,0.3);
+        color: #198754;
+    }
+    .result-card.error {
+        background: rgba(220,53,69,0.1);
+        border: 1px solid rgba(220,53,69,0.3);
+        color: #dc3545;
+    }
+    .result-card .result-icon {
+        font-size: 3rem;
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="checkin-header shadow-sm mt-0">
+    <h1 class="h4 mb-1"><i class="fas fa-qrcode me-2"></i>Check-in por QR Code</h1>
+    <p class="mb-0 opacity-75">Aponte a camera para o QR Code do aluno</p>
+</header>
+
+<div class="container mb-5">
+    <div class="scanner-container">
+        <div id="reader"></div>
+
+        <div id="resultCard" class="result-card">
+            <div class="result-icon" id="resultIcon"></div>
+            <h5 id="resultTitle"></h5>
+            <p id="resultMessage" class="mb-0"></p>
+        </div>
+
+        <div class="mt-4">
+            <button class="btn btn-outline-secondary" onclick="resetScanner()">
+                <i class="fas fa-redo me-2"></i>Escanear Novamente
+            </button>
+            <a href="{{ url_for('instructor.dashboard') }}" class="btn btn-outline-dark ms-2">
+                <i class="fas fa-arrow-left me-2"></i>Voltar
+            </a>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+    var html5QrcodeScanner = null;
+    var isProcessing = false;
+
+    function startScanner() {
+        html5QrcodeScanner = new Html5Qrcode("reader");
+        html5QrcodeScanner.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            onScanSuccess,
+            function() {}
+        ).catch(function(err) {
+            document.getElementById('reader').innerHTML =
+                '<div class="p-4 text-center"><i class="fas fa-camera fa-3x text-muted mb-3"></i><p>Nao foi possivel acessar a camera.</p><p class="text-muted small">Verifique as permissoes do navegador.</p></div>';
+        });
+    }
+
+    function onScanSuccess(decodedText) {
+        if (isProcessing) return;
+        isProcessing = true;
+
+        if (html5QrcodeScanner) {
+            html5QrcodeScanner.stop();
+        }
+
+        fetch('{{ url_for("instructor.process_qr_checkin") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ qr_data: decodedText })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var card = document.getElementById('resultCard');
+            var icon = document.getElementById('resultIcon');
+            var title = document.getElementById('resultTitle');
+            var msg = document.getElementById('resultMessage');
+
+            card.style.display = 'block';
+            if (data.success) {
+                card.className = 'result-card success';
+                icon.innerHTML = '<i class="fas fa-check-circle"></i>';
+                title.textContent = data.student_name;
+                msg.textContent = 'Check-in realizado com sucesso!';
+            } else {
+                card.className = 'result-card error';
+                icon.innerHTML = '<i class="fas fa-times-circle"></i>';
+                title.textContent = 'Erro';
+                msg.textContent = data.error;
+            }
+            isProcessing = false;
+        })
+        .catch(function() {
+            isProcessing = false;
+        });
+    }
+
+    function resetScanner() {
+        document.getElementById('resultCard').style.display = 'none';
+        isProcessing = false;
+        startScanner();
+    }
+
+    startScanner();
+</script>
+{% endblock %}

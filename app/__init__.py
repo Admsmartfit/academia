@@ -2,7 +2,7 @@
 
 import os
 from datetime import datetime, timedelta
-from flask import Flask
+from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
@@ -46,9 +46,18 @@ def create_app(config_name='default'):
     # Context processor para templates
     @app.context_processor
     def utility_processor():
+        from flask_login import current_user
+        unread_notifications = 0
+        if current_user and hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
+            try:
+                from app.models.notification import Notification
+                unread_notifications = Notification.get_unread_count(current_user.id)
+            except Exception:
+                pass
         return {
             'now': datetime.now,
-            'timedelta': timedelta
+            'timedelta': timedelta,
+            'unread_notifications': unread_notifications
         }
 
     # Registrar blueprints
@@ -80,6 +89,8 @@ def create_app(config_name='default'):
     from app.routes.admin.metrics import metrics_bp
     from app.routes.admin.exercises import exercises_bp
     from app.routes.admin.maintenance import maintenance_bp
+    from app.routes.admin.expenses import expenses_bp
+    from app.routes.admin.lgpd import lgpd_bp
 
     app.register_blueprint(marketing_bp)
     app.register_blueprint(auth_bp)
@@ -109,6 +120,17 @@ def create_app(config_name='default'):
     app.register_blueprint(metrics_bp)
     app.register_blueprint(exercises_bp)
     app.register_blueprint(maintenance_bp)
+    app.register_blueprint(expenses_bp)
+    app.register_blueprint(lgpd_bp)
+
+    # Error handlers
+    @app.errorhandler(404)
+    def page_not_found(e):
+        return render_template('errors/404.html'), 404
+
+    @app.errorhandler(500)
+    def internal_error(e):
+        return render_template('errors/500.html'), 500
 
     # Iniciar scheduler
     if not app.debug or os.getenv('WERKZEUG_RUN_MAIN') == 'true':

@@ -95,6 +95,17 @@ def login():
 
             login_user(user, remember=remember)
             user.last_login = datetime.utcnow()
+
+            # Auditoria de login
+            from app.models.audit_log import AuditLog, AuditAction
+            AuditLog.log(
+                action=AuditAction.LOGIN,
+                user_id=user.id,
+                entity_type='User',
+                entity_id=user.id,
+                description=f'Login de {user.name}',
+                ip_address=request.remote_addr
+            )
             db.session.commit()
 
             # Usuario de terminal vai direto para o totem
@@ -114,6 +125,16 @@ def login():
             return redirect(url_for('student.dashboard'))
 
         _record_login_attempt()
+
+        # Auditoria de login falho
+        from app.models.audit_log import AuditLog, AuditAction
+        AuditLog.log(
+            action=AuditAction.LOGIN_FAILED,
+            description=f'Tentativa de login falha para: {email}',
+            ip_address=request.remote_addr
+        )
+        db.session.commit()
+
         flash('E-mail ou senha invalidos.', 'danger')
 
     return render_template('auth/login.html')
@@ -139,8 +160,13 @@ def register():
         confirm_password = request.form.get('confirm_password', '')
         trial_type = request.form.get('trial_type', '')
 
+        lgpd_consent = request.form.get('lgpd_consent')
+
         # Validacoes
         errors = []
+
+        if not lgpd_consent:
+            errors.append('Voce precisa aceitar os termos de uso e politica de privacidade.')
 
         if not name or len(name) < 3:
             errors.append('Nome deve ter pelo menos 3 caracteres.')
@@ -202,6 +228,30 @@ def register():
         user.set_password(password)
 
         db.session.add(user)
+        db.session.flush()  # get user.id
+
+        # Registrar consentimento LGPD
+        from app.models.consent_log import ConsentLog, ConsentType
+        from app.models.audit_log import AuditLog, AuditAction
+        for ct in [ConsentType.TERMS_OF_USE, ConsentType.PRIVACY_POLICY, ConsentType.DATA_PROCESSING]:
+            consent = ConsentLog(
+                user_id=user.id,
+                consent_type=ct,
+                accepted=True,
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent', '')[:300]
+            )
+            db.session.add(consent)
+
+        AuditLog.log(
+            action=AuditAction.CREATE,
+            user_id=user.id,
+            entity_type='User',
+            entity_id=user.id,
+            description=f'Novo cadastro de aluno: {name}',
+            ip_address=request.remote_addr
+        )
+
         db.session.commit()
 
         flash('Conta criada com sucesso! Faca login para continuar.', 'success')
@@ -216,6 +266,18 @@ def register():
 @login_required
 def logout():
     """Logout do usuario"""
+    # Auditoria de logout
+    from app.models.audit_log import AuditLog, AuditAction
+    AuditLog.log(
+        action=AuditAction.LOGOUT,
+        user_id=current_user.id,
+        entity_type='User',
+        entity_id=current_user.id,
+        description=f'Logout de {current_user.name}',
+        ip_address=request.remote_addr
+    )
+    db.session.commit()
+
     logout_user()
     flash('Voce saiu do sistema.', 'info')
     return redirect(url_for('auth.login'))

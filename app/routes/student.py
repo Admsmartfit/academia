@@ -207,10 +207,11 @@ def schedule():
     else:
         weekday += 1  # Segunda=1, Terca=2, etc.
 
-    # Buscar aulas do dia
+    # Buscar aulas do dia (apenas aprovadas)
     schedules = ClassSchedule.query.filter_by(
         weekday=weekday,
-        is_active=True
+        is_active=True,
+        is_approved=True
     ).order_by(ClassSchedule.start_time).all()
 
     # Adicionar info de vagas e status do usuario
@@ -450,7 +451,7 @@ def my_bookings():
 @login_required
 def my_training():
     """Visualizacao do treino do aluno (mobile-first)."""
-    from app.models.training import TrainingPlan
+    from app.models.training import TrainingPlan, TrainingSession
 
     plan = TrainingPlan.query.filter_by(
         user_id=current_user.id,
@@ -476,10 +477,39 @@ def my_training():
             else:
                 break
 
+    # Progresso semanal (sessoes completadas esta semana)
+    weekly_progress = {'done': 0, 'total': 0}
+    if plan and plan.workout_sessions:
+        weekly_progress['total'] = len(plan.workout_sessions)
+        today = datetime.now().date()
+        monday = today - timedelta(days=today.weekday())
+        week_start = datetime.combine(monday, datetime.min.time())
+        done_count = TrainingSession.query.filter(
+            TrainingSession.user_id == current_user.id,
+            TrainingSession.completed_at >= week_start,
+            TrainingSession.completed_at.isnot(None)
+        ).count()
+        weekly_progress['done'] = min(done_count, weekly_progress['total'])
+
+    # Ultimo registro de carga por exercicio (para mostrar ao aluno)
+    last_logs = {}
+    if plan:
+        from app.models.workout_log import WorkoutLog
+        for ws in plan.workout_sessions:
+            for we in ws.exercises:
+                log = WorkoutLog.query.filter_by(
+                    user_id=current_user.id,
+                    exercise_id=we.exercise_id
+                ).order_by(WorkoutLog.logged_at.desc()).first()
+                if log:
+                    last_logs[we.exercise_id] = log
+
     return render_template('student/my_training.html',
                          plan=plan,
                          recent_completed=recent_completed,
-                         training_streak=training_streak)
+                         training_streak=training_streak,
+                         weekly_progress=weekly_progress,
+                         last_logs=last_logs)
 
 
 @student_bp.route('/report-pain', methods=['POST'])
@@ -532,6 +562,133 @@ def report_pain():
 
     flash(f'Relato enviado com sucesso! {instructor_name} será notificado.', 'success')
     return redirect(url_for('student.my_training'))
+
+
+@student_bp.route('/report-pain-page')
+@login_required
+def report_pain_page():
+    """Pagina dedicada para relato de dor com historico."""
+    from app.models.training import TrainingPlan
+
+    plan = TrainingPlan.query.filter_by(
+        user_id=current_user.id,
+        is_active=True
+    ).first()
+
+    pain_history = AutomationLog.query.filter_by(
+        user_id=current_user.id,
+        automation_type='pain_report'
+    ).order_by(AutomationLog.sent_at.desc()).limit(10).all()
+
+    instructor_name = plan.instructor.name if plan and plan.instructor else None
+
+    return render_template('student/report_pain.html',
+                         plan=plan,
+                         pain_history=pain_history,
+                         instructor_name=instructor_name)
+
+
+@student_bp.route('/progress')
+@login_required
+def progress():
+    """Historico e evolucao do aluno."""
+    from app.models.training import TrainingSession
+
+    # Frequencia mensal (ultimos 6 meses)
+    monthly_attendance = []
+    today = datetime.now().date()
+    for i in range(5, -1, -1):
+        month_date = today.replace(day=1) - timedelta(days=i * 30)
+        month_start = month_date.replace(day=1)
+        if month_start.month == 12:
+            month_end = month_start.replace(year=month_start.year + 1, month=1, day=1)
+        else:
+            month_end = month_start.replace(month=month_start.month + 1, day=1)
+
+        completed = Booking.query.filter(
+            Booking.user_id == current_user.id,
+            Booking.status == BookingStatus.COMPLETED,
+            Booking.date >= month_start,
+            Booking.date < month_end
+        ).count()
+
+        month_names = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+                       'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+        monthly_attendance.append({
+            'month': month_names[month_start.month - 1],
+            'year': month_start.year,
+            'count': completed
+        })
+
+    # XP por semana (ultimas 8 semanas)
+    weekly_xp = []
+    for i in range(7, -1, -1):
+        week_start = today - timedelta(days=today.weekday() + 7 * i)
+        week_end = week_start + timedelta(days=7)
+        xp_sum = db.session.query(
+            func.coalesce(func.sum(XPLedger.xp_amount), 0)
+        ).filter(
+            XPLedger.user_id == current_user.id,
+            XPLedger.earned_at >= datetime.combine(week_start, datetime.min.time()),
+            XPLedger.earned_at < datetime.combine(week_end, datetime.min.time())
+        ).scalar()
+        weekly_xp.append({
+            'week': week_start.strftime('%d/%m'),
+            'xp': int(xp_sum)
+        })
+
+    # Conquistas desbloqueadas (timeline)
+    from app.models.achievement import UserAchievement
+    achievements = UserAchievement.query.filter_by(
+        user_id=current_user.id
+    ).order_by(UserAchievement.unlocked_at.desc()).all()
+
+    # Streak atual e maior streak
+    all_completed = Booking.query.filter(
+        Booking.user_id == current_user.id,
+        Booking.status == BookingStatus.COMPLETED
+    ).order_by(Booking.date.desc()).all()
+
+    current_streak = 0
+    max_streak = 0
+    if all_completed:
+        dates = sorted(set(b.date for b in all_completed), reverse=True)
+        current_date = today
+        for d in dates:
+            diff = (current_date - d).days
+            if diff <= 1:
+                current_streak += 1
+                current_date = d
+            else:
+                break
+
+        dates_asc = sorted(set(b.date for b in all_completed))
+        streak = 1
+        for i in range(1, len(dates_asc)):
+            if (dates_asc[i] - dates_asc[i-1]).days <= 1:
+                streak += 1
+            else:
+                max_streak = max(max_streak, streak)
+                streak = 1
+        max_streak = max(max_streak, streak)
+
+    total_classes = len(all_completed)
+    total_xp = current_user.xp
+
+    total_training_sessions = TrainingSession.query.filter(
+        TrainingSession.user_id == current_user.id,
+        TrainingSession.completed_at.isnot(None)
+    ).count()
+
+    return render_template('student/progress.html',
+                         monthly_attendance=monthly_attendance,
+                         weekly_xp=weekly_xp,
+                         achievements=achievements,
+                         current_streak=current_streak,
+                         max_streak=max_streak,
+                         total_classes=total_classes,
+                         total_xp=total_xp,
+                         total_training_sessions=total_training_sessions)
 
 
 @student_bp.route('/ranking')
@@ -880,3 +1037,49 @@ def xp_summary_api():
     summary = CreditService.get_user_summary(current_user.id)
 
     return jsonify(summary)
+
+
+# ==================== NOTIFICACOES ====================
+
+@student_bp.route('/notifications')
+@login_required
+def notifications():
+    """Pagina de notificacoes do aluno."""
+    from app.models.notification import Notification
+    all_notifications = Notification.get_recent(current_user.id, limit=50)
+    # Marcar todas como lidas ao abrir a pagina
+    Notification.query.filter_by(user_id=current_user.id, is_read=False).update({'is_read': True})
+    db.session.commit()
+    return render_template('student/notifications.html', notifications=all_notifications)
+
+
+@student_bp.route('/notifications/mark-read', methods=['POST'])
+@login_required
+def mark_notifications_read():
+    """Marcar todas as notificacoes como lidas (API)."""
+    from app.models.notification import Notification
+    Notification.query.filter_by(user_id=current_user.id, is_read=False).update({'is_read': True})
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@student_bp.route('/api/notifications/count')
+@login_required
+def notifications_count_api():
+    """API para obter contagem de notificacoes nao lidas."""
+    from app.models.notification import Notification
+    count = Notification.get_unread_count(current_user.id)
+    return jsonify({'count': count})
+
+
+# ==================== QR CODE CHECK-IN ====================
+
+@student_bp.route('/my-qrcode')
+@login_required
+def my_qrcode():
+    """Gera QR Code do aluno para check-in."""
+    import hashlib
+    today_str = datetime.now().strftime('%Y-%m-%d')
+    token = hashlib.sha256(f"{current_user.id}:{today_str}:{current_user.password_hash[:10]}".encode()).hexdigest()[:12]
+    qr_data = f"checkin:{current_user.id}:{today_str}:{token}"
+    return render_template('student/my_qrcode.html', qr_data=qr_data)

@@ -1,0 +1,94 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}LGPD e Seguranca{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-shield-alt me-2"></i>LGPD e Seguranca</h4>
+    <a href="{{ url_for('admin_lgpd.audit_logs') }}" class="btn btn-outline-primary btn-sm">
+        <i class="fas fa-list me-1"></i>Todos os Logs
+    </a>
+</div>
+
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card text-center py-3" style="border-left: 4px solid #198754;">
+            <div class="fs-2 fw-bold text-success">{{ total_consents }}</div>
+            <small class="text-muted">Consentimentos Ativos</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center py-3" style="border-left: 4px solid #ffc107;">
+            <div class="fs-2 fw-bold text-warning">{{ revoked_consents }}</div>
+            <small class="text-muted">Consentimentos Revogados</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center py-3" style="border-left: 4px solid #0d6efd;">
+            <div class="fs-2 fw-bold text-primary">{{ logs_today }}</div>
+            <small class="text-muted">Logs Hoje</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center py-3" style="border-left: 4px solid #dc3545;">
+            <div class="fs-2 fw-bold text-danger">{{ failed_logins }}</div>
+            <small class="text-muted">Logins Falhos Hoje</small>
+        </div>
+    </div>
+</div>
+
+<!-- Consentimentos por Tipo -->
+<div class="card mb-4">
+    <div class="card-header"><h6 class="mb-0"><i class="fas fa-file-contract me-2"></i>Consentimentos por Tipo</h6></div>
+    <div class="card-body">
+        <div class="row g-3">
+            {% for key, data in consent_stats.items() %}
+            <div class="col-md-4">
+                <div class="d-flex justify-content-between align-items-center p-2 border rounded">
+                    <span>{{ data.label }}</span>
+                    <span class="badge bg-success">{{ data.count }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Logs Recentes -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="fas fa-history me-2"></i>Atividade Recente</h6>
+        <a href="{{ url_for('admin_lgpd.audit_logs') }}" class="btn btn-sm btn-outline-secondary">Ver Todos</a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr><th>Data/Hora</th><th>Usuario</th><th>Acao</th><th>Entidade</th><th>Descricao</th></tr>
+                </thead>
+                <tbody>
+                    {% for log in recent_logs %}
+                    <tr>
+                        <td><small>{{ log.created_at.strftime('%d/%m %H:%M') }}</small></td>
+                        <td>
+                            {% if log.user %}
+                            <small>{{ log.user.name.split()[0] }}</small>
+                            {% else %}
+                            <small class="text-muted">Sistema</small>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge bg-{{ log.action_color }}">{{ log.action_label }}</span></td>
+                        <td><small>{{ log.entity_type or '-' }}{% if log.entity_id %} #{{ log.entity_id }}{% endif %}</small></td>
+                        <td><small class="text-muted">{{ log.description[:60] if log.description else '-' }}</small></td>
+                    </tr>
+                    {% endfor %}
+                    {% if not recent_logs %}
+                    <tr><td colspan="5" class="text-center text-muted py-3">Nenhum log registrado</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

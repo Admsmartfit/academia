@@ -1,0 +1,79 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Consentimentos - {{ user.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-file-contract me-2"></i>Consentimentos: {{ user.name }}</h4>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('admin_lgpd.export_user_data', user_id=user.id) }}" class="btn btn-outline-info btn-sm">
+            <i class="fas fa-download me-1"></i>Exportar Dados
+        </a>
+        <form method="POST" action="{{ url_for('admin_lgpd.anonymize_user', user_id=user.id) }}" class="d-inline"
+              onsubmit="return confirm('ATENCAO: Esta acao e IRREVERSIVEL! Os dados pessoais serao permanentemente anonimizados. Continuar?')">
+            <button class="btn btn-outline-danger btn-sm">
+                <i class="fas fa-user-slash me-1"></i>Anonimizar Dados
+            </button>
+        </form>
+        <a href="{{ url_for('admin_lgpd.index') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i>Voltar
+        </a>
+    </div>
+</div>
+
+<!-- Info do Usuario -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4"><strong>Nome:</strong> {{ user.name }}</div>
+            <div class="col-md-4"><strong>Email:</strong> {{ user.email or '-' }}</div>
+            <div class="col-md-4"><strong>Telefone:</strong> {{ user.phone or '-' }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Consentimentos -->
+{% if consents %}
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Status</th>
+                        <th>Versao</th>
+                        <th>Data</th>
+                        <th>IP</th>
+                        <th>Revogado em</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in consents %}
+                    <tr>
+                        <td>{{ c.consent_type.label }}</td>
+                        <td>
+                            {% if c.is_active %}
+                            <span class="badge bg-success">Ativo</span>
+                            {% else %}
+                            <span class="badge bg-danger">Revogado</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ c.version }}</td>
+                        <td>{{ c.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td><small>{{ c.ip_address or '-' }}</small></td>
+                        <td>{{ c.revoked_at.strftime('%d/%m/%Y %H:%M') if c.revoked_at else '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="fas fa-file-contract fa-3x text-muted mb-3"></i>
+    <h5>Nenhum consentimento registrado</h5>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,215 @@
+{# ---- helpers: detecta grupo ativo baseado no endpoint ---- #}
+{% set ep = request.endpoint or '' %}
+{% set args = request.args %}
+
+{% set grp_pessoas   = 'users' in ep %}
+{% set grp_academico = 'modalities' in ep or 'schedules' in ep or 'exercises' in ep or 'achievements' in ep or 'conversion_rules' in ep %}
+{% set grp_comercial = 'crm' in ep or 'packages' in ep %}
+{% set grp_financeiro= 'payments' in ep or 'expenses' in ep or 'split' in ep %}
+{% set grp_comunic   = ('whatsapp' in ep and 'megaapi' not in ep) %}
+{% set grp_config    = 'megaapi' in ep or 'nupay' in ep or ('settings' in ep and 'megaapi' not in ep) or 'lgpd' in ep or 'maintenance' in ep or ep == 'admin_schedules.gender_management' %}
+
+<ul class="nav nav-pills flex-column mb-auto sidebar-nav">
+
+    {# ══════ Dashboard ══════ #}
+    <li class="nav-item">
+        <a href="{{ url_for('admin.dashboard') }}"
+           class="nav-link {% if ep == 'admin.dashboard' %}active{% endif %}">
+            <i class="fas fa-chart-line"></i> Dashboard
+        </a>
+    </li>
+
+    {# ══════ Pessoas ══════ #}
+    <li class="nav-item nav-group">
+        <a class="nav-link nav-group-toggle {% if grp_pessoas %}open{% endif %}"
+           data-bs-toggle="collapse" href="#grpPessoas" role="button"
+           aria-expanded="{{ 'true' if grp_pessoas else 'false' }}">
+            <i class="fas fa-users"></i> Pessoas
+            <i class="fas fa-chevron-right nav-arrow"></i>
+        </a>
+        <div class="collapse {% if grp_pessoas %}show{% endif %}" id="grpPessoas">
+            <ul class="nav flex-column nav-sub">
+                <li><a href="{{ url_for('admin_users.list_users') }}"
+                       class="nav-link {% if 'users' in ep and args.get('role') != 'student' %}active{% endif %}">
+                    <i class="fas fa-users-cog"></i> Usuarios
+                </a></li>
+                <li><a href="{{ url_for('admin_users.list_users', role='student') }}"
+                       class="nav-link {% if 'users' in ep and args.get('role') == 'student' %}active{% endif %}">
+                    <i class="fas fa-user-graduate"></i> Alunos
+                </a></li>
+            </ul>
+        </div>
+    </li>
+
+    {# ══════ Acadêmico ══════ #}
+    <li class="nav-item nav-group">
+        <a class="nav-link nav-group-toggle {% if grp_academico %}open{% endif %}"
+           data-bs-toggle="collapse" href="#grpAcademico" role="button"
+           aria-expanded="{{ 'true' if grp_academico else 'false' }}">
+            <i class="fas fa-graduation-cap"></i> Academico
+            <i class="fas fa-chevron-right nav-arrow"></i>
+        </a>
+        <div class="collapse {% if grp_academico %}show{% endif %}" id="grpAcademico">
+            <ul class="nav flex-column nav-sub">
+                <li><a href="{{ url_for('admin_modalities.list_modalities') }}"
+                       class="nav-link {% if 'modalities' in ep %}active{% endif %}">
+                    <i class="fas fa-running"></i> Modalidades
+                </a></li>
+                <li><a href="{{ url_for('admin_schedules.list_schedules') }}"
+                       class="nav-link {% if 'schedules' in ep and ep != 'admin_schedules.gender_management' %}active{% endif %}">
+                    <i class="fas fa-calendar-alt"></i> Grade de Horarios
+                </a></li>
+                <li><a href="{{ url_for('admin_exercises.list_exercises') }}"
+                       class="nav-link {% if 'exercises' in ep %}active{% endif %}">
+                    <i class="fas fa-dumbbell"></i> Exercicios
+                </a></li>
+                <li><a href="{{ url_for('admin_achievements.list_achievements') }}"
+                       class="nav-link {% if 'achievements' in ep %}active{% endif %}">
+                    <i class="fas fa-trophy"></i> Conquistas
+                </a></li>
+                <li><a href="{{ url_for('admin_conversion_rules.list_rules') }}"
+                       class="nav-link {% if 'conversion_rules' in ep %}active{% endif %}">
+                    <i class="fas fa-exchange-alt"></i> Conversao XP
+                </a></li>
+            </ul>
+        </div>
+    </li>
+
+    {# ══════ Comercial ══════ #}
+    <li class="nav-item nav-group">
+        <a class="nav-link nav-group-toggle {% if grp_comercial %}open{% endif %}"
+           data-bs-toggle="collapse" href="#grpComercial" role="button"
+           aria-expanded="{{ 'true' if grp_comercial else 'false' }}">
+            <i class="fas fa-handshake"></i> Comercial
+            <i class="fas fa-chevron-right nav-arrow"></i>
+        </a>
+        <div class="collapse {% if grp_comercial %}show{% endif %}" id="grpComercial">
+            <ul class="nav flex-column nav-sub">
+                <li><a href="{{ url_for('crm.dashboard') }}"
+                       class="nav-link {% if ep == 'crm.dashboard' %}active{% endif %}">
+                    <i class="fas fa-heartbeat"></i> CRM & Retencao
+                </a></li>
+                <li><a href="{{ url_for('crm.leads') }}"
+                       class="nav-link {% if ep == 'crm.leads' %}active{% endif %}">
+                    <i class="fas fa-user-plus"></i> Leads / Pipeline
+                </a></li>
+                <li><a href="{{ url_for('crm.funnel') }}"
+                       class="nav-link {% if ep == 'crm.funnel' %}active{% endif %}">
+                    <i class="fas fa-filter"></i> Funil
+                </a></li>
+                <li><a href="{{ url_for('crm.nps_dashboard') }}"
+                       class="nav-link {% if ep == 'crm.nps_dashboard' %}active{% endif %}">
+                    <i class="fas fa-smile"></i> NPS
+                </a></li>
+                <li><a href="{{ url_for('admin_packages.list_packages') }}"
+                       class="nav-link {% if 'packages' in ep %}active{% endif %}">
+                    <i class="fas fa-box"></i> Pacotes
+                </a></li>
+            </ul>
+        </div>
+    </li>
+
+    {# ══════ Financeiro ══════ #}
+    <li class="nav-item nav-group">
+        <a class="nav-link nav-group-toggle {% if grp_financeiro %}open{% endif %}"
+           data-bs-toggle="collapse" href="#grpFinanceiro" role="button"
+           aria-expanded="{{ 'true' if grp_financeiro else 'false' }}">
+            <i class="fas fa-dollar-sign"></i> Financeiro
+            <i class="fas fa-chevron-right nav-arrow"></i>
+        </a>
+        <div class="collapse {% if grp_financeiro %}show{% endif %}" id="grpFinanceiro">
+            <ul class="nav flex-column nav-sub">
+                <li><a href="{{ url_for('admin_payments.pending_payments') }}"
+                       class="nav-link {% if 'payments' in ep %}active{% endif %}">
+                    <i class="fas fa-money-bill-wave"></i> Pagamentos
+                </a></li>
+                <li><a href="{{ url_for('admin_expenses.list_expenses') }}"
+                       class="nav-link {% if 'expenses' in ep %}active{% endif %}">
+                    <i class="fas fa-receipt"></i> Despesas
+                </a></li>
+                <li><a href="{{ url_for('admin_split.dashboard') }}"
+                       class="nav-link {% if 'split' in ep %}active{% endif %}">
+                    <i class="fas fa-file-invoice-dollar"></i> Split Bancario
+                </a></li>
+            </ul>
+        </div>
+    </li>
+
+    {# ══════ Comunicação ══════ #}
+    <li class="nav-item nav-group">
+        <a class="nav-link nav-group-toggle {% if grp_comunic %}open{% endif %}"
+           data-bs-toggle="collapse" href="#grpComunic" role="button"
+           aria-expanded="{{ 'true' if grp_comunic else 'false' }}">
+            <i class="fab fa-whatsapp"></i> Comunicacao
+            <i class="fas fa-chevron-right nav-arrow"></i>
+        </a>
+        <div class="collapse {% if grp_comunic %}show{% endif %}" id="grpComunic">
+            <ul class="nav flex-column nav-sub">
+                <li><a href="{{ url_for('admin_whatsapp.list_templates') }}"
+                       class="nav-link {% if 'whatsapp' in ep and 'megaapi' not in ep and ep != 'admin_whatsapp.list_logs' and ep != 'admin_whatsapp.list_campaigns' and ep != 'admin_whatsapp.create_campaign' %}active{% endif %}">
+                    <i class="fab fa-whatsapp"></i> Templates
+                </a></li>
+                <li><a href="{{ url_for('admin_whatsapp.list_campaigns') }}"
+                       class="nav-link {% if ep == 'admin_whatsapp.list_campaigns' or ep == 'admin_whatsapp.create_campaign' %}active{% endif %}">
+                    <i class="fas fa-bullhorn"></i> Campanhas
+                </a></li>
+                <li><a href="{{ url_for('admin_whatsapp.list_logs') }}"
+                       class="nav-link {% if ep == 'admin_whatsapp.list_logs' %}active{% endif %}">
+                    <i class="fas fa-robot"></i> Logs de Automacao
+                </a></li>
+            </ul>
+        </div>
+    </li>
+
+    {# ══════ Configurações ══════ #}
+    <li class="nav-item nav-group">
+        <a class="nav-link nav-group-toggle {% if grp_config %}open{% endif %}"
+           data-bs-toggle="collapse" href="#grpConfig" role="button"
+           aria-expanded="{{ 'true' if grp_config else 'false' }}">
+            <i class="fas fa-cogs"></i> Configuracoes
+            <i class="fas fa-chevron-right nav-arrow"></i>
+        </a>
+        <div class="collapse {% if grp_config %}show{% endif %}" id="grpConfig">
+            <ul class="nav flex-column nav-sub">
+                <li><a href="{{ url_for('admin_settings.index') }}"
+                       class="nav-link {% if 'settings' in ep and 'megaapi' not in ep %}active{% endif %}">
+                    <i class="fas fa-sliders-h"></i> Gerais
+                </a></li>
+                <li><a href="{{ url_for('admin_megaapi.settings') }}"
+                       class="nav-link {% if 'megaapi' in ep %}active{% endif %}">
+                    <i class="fab fa-whatsapp"></i> WhatsApp API
+                </a></li>
+                <li><a href="{{ url_for('admin_nupay.settings') }}"
+                       class="nav-link {% if 'nupay' in ep %}active{% endif %}">
+                    <i class="fas fa-credit-card"></i> NuPay
+                </a></li>
+                <li><a href="{{ url_for('admin_schedules.gender_management') }}"
+                       class="nav-link {% if ep == 'admin_schedules.gender_management' %}active{% endif %}">
+                    <i class="fas fa-venus-mars"></i> Gestao de Sexo
+                </a></li>
+                <li><a href="{{ url_for('admin_lgpd.index') }}"
+                       class="nav-link {% if 'lgpd' in ep %}active{% endif %}">
+                    <i class="fas fa-shield-alt"></i> LGPD / Seguranca
+                </a></li>
+                <li><a href="{{ url_for('admin_maintenance.index') }}"
+                       class="nav-link {% if 'maintenance' in ep %}active{% endif %}">
+                    <i class="fas fa-tools"></i> Manutencao
+                </a></li>
+            </ul>
+        </div>
+    </li>
+
+</ul>
+
+<hr class="border-secondary">
+
+<div class="dropdown px-2">
+    <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle"
+        data-bs-toggle="dropdown">
+        <i class="fas fa-user-circle fa-lg me-2"></i>
+        <strong>{{ current_user.name.split()[0] }}</strong>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-dark text-small shadow">
+        <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Sair</a></li>
+    </ul>
+</div>

@@ -345,6 +345,20 @@
     </div>
     {% endif %}
 
+    <!-- Progresso Semanal -->
+    {% if weekly_progress is defined and weekly_progress.total > 0 %}
+    <div class="history-section" style="padding: 16px 20px;">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="history-title mb-0"><i class="fas fa-calendar-check me-2"></i>Esta Semana</span>
+            <span style="color: #a78bfa; font-weight: 700;">{{ weekly_progress.done }}/{{ weekly_progress.total }} sessoes</span>
+        </div>
+        <div class="progress" style="height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px;">
+            <div class="progress-bar" role="progressbar"
+                 style="width: {{ (weekly_progress.done / weekly_progress.total * 100)|int }}%; background: linear-gradient(90deg, #8B5CF6, #a78bfa); border-radius: 4px;"></div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Session Selector -->
     {% if plan.workout_sessions|length > 1 %}
     <div class="session-selector">
@@ -399,6 +413,15 @@
                     {% endif %}
                 </div>
 
+                {% if last_logs is defined and we.exercise_id in last_logs %}
+                <div class="mt-2 d-flex align-items-center gap-2" style="font-size:0.8rem; color: #10B981;">
+                    <i class="fas fa-weight-hanging"></i>
+                    <span>Ultima carga: <strong>{{ last_logs[we.exercise_id].weight_kg or '-' }}{% if last_logs[we.exercise_id].weight_kg %}kg{% endif %}</strong></span>
+                    <span>{{ last_logs[we.exercise_id].reps or '-' }}reps x {{ last_logs[we.exercise_id].sets or '-' }}s</span>
+                    <span style="color:#64748b;">({{ last_logs[we.exercise_id].logged_at.strftime('%d/%m') }})</span>
+                </div>
+                {% endif %}
+
                 {% if we.instructor_notes %}
                 <div class="exercise-notes">
                     <i class="fas fa-info-circle me-1"></i>{{ we.instructor_notes }}
@@ -439,11 +462,15 @@
     </div>
     {% endif %}
 
-    <!-- Reportar Dor / Desconforto -->
-    <div class="mt-4 mb-4">
-        <button class="pain-btn" data-bs-toggle="modal" data-bs-target="#painModal">
-            <i class="fas fa-exclamation-triangle me-2"></i>Reportar Dor ou Desconforto
-        </button>
+    <!-- Acoes rapidas -->
+    <div class="mt-4 mb-2 d-flex gap-2">
+        <a href="{{ url_for('student.report_pain_page') }}" class="pain-btn flex-fill text-decoration-none">
+            <i class="fas fa-exclamation-triangle me-2"></i>Reportar Dor
+        </a>
+        <a href="{{ url_for('student.progress') }}" class="pain-btn flex-fill text-decoration-none"
+           style="background: rgba(139,92,246,0.1); border-color: rgba(139,92,246,0.2); color: #a78bfa;">
+            <i class="fas fa-chart-line me-2"></i>Evolucao
+        </a>
     </div>
 
     {% else %}

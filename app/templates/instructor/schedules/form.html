@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Sugerir Novo Horário{% endblock %}
+
+{% block extra_css %}
+<style>
+    .instructor-header {
+        background: linear-gradient(135deg, #FF6B35 0%, #db592a 100%);
+        color: white;
+        padding: 30px 0;
+        margin-bottom: 30px;
+        border-radius: 0 0 20px 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="instructor-header shadow-sm mt-0">
+    <div class="container text-center">
+        <h1 class="h3 mb-1">Novo Horário</h1>
+        <p class="mb-0 opacity-75">
+            <i class="fas fa-plus-circle me-1"></i> Sugestão de aula para aprovação
+        </p>
+    </div>
+</header>
+
+<div class="container mb-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <form method="POST">
+                        <div class="row g-3">
+                            <!-- Modalidade -->
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label fw-bold">Modalidade *</label>
+                                <select name="modality_id" class="form-select form-select-lg" required>
+                                    <option value="">Selecione a modalidade...</option>
+                                    {% for modality in modalities %}
+                                    <option value="{{ modality.id }}">
+                                        {{ modality.icon or '💪' }} {{ modality.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Instrutor -->
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label fw-bold">Instrutor da Aula *</label>
+                                <select name="instructor_id" class="form-select" required>
+                                    {% for instructor in instructors %}
+                                    <option value="{{ instructor.id }}" {% if instructor.id==current_user.id
+                                        %}selected{% endif %}>
+                                        {{ instructor.name }} {% if instructor.id == current_user.id %}(Você){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Dia da Semana -->
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label fw-bold">Dia(s) da Semana *</label>
+                                <div class="row g-2">
+                                    {% for day_num, day_name in weekdays %}
+                                    <div class="col-6 col-md-3">
+                                        <div class="form-check card p-2 {{ 'bg-light' if day_num in [0, 6] }}">
+                                            <input class="form-check-input weekday-checkbox mt-1 ms-1" type="checkbox"
+                                                name="weekdays" value="{{ day_num }}" id="weekday_{{ day_num }}">
+                                            <label class="form-check-label ms-2" for="weekday_{{ day_num }}">
+                                                {{ day_name }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="mt-2">
+                                    <button type="button" class="btn btn-xs btn-outline-secondary"
+                                        onclick="selectWeekdays()">Seg-Sex</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary"
+                                        onclick="selectAll()">Todos</button>
+                                </div>
+                            </div>
+
+                            <!-- Horarios -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Horário de Início *</label>
+                                <input type="time" name="start_time" class="form-control" value="08:00" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Horário de Término *</label>
+                                <input type="time" name="end_time" class="form-control" value="09:00" required>
+                                <div class="form-text small">Indique o bloco total de horas.</div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="alert alert-info py-2">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    <small>O sistema dividirá este intervalo automaticamente em sessões conforme a
+                                        duração da modalidade.</small>
+                                </div>
+                            </div>
+
+                            <!-- Capacidade -->
+                            <div class="col-md-12 mb-4">
+                                <label class="form-label fw-bold">Capacidade (vagas) *</label>
+                                <input type="number" name="capacity" class="form-control" value="10" min="1" required>
+                            </div>
+
+                            <div class="col-12 d-flex justify-content-between pt-3">
+                                <a href="{{ url_for('instructor.list_schedules') }}" class="btn btn-light">
+                                    <i class="fas fa-arrow-left me-2"></i>Voltar
+                                </a>
+                                <button type="submit" class="btn btn-primary btn-lg px-5">
+                                    <i class="fas fa-paper-plane me-2"></i>Enviar para Aprovação
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function selectWeekdays() {
+        document.querySelectorAll('.weekday-checkbox').forEach((cb) => {
+            cb.checked = [1, 2, 3, 4, 5].includes(parseInt(cb.value));
+        });
+    }
+
+    function selectAll() {
+        document.querySelectorAll('.weekday-checkbox').forEach(cb => cb.checked = true);
+    }
+
+    document.querySelector('form').addEventListener('submit', function (e) {
+        const checked = document.querySelectorAll('.weekday-checkbox:checked');
+        if (checked.length === 0) {
+            e.preventDefault();
+            alert('Selecione pelo menos um dia da semana.');
+        }
+    });
+</script>
+{% endblock %}

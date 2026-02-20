@@ -21,121 +21,137 @@
         background: rgba(0, 0, 0, 0.9);
     }
 
-    /* Simulator Styles */
-    .simulator-card {
-        border-radius: 20px;
-        border: none;
-        background: white;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-    }
-
-    .modality-input-card {
+    /* Simulator Styles - Compact */
+    .simulator-toggle-btn {
+        border: 2px dashed rgba(255,255,255,0.4);
         border-radius: 12px;
+        padding: 12px 24px;
+        color: #fff;
+        background: rgba(255,255,255,0.1);
+        transition: all 0.3s;
+        text-decoration: none;
+    }
+    .simulator-toggle-btn:hover {
+        background: rgba(255,255,255,0.2);
+        border-color: rgba(255,255,255,0.7);
+        color: #fff;
+    }
+    .simulator-compact {
+        background: rgba(255,255,255,0.08);
+        border-radius: 16px;
+        border: 1px solid rgba(255,255,255,0.15);
+    }
+    .simulator-compact .modality-input-card {
+        border-radius: 10px;
         transition: all 0.2s;
-        border: 1px solid #eee;
+        border: 1px solid rgba(255,255,255,0.15);
+        background: rgba(255,255,255,0.06);
+        color: #fff;
     }
-
-    .modality-input-card:hover {
-        border-color: var(--primary-color);
-        background: #fffcfb;
+    .simulator-compact .modality-input-card:hover {
+        background: rgba(255,255,255,0.12);
+        border-color: rgba(255,255,255,0.3);
     }
-
-    .recommendation-badge {
-        position: absolute;
-        top: -10px;
-        right: -10px;
-        z-index: 10;
-        transform: rotate(5deg);
+    .simulator-compact .form-control {
+        background: rgba(255,255,255,0.1);
+        border-color: rgba(255,255,255,0.2);
+        color: #fff;
+    }
+    .simulator-compact .btn-outline-secondary {
+        color: rgba(255,255,255,0.7);
+        border-color: rgba(255,255,255,0.2);
+    }
+    .simulator-compact .btn-outline-secondary:hover {
+        background: rgba(255,255,255,0.15);
+        color: #fff;
+    }
+    .sim-result-box {
+        background: rgba(255,255,255,0.12);
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.2);
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid p-0">
-    <!-- Hero Section -->
-    <section class="bg-gradient-primary text-white py-5">
+    <!-- Hero Section + Simulator inline -->
+    <section class="bg-gradient-primary text-white py-4 py-lg-5">
         <div class="container">
             <div class="row align-items-center">
-                <div class="col-lg-6">
-                    <h1 class="display-4 fw-bold mb-3">Escolha seu Plano</h1>
-                    <p class="lead mb-4">
-                        Créditos flexíveis para você treinar no seu ritmo.
-                        Sem mensalidades fixas, sem fidelidade.
+                <div class="col-lg-7">
+                    <h1 class="display-5 fw-bold mb-2">Escolha seu Plano</h1>
+                    <p class="lead mb-3 opacity-75">
+                        Créditos flexíveis para treinar no seu ritmo. Sem mensalidade fixa, sem fidelidade.
                     </p>
-                    <div class="d-flex gap-4">
+                    <div class="d-flex gap-4 mb-3">
                         <div class="text-center">
-                            <h3 class="mb-0">100+</h3>
-                            <small>Alunos Ativos</small>
+                            <h4 class="mb-0">100+</h4>
+                            <small class="opacity-75">Alunos</small>
                         </div>
                         <div class="text-center">
-                            <h3 class="mb-0">15+</h3>
-                            <small>Modalidades</small>
+                            <h4 class="mb-0">15+</h4>
+                            <small class="opacity-75">Modalidades</small>
                         </div>
                         <div class="text-center">
-                            <h3 class="mb-0">4.9</h3>
-                            <small>Avaliação</small>
+                            <h4 class="mb-0">4.9</h4>
+                            <small class="opacity-75">Avaliação</small>
                         </div>
                     </div>
                 </div>
-                <div class="col-lg-6 d-none d-lg-block">
-                    <div class="text-center">
-                        <i class="fas fa-dumbbell fa-8x opacity-25"></i>
-                    </div>
+                <div class="col-lg-5 text-center text-lg-end">
+                    <a class="simulator-toggle-btn d-inline-flex align-items-center gap-2"
+                       data-bs-toggle="collapse" href="#simulatorCollapse" role="button"
+                       aria-expanded="false" aria-controls="simulatorCollapse">
+                        <i class="fas fa-calculator fa-lg"></i>
+                        <span><strong>Simulador de Treino</strong><br><small class="opacity-75">Descubra o pacote ideal</small></span>
+                        <i class="fas fa-chevron-down ms-2"></i>
+                    </a>
                 </div>
             </div>
-        </div>
-    </section>
 
-    <!-- Simulator Section -->
-    <section class="py-5" id="simulator">
-        <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-lg-10">
-                    <div class="card simulator-card p-4 p-md-5">
-                        <div class="row align-items-center">
-                            <div class="col-md-7">
-                                <h2 class="fw-bold mb-3">Simulador de Treino</h2>
-                                <p class="text-muted mb-4">Escolha quantas vezes por semana você pretende treinar em
-                                    cada
-                                    modalidade e nós calculamos o pacote ideal para você.</p>
-
-                                <div class="row g-3" id="modalityInputs">
-                                    {% for modality in modalities %}
-                                    <div class="col-sm-6">
-                                        <div class="modality-input-card p-3">
-                                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                                <span class="fw-bold">
-                                                    <i class="{{ modality.icon or 'fas fa-dumbbell' }} me-2 modality-icon"
-                                                        data-color="{{ modality.color }}"></i>
-                                                    {{ modality.name }}
-                                                </span>
-                                                <span class="badge bg-light text-dark">{{ modality.credits_cost }}
-                                                    créditos/aula</span>
-                                            </div>
-                                            <div class="input-group input-group-sm">
-                                                <button class="btn btn-outline-secondary btn-minus" type="button"
-                                                    data-modality-id="{{ modality.id }}">-</button>
-                                                <input type="number" class="form-control text-center freq-input"
-                                                    value="0" min="0" max="7" data-modality-id="{{ modality.id }}"
-                                                    data-cost="{{ modality.credits_cost }}" id="freq-{{ modality.id }}">
-                                                <button class="btn btn-outline-secondary btn-plus" type="button"
-                                                    data-modality-id="{{ modality.id }}">+</button>
-                                            </div>
+            <!-- Simulator Collapsible (inside hero) -->
+            <div class="collapse mt-4" id="simulatorCollapse">
+                <div class="simulator-compact p-3 p-md-4">
+                    <div class="row g-3 align-items-start">
+                        <div class="col-lg-8">
+                            <h6 class="text-uppercase small fw-bold mb-3 opacity-75">
+                                <i class="fas fa-calculator me-1"></i> Quantas vezes por semana?
+                            </h6>
+                            <div class="row g-2" id="modalityInputs">
+                                {% for modality in modalities %}
+                                <div class="col-sm-6 col-md-4">
+                                    <div class="modality-input-card p-2">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="small fw-bold">
+                                                <i class="{{ modality.icon or 'fas fa-dumbbell' }} me-1 modality-icon"
+                                                    data-color="{{ modality.color }}"></i>
+                                                {{ modality.name }}
+                                            </span>
+                                            <span class="badge bg-dark bg-opacity-25" style="font-size:0.65rem;">{{ modality.credits_cost }}cr</span>
+                                        </div>
+                                        <div class="input-group input-group-sm">
+                                            <button class="btn btn-outline-secondary btn-minus btn-sm" type="button"
+                                                data-modality-id="{{ modality.id }}">-</button>
+                                            <input type="number" class="form-control text-center freq-input"
+                                                value="0" min="0" max="7" data-modality-id="{{ modality.id }}"
+                                                data-cost="{{ modality.credits_cost }}" id="freq-{{ modality.id }}">
+                                            <button class="btn btn-outline-secondary btn-plus btn-sm" type="button"
+                                                data-modality-id="{{ modality.id }}">+</button>
                                         </div>
                                     </div>
-                                    {% endfor %}
                                 </div>
+                                {% endfor %}
                             </div>
-                            <div class="col-md-5 mt-4 mt-md-0">
-                                <div class="bg-light p-4 rounded-4 text-center border">
-                                    <h6 class="text-uppercase text-muted small fw-bold mb-3">Estimativa Mensal</h6>
-                                    <div class="display-3 fw-bold text-primary mb-0" id="totalCredits">0</div>
-                                    <p class="text-muted fw-bold">Créditos Necessários</p>
-                                    <hr>
-                                    <div id="recommendationText">
-                                        <p class="small text-muted mb-0">Selecione suas aulas para ver a recomendação.
-                                        </p>
-                                    </div>
+                        </div>
+                        <div class="col-lg-4 mt-3 mt-lg-0">
+                            <div class="sim-result-box p-3 text-center">
+                                <small class="text-uppercase fw-bold opacity-75">Estimativa Mensal</small>
+                                <div class="display-5 fw-bold my-1" id="totalCredits">0</div>
+                                <small class="opacity-75 fw-bold">créditos</small>
+                                <hr class="border-light my-2">
+                                <div id="recommendationText">
+                                    <p class="small opacity-75 mb-0">Selecione suas aulas acima.</p>
                                 </div>
                             </div>
                         </div>
@@ -397,7 +413,7 @@
 
         function updateRecommendation(total) {
             if (total === 0) {
-                recommendationTextEl.innerHTML = '<p class="small text-muted mb-0">Selecione suas aulas para ver a recomendação.</p>';
+                recommendationTextEl.innerHTML = '<p class="small opacity-75 mb-0">Selecione suas aulas acima.</p>';
                 return;
             }
 
@@ -405,17 +421,17 @@
 
             if (match) {
                 recommendationTextEl.innerHTML = `
-                    <div class="animate__animated animate__fadeIn">
-                        <p class="mb-2">O pacote ideal é:</p>
-                        <h5 class="fw-bold text-success mb-2">${match.name}</h5>
-                        <p class="small text-muted mb-3">Com ${match.credits} créditos, você cobre sua necessidade de ${total}.</p>
-                        <a href="#package-${match.id}" class="btn btn-primary btn-sm px-4 rounded-pill">Ver este plano</a>
+                    <div>
+                        <p class="small mb-1 opacity-75">Pacote ideal:</p>
+                        <h6 class="fw-bold mb-1" style="color:#6fea67;">${match.name}</h6>
+                        <p class="small opacity-75 mb-2">${match.credits} créditos cobrem seus ${total}.</p>
+                        <a href="#package-${match.id}" class="btn btn-light btn-sm px-3 rounded-pill">Ver plano</a>
                     </div>
                 `;
             } else {
                 recommendationTextEl.innerHTML = `
-                    <div class="alert alert-warning py-2 small mb-0">
-                        Sua necessidade (${total} créditos) excede nossos pacotes individuais. Entre em contato para um plano personalizado!
+                    <div class="small opacity-75">
+                        Sua necessidade (${total} créditos) excede nossos pacotes. Entre em contato!
                     </div>
                 `;
             }

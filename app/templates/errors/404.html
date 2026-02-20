@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Pagina nao encontrada{% endblock %}
+
+{% block content %}
+<div class="min-vh-100 d-flex align-items-center justify-content-center"
+    style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
+    <div class="text-center text-white">
+        <i class="fas fa-search fa-4x mb-4 opacity-50"></i>
+        <h1 class="display-1 fw-bold">404</h1>
+        <h4 class="mb-3">Pagina nao encontrada</h4>
+        <p class="text-white-50 mb-4">A pagina que voce procura nao existe ou foi movida.</p>
+        <div class="d-flex gap-3 justify-content-center">
+            <a href="javascript:history.back()" class="btn btn-outline-light">
+                <i class="fas fa-arrow-left me-2"></i>Voltar
+            </a>
+            {% if current_user.is_authenticated %}
+                {% if current_user.is_admin %}
+                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-primary">
+                    <i class="fas fa-home me-2"></i>Painel Admin
+                </a>
+                {% elif current_user.is_instructor %}
+                <a href="{{ url_for('instructor.dashboard') }}" class="btn btn-primary">
+                    <i class="fas fa-home me-2"></i>Minhas Aulas
+                </a>
+                {% else %}
+                <a href="{{ url_for('student.dashboard') }}" class="btn btn-primary">
+                    <i class="fas fa-home me-2"></i>Meu Painel
+                </a>
+                {% endif %}
+            {% else %}
+            <a href="{{ url_for('auth.login') }}" class="btn btn-primary">
+                <i class="fas fa-sign-in-alt me-2"></i>Entrar
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

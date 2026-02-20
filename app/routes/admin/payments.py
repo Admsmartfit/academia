@@ -245,3 +245,183 @@ Para retornar às atividades, será necessário adquirir um novo pacote.
 
     flash(f'Assinatura de {subscription.user.name} cancelada.', 'danger')
     return redirect(url_for('admin_payments.overdue_payments'))
+
+
+@payments_bp.route('/send-bulk-collection', methods=['POST'])
+@login_required
+@admin_required
+def send_bulk_collection():
+    """Enviar cobranças em massa por faixa de atraso."""
+    range_filter = request.form.get('range', 'all')
+    today = datetime.now().date()
+
+    query = Payment.query.filter(Payment.status == PaymentStatusEnum.OVERDUE)
+
+    if range_filter == '15d':
+        query = query.filter(Payment.overdue_days >= 15, Payment.overdue_days < 30)
+    elif range_filter == '30d':
+        query = query.filter(Payment.overdue_days >= 30, Payment.overdue_days < 60)
+    elif range_filter == '60d':
+        query = query.filter(Payment.overdue_days >= 60, Payment.overdue_days < 90)
+    elif range_filter == '90d':
+        query = query.filter(Payment.overdue_days >= 90)
+
+    payments = query.all()
+    sent = 0
+    errors = 0
+
+    for payment in payments:
+        if not payment.subscription or not payment.subscription.user or not payment.subscription.user.phone:
+            errors += 1
+            continue
+        try:
+            from app.services.megaapi import megaapi
+            user = payment.subscription.user
+            academia_name = current_app.config.get('ACADEMIA_NAME', 'Academia')
+            megaapi.send_custom_message(
+                phone=user.phone,
+                message=f"Ola {user.name.split()[0]}, voce possui uma parcela em atraso "
+                        f"({payment.installment_number}/{payment.installment_total}) no valor de "
+                        f"R$ {payment.amount:.2f}, vencida ha {payment.overdue_days} dias. "
+                        f"Regularize para manter seu acesso. {academia_name}"
+            )
+            sent += 1
+        except Exception:
+            errors += 1
+
+    flash(f'Cobranças enviadas: {sent} sucesso, {errors} erros.', 'success' if errors == 0 else 'warning')
+    return redirect(url_for('admin_payments.overdue_payments'))
+
+
+@payments_bp.route('/receipt/<int:payment_id>')
+@login_required
+@admin_required
+def generate_receipt(payment_id):
+    """Gerar recibo PDF para pagamento aprovado."""
+    from flask import make_response
+    payment = Payment.query.get_or_404(payment_id)
+
+    if payment.status != PaymentStatusEnum.PAID:
+        flash('Recibo so pode ser gerado para pagamentos aprovados.', 'warning')
+        return redirect(url_for('admin_payments.pending_payments'))
+
+    user = payment.subscription.user
+    package = payment.subscription.package
+
+    # Gerar PDF simples com reportlab-like approach
+    pdf_bytes = _generate_receipt_pdf(payment, user, package)
+
+    response = make_response(pdf_bytes)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'inline; filename=recibo_{payment.id}.pdf'
+    return response
+
+
+@payments_bp.route('/receipt/<int:payment_id>/send', methods=['POST'])
+@login_required
+@admin_required
+def send_receipt_whatsapp(payment_id):
+    """Enviar recibo via WhatsApp."""
+    payment = Payment.query.get_or_404(payment_id)
+
+    if payment.status != PaymentStatusEnum.PAID:
+        flash('Recibo so pode ser enviado para pagamentos aprovados.', 'warning')
+        return redirect(url_for('admin_payments.pending_payments'))
+
+    user = payment.subscription.user
+    try:
+        from app.services.megaapi import megaapi
+        academia_name = current_app.config.get('ACADEMIA_NAME', 'Academia')
+        megaapi.send_custom_message(
+            phone=user.phone,
+            message=f"Ola {user.name.split()[0]}! Confirmamos o recebimento do seu pagamento.\n\n"
+                    f"Parcela: {payment.installment_number}/{payment.installment_total}\n"
+                    f"Valor: R$ {payment.amount:.2f}\n"
+                    f"Data: {payment.paid_date.strftime('%d/%m/%Y') if payment.paid_date else '-'}\n\n"
+                    f"Obrigado! {academia_name}"
+        )
+        flash('Recibo enviado via WhatsApp!', 'success')
+    except Exception as e:
+        flash(f'Erro ao enviar: {str(e)}', 'danger')
+
+    return redirect(url_for('admin_payments.overdue_payments'))
+
+
+def _generate_receipt_pdf(payment, user, package):
+    """Gera PDF de recibo simples."""
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import cm
+        from reportlab.pdfgen import canvas as pdf_canvas
+        from reportlab.lib.colors import HexColor
+        import io
+
+        buffer = io.BytesIO()
+        c = pdf_canvas.Canvas(buffer, pagesize=A4)
+        w, h = A4
+
+        # Header
+        c.setFillColor(HexColor('#1a1a2e'))
+        c.rect(0, h - 100, w, 100, fill=True)
+        c.setFillColor(HexColor('#ffffff'))
+        c.setFont('Helvetica-Bold', 20)
+        c.drawCentredString(w / 2, h - 50, 'RECIBO DE PAGAMENTO')
+        c.setFont('Helvetica', 11)
+        c.drawCentredString(w / 2, h - 72, f'No. {payment.id:06d}')
+
+        y = h - 140
+        c.setFillColor(HexColor('#333333'))
+
+        # Dados do aluno
+        c.setFont('Helvetica-Bold', 12)
+        c.drawString(2 * cm, y, 'DADOS DO ALUNO')
+        y -= 20
+        c.setFont('Helvetica', 10)
+        c.drawString(2 * cm, y, f'Nome: {user.name}')
+        y -= 16
+        c.drawString(2 * cm, y, f'Email: {user.email or "-"}')
+        y -= 16
+        c.drawString(2 * cm, y, f'Telefone: {user.phone or "-"}')
+
+        y -= 35
+        c.setFont('Helvetica-Bold', 12)
+        c.drawString(2 * cm, y, 'DADOS DO PAGAMENTO')
+        y -= 20
+        c.setFont('Helvetica', 10)
+        c.drawString(2 * cm, y, f'Pacote: {package.name if package else "-"}')
+        y -= 16
+        c.drawString(2 * cm, y, f'Parcela: {payment.installment_number}/{payment.installment_total}')
+        y -= 16
+        c.drawString(2 * cm, y, f'Valor: R$ {payment.amount:.2f}')
+        y -= 16
+        c.drawString(2 * cm, y, f'Vencimento: {payment.due_date.strftime("%d/%m/%Y") if payment.due_date else "-"}')
+        y -= 16
+        c.drawString(2 * cm, y, f'Data Pagamento: {payment.paid_date.strftime("%d/%m/%Y") if payment.paid_date else "-"}')
+        y -= 16
+        c.drawString(2 * cm, y, f'Metodo: {payment.payment_method or "Manual"}')
+
+        # Valor destaque
+        y -= 40
+        c.setFillColor(HexColor('#198754'))
+        c.setFont('Helvetica-Bold', 16)
+        c.drawCentredString(w / 2, y, f'VALOR PAGO: R$ {payment.amount:.2f}')
+
+        # Footer
+        c.setFillColor(HexColor('#999999'))
+        c.setFont('Helvetica', 8)
+        c.drawCentredString(w / 2, 2 * cm, f'Gerado em {datetime.now().strftime("%d/%m/%Y %H:%M")} - Documento sem valor fiscal')
+
+        c.save()
+        return buffer.getvalue()
+
+    except ImportError:
+        # Fallback sem reportlab - gera HTML simples convertido a texto
+        html = f"""
+        <h1>RECIBO DE PAGAMENTO #{payment.id:06d}</h1>
+        <p>Aluno: {user.name}</p>
+        <p>Pacote: {package.name if package else '-'}</p>
+        <p>Parcela: {payment.installment_number}/{payment.installment_total}</p>
+        <p>Valor: R$ {payment.amount:.2f}</p>
+        <p>Data: {payment.paid_date.strftime('%d/%m/%Y') if payment.paid_date else '-'}</p>
+        """
+        return html.encode('utf-8')

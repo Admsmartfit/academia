@@ -5,14 +5,17 @@
     .sidebar {
         min-height: 100vh;
         background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+        width: 260px;
+        overflow-y: auto;
     }
 
     .sidebar .nav-link {
         color: rgba(255, 255, 255, 0.8);
-        padding: 12px 20px;
+        padding: 10px 16px;
         border-radius: 8px;
-        margin: 4px 12px;
+        margin: 2px 8px;
         transition: all 0.3s;
+        font-size: 0.9rem;
     }
 
     .sidebar .nav-link:hover {
@@ -26,7 +29,41 @@
     }
 
     .sidebar .nav-link i {
-        width: 24px;
+        width: 22px;
+    }
+
+    /* ── Grupos colapsáveis ── */
+    .nav-group-toggle {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        color: rgba(255,255,255,0.55) !important;
+        padding: 8px 16px !important;
+        margin-top: 6px;
+    }
+    .nav-group-toggle:hover {
+        color: rgba(255,255,255,0.9) !important;
+        background: transparent !important;
+    }
+    .nav-group-toggle .nav-arrow {
+        margin-left: auto;
+        font-size: 0.6rem;
+        transition: transform 0.25s ease;
+    }
+    .nav-group-toggle[aria-expanded="true"] .nav-arrow,
+    .nav-group-toggle.open .nav-arrow {
+        transform: rotate(90deg);
+    }
+    .nav-sub {
+        padding: 0 0 4px 0;
+    }
+    .nav-sub .nav-link {
+        padding: 7px 16px 7px 38px !important;
+        font-size: 0.85rem;
     }
 
     .main-content {
@@ -46,25 +83,11 @@
         font-weight: 600;
     }
 
-    .stat-card {
-        border-left: 4px solid var(--primary-color);
-    }
-
-    .stat-card.success {
-        border-left-color: #28a745;
-    }
-
-    .stat-card.warning {
-        border-left-color: #ffc107;
-    }
-
-    .stat-card.danger {
-        border-left-color: #dc3545;
-    }
-
-    .stat-card.info {
-        border-left-color: #17a2b8;
-    }
+    .stat-card { border-left: 4px solid var(--primary-color); }
+    .stat-card.success { border-left-color: #28a745; }
+    .stat-card.warning { border-left-color: #ffc107; }
+    .stat-card.danger { border-left-color: #dc3545; }
+    .stat-card.info { border-left-color: #17a2b8; }
 
     .table th {
         font-weight: 600;
@@ -76,194 +99,79 @@
         border-radius: 20px;
         font-weight: 500;
     }
+
+    /* Mobile: sidebar escondida, offcanvas */
+    @media (max-width: 991.98px) {
+        .sidebar-desktop { display: none !important; }
+        .main-content { min-height: auto; }
+        .mobile-topbar { display: flex !important; }
+    }
+    @media (min-width: 992px) {
+        .mobile-topbar { display: none !important; }
+    }
+
+    /* Offcanvas com mesmo estilo */
+    .offcanvas-admin {
+        background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+        width: 280px !important;
+    }
+    .offcanvas-admin .btn-close { filter: invert(1); }
 </style>
 {% endblock %}
 
 {% block body %}
+<!-- Mobile top bar -->
+<nav class="navbar navbar-dark bg-dark mobile-topbar px-3 d-none">
+    <button class="btn btn-outline-light btn-sm" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMobile">
+        <i class="fas fa-bars"></i>
+    </button>
+    <span class="navbar-brand mb-0 ms-2">
+        <i class="fas fa-dumbbell me-1 text-primary"></i>Admin
+    </span>
+    <span class="text-muted small">{{ now().strftime('%d/%m/%Y') }}</span>
+</nav>
+
+<!-- Mobile offcanvas sidebar -->
+<div class="offcanvas offcanvas-start offcanvas-admin" tabindex="-1" id="sidebarMobile">
+    <div class="offcanvas-header">
+        <h5 class="text-white mb-0"><i class="fas fa-dumbbell me-2"></i>Academia</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+        {% include "admin/_sidebar_nav.html" %}
+    </div>
+</div>
+
 <div class="d-flex">
-    <!-- Sidebar -->
-    <nav class="sidebar d-flex flex-column p-3" style="width: 280px;">
+    <!-- Desktop sidebar -->
+    <nav class="sidebar sidebar-desktop d-flex flex-column p-3">
         <a href="{{ url_for('admin.dashboard') }}"
-            class="d-flex align-items-center mb-4 text-white text-decoration-none">
+            class="d-flex align-items-center mb-3 text-white text-decoration-none">
             <i class="fas fa-dumbbell fa-2x me-2"></i>
-            <span class="fs-4 fw-bold">Academia</span>
+            <span class="fs-5 fw-bold">Academia</span>
         </a>
-
-        <hr class="border-secondary">
-
-        <ul class="nav nav-pills flex-column mb-auto">
-            <li class="nav-item">
-                <a href="{{ url_for('admin.dashboard') }}"
-                    class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
-                    <i class="fas fa-chart-line"></i> Dashboard
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="{{ url_for('crm.dashboard') }}"
-                    class="nav-link {% if 'crm' in request.endpoint %}active{% endif %}">
-                    <i class="fas fa-heartbeat"></i> CRM & Retenção
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="{{ url_for('admin_packages.list_packages') }}"
-                    class="nav-link {% if 'packages' in request.endpoint %}active{% endif %}">
-                    <i class="fas fa-box"></i> Pacotes
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="{{ url_for('admin_modalities.list_modalities') }}"
-                    class="nav-link {% if 'modalities' in request.endpoint %}active{% endif %}">
-                    <i class="fas fa-running"></i> Modalidades
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="{{ url_for('admin_schedules.list_schedules') }}"
-                    class="nav-link {% if 'schedules' in request.endpoint %}active{% endif %}">
-                    <i class="fas fa-calendar-alt"></i> Grade de Horarios
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="{{ url_for('admin_users.list_users') }}"
-                    class="nav-link {% if 'users' in request.endpoint %}active{% endif %}">
-                    <i class="fas fa-users-cog"></i> Usuários
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="{{ url_for('admin_users.list_users', role='student') }}"
-                    class="nav-link {% if 'users' in request.endpoint and request.args.get('role') == 'student' %}active{% endif %}">
-                    <i class="fas fa-users"></i> Alunos
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="{{ url_for('admin_payments.pending_payments') }}"
-                    class="nav-link {% if 'payments' in request.endpoint %}active{% endif %}">
-                    <i class="fas fa-money-bill-wave"></i> Pagamentos
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="{{ url_for('admin_achievements.list_achievements') }}"
-                    class="nav-link {% if 'achievements' in request.endpoint %}active{% endif %}">
-                    <i class="fas fa-trophy"></i> Conquistas
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="{{ url_for('admin_exercises.list_exercises') }}"
-                    class="nav-link {% if 'exercises' in request.endpoint %}active{% endif %}">
-                    <i class="fas fa-dumbbell"></i> Exercicios
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="{{ url_for('admin_conversion_rules.list_rules') }}"
-                    class="nav-link {% if 'conversion_rules' in request.endpoint %}active{% endif %}">
-                    <i class="fas fa-exchange-alt"></i> Conversao XP
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="{{ url_for('admin_split.dashboard') }}"
-                    class="nav-link {% if 'split' in request.endpoint %}active{% endif %}">
-                    <i class="fas fa-file-invoice-dollar"></i> Split Bancario
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="{{ url_for('admin_whatsapp.list_templates') }}"
-                    class="nav-link {% if 'whatsapp' in request.endpoint and 'megaapi' not in request.endpoint and request.endpoint != 'admin_whatsapp.list_logs' %}active{% endif %}">
-                    <i class="fab fa-whatsapp"></i> WhatsApp
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="{{ url_for('admin_whatsapp.list_logs') }}"
-                    class="nav-link {% if request.endpoint == 'admin_whatsapp.list_logs' %}active{% endif %}">
-                    <i class="fas fa-robot"></i> Logs de Automacao
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="{{ url_for('admin_schedules.gender_management') }}"
-                    class="nav-link {% if request.endpoint == 'admin_schedules.gender_management' %}active{% endif %}">
-                    <i class="fas fa-venus-mars"></i> Gestao de Sexo
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="{{ url_for('admin_megaapi.settings') }}"
-                    class="nav-link {% if 'megaapi' in request.endpoint %}active{% endif %}">
-                    <i class="fab fa-whatsapp"></i> Config WhatsApp
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="{{ url_for('admin_nupay.settings') }}"
-                    class="nav-link {% if 'nupay' in request.endpoint %}active{% endif %}">
-                    <i class="fas fa-credit-card"></i> Config NuPay
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="{{ url_for('admin_settings.index') }}"
-                    class="nav-link {% if 'settings' in request.endpoint and 'megaapi' not in request.endpoint %}active{% endif %}">
-                    <i class="fas fa-cogs"></i> Configuracoes
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="{{ url_for('admin_maintenance.index') }}"
-                    class="nav-link {% if 'maintenance' in request.endpoint %}active{% endif %}">
-                    <i class="fas fa-tools"></i> Manutencao
-                </a>
-            </li>
-        </ul>
-
-        <hr class="border-secondary">
-
-        <div class="dropdown">
-            <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle"
-                data-bs-toggle="dropdown">
-                <i class="fas fa-user-circle fa-2x me-2"></i>
-                <strong>{{ current_user.name }}</strong>
-            </a>
-            <ul class="dropdown-menu dropdown-menu-dark text-small shadow">
-                <li><a class="dropdown-item" href="#">Perfil</a></li>
-                <li>
-                    <hr class="dropdown-divider">
-                </li>
-                <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Sair</a></li>
-            </ul>
-        </div>
+        <hr class="border-secondary my-2">
+        {% include "admin/_sidebar_nav.html" %}
     </nav>
 
     <!-- Main Content -->
     <main class="main-content flex-grow-1">
-        <!-- Top Bar -->
-        <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm px-4">
+        <!-- Top Bar (desktop) -->
+        <nav class="navbar navbar-light bg-white shadow-sm px-4 d-none d-lg-flex">
             <div class="container-fluid">
-                <span class="navbar-text">
+                <span class="navbar-text fw-medium">
                     {% block page_title %}Dashboard{% endblock %}
                 </span>
-                <div class="d-flex align-items-center">
-                    <span class="text-muted me-3">
-                        <i class="far fa-calendar"></i> {{ now().strftime('%d/%m/%Y') }}
-                    </span>
-                </div>
+                <span class="text-muted">
+                    <i class="far fa-calendar me-1"></i>{{ now().strftime('%d/%m/%Y') }}
+                </span>
             </div>
         </nav>
 
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-        <div class="px-4 pt-3">
+        <div class="px-3 px-lg-4 pt-3">
             {% for category, message in messages %}
             <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show"
                 role="alert">
@@ -276,7 +184,7 @@
         {% endwith %}
 
         <!-- Page Content -->
-        <div class="p-4">
+        <div class="p-3 p-lg-4">
             {% block content %}{% endblock %}
         </div>
     </main>
@@ -291,5 +199,32 @@
             new bootstrap.Alert(alert).close();
         });
     }, 5000);
+
+    // Loading spinner em botoes de submit
+    document.querySelectorAll('form').forEach(function (form) {
+        form.addEventListener('submit', function () {
+            var btn = form.querySelector('button[type="submit"]');
+            if (btn && !btn.disabled) {
+                btn.disabled = true;
+                var originalHtml = btn.innerHTML;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Aguarde...';
+                setTimeout(function () {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }, 8000);
+            }
+        });
+    });
+
+    // Fechar offcanvas ao clicar em link
+    var offcanvasEl = document.getElementById('sidebarMobile');
+    if (offcanvasEl) {
+        offcanvasEl.querySelectorAll('.nav-link').forEach(function (link) {
+            link.addEventListener('click', function () {
+                var offcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
+                if (offcanvas) offcanvas.hide();
+            });
+        });
+    }
 </script>
 {% endblock %}

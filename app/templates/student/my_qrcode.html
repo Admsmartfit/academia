@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Meu QR Code - Academia{% endblock %}
+
+{% block extra_css %}
+<style>
+    body.dark-qr {
+        background-color: #0F172A !important;
+        color: #f1f5f9;
+    }
+    .qr-container {
+        text-align: center;
+        padding: 30px 20px;
+    }
+    .qr-card {
+        background: #1E293B;
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 20px;
+        padding: 30px;
+        display: inline-block;
+        max-width: 360px;
+        width: 100%;
+    }
+    .qr-code-wrapper {
+        background: white;
+        border-radius: 16px;
+        padding: 16px;
+        display: inline-block;
+        margin: 20px 0;
+    }
+    .qr-code-wrapper canvas {
+        display: block;
+    }
+    .qr-info {
+        color: #64748b;
+        font-size: 0.85rem;
+        margin-top: 12px;
+    }
+    .qr-expiry {
+        background: rgba(251,191,36,0.1);
+        border: 1px solid rgba(251,191,36,0.2);
+        color: #FBBF24;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        margin-top: 16px;
+        display: inline-block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="qr-container">
+    <div class="qr-card">
+        <h5 class="mb-1">{{ current_user.name }}</h5>
+        <small style="color: #64748b;">Mostre este QR Code ao instrutor</small>
+
+        <div class="qr-code-wrapper">
+            <canvas id="qrCanvas"></canvas>
+        </div>
+
+        <div class="qr-expiry">
+            <i class="fas fa-clock me-1"></i>Valido apenas hoje
+        </div>
+
+        <div class="qr-info">
+            <i class="fas fa-shield-alt me-1"></i>O QR Code e renovado diariamente por seguranca
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="{{ url_for('student.dashboard') }}" class="btn btn-outline-light btn-sm">
+            <i class="fas fa-arrow-left me-2"></i>Voltar
+        </a>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script>
+    document.body.classList.add('dark-qr');
+    var canvas = document.getElementById('qrCanvas');
+    QRCode.toCanvas(canvas, '{{ qr_data }}', {
+        width: 220,
+        margin: 1,
+        color: { dark: '#1E293B', light: '#ffffff' }
+    });
+</script>
+{% endblock %}

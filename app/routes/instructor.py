@@ -2,17 +2,33 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify
 from flask_login import login_required, current_user
-from app.models import ClassSchedule, Booking, BookingStatus, User
+from app.models import ClassSchedule, Booking, BookingStatus, User, Modality
 from app import db
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time, date
 
 instructor_bp = Blueprint('instructor', __name__, url_prefix='/instructor')
+
+WEEKDAYS = [
+    (0, 'Domingo'),
+    (1, 'Segunda-feira'),
+    (2, 'Terça-feira'),
+    (3, 'Quarta-feira'),
+    (4, 'Quinta-feira'),
+    (5, 'Sexta-feira'),
+    (6, 'Sábado')
+]
 
 def instructor_required(f):
     from functools import wraps
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.role != 'instructor':
+        if not current_user.is_authenticated:
+            abort(403)
+        # Permite acesso para Instrutor, Tecnica e Nutrologo (baseado no role ou professional_type)
+        is_staff = current_user.role in ('instructor', 'admin') or \
+                   (hasattr(current_user, 'professional_type') and current_user.professional_type is not None)
+        
+        if not is_staff:
             abort(403)
         return f(*args, **kwargs)
     return decorated_function
@@ -65,12 +81,26 @@ def dashboard():
             Booking.date == selected_date,
             Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.COMPLETED, BookingStatus.NO_SHOW])
         ).all()
-        
+
         # Adicionar status de saude para cada booking
         from app.models.health import ScreeningType
         for booking in sched.today_bookings:
             booking.user.parq_status = booking.user.get_screening_status(ScreeningType.PARQ)
             booking.user.ems_status = booking.user.get_screening_status(ScreeningType.EMS)
+
+    # Metricas do dia
+    all_bookings_today = Booking.query.join(ClassSchedule).filter(
+        ClassSchedule.instructor_id == current_user.id,
+        Booking.date == selected_date
+    ).all()
+
+    day_metrics = {
+        'total': len(all_bookings_today),
+        'confirmed': sum(1 for b in all_bookings_today if b.status == BookingStatus.CONFIRMED),
+        'completed': sum(1 for b in all_bookings_today if b.status == BookingStatus.COMPLETED),
+        'no_show': sum(1 for b in all_bookings_today if b.status == BookingStatus.NO_SHOW),
+        'cancelled': sum(1 for b in all_bookings_today if b.status == BookingStatus.CANCELLED),
+    }
 
     # Datas de navegação
     prev_date = selected_date - timedelta(days=1)
@@ -86,7 +116,8 @@ def dashboard():
                          today=today,
                          prev_date=prev_date,
                          next_date=next_date,
-                         current_time=current_time)
+                         current_time=current_time,
+                         day_metrics=day_metrics)
 
 # Check-in removido - sistema considera presença automaticamente
 
@@ -392,16 +423,40 @@ def student_detail(id):
     
     # Historico de aulas
     bookings = Booking.query.filter_by(user_id=student.id).order_by(Booking.date.desc()).limit(20).all()
-    
-    return render_template('instructor/students/detail.html', 
-                          student=student, 
+
+    # Observacoes do aluno
+    from app.models.student_note import StudentNote, NoteType
+    student_notes = StudentNote.query.filter_by(
+        student_id=student.id
+    ).order_by(StudentNote.created_at.desc()).limit(20).all()
+
+    # Ultimos registros de carga
+    from app.models.workout_log import WorkoutLog
+    recent_logs = WorkoutLog.query.filter_by(
+        user_id=student.id
+    ).order_by(WorkoutLog.logged_at.desc()).limit(10).all()
+
+    # Exercicios do plano ativo (para select de registro de carga)
+    plan_exercises = []
+    if active_plan:
+        for ws in active_plan.workout_sessions:
+            for we in ws.exercises:
+                if we.exercise not in plan_exercises:
+                    plan_exercises.append(we.exercise)
+
+    return render_template('instructor/students/detail.html',
+                          student=student,
                           active_plan=active_plan,
                           past_plans=past_plans,
                           parq=parq,
                           ems=ems,
                           bookings=bookings,
                           pain_alert=pain_alert,
-                          whatsapp_logs=whatsapp_logs)
+                          whatsapp_logs=whatsapp_logs,
+                          student_notes=student_notes,
+                          recent_logs=recent_logs,
+                          plan_exercises=plan_exercises,
+                          NoteType=NoteType)
 
 
 @instructor_bp.route('/student/<int:id>/face', methods=['GET'])
@@ -433,11 +488,282 @@ def enroll_face(id):
     
     if result['success']:
         return jsonify({
-            'success': True, 
+            'success': True,
             'message': f'Face de {student.name} cadastrada com sucesso!',
             'confidence': result['confidence']
         }), 201
     else:
         return jsonify({'success': False, 'error': result['message']}), 400
+
+
+# ==================== WORKOUT LOG (REGISTRO DE CARGA) ====================
+
+@instructor_bp.route('/student/<int:student_id>/log-workout', methods=['POST'])
+@login_required
+@instructor_required
+def log_workout(student_id):
+    """Registrar carga/performance de um exercicio."""
+    from app.models.workout_log import WorkoutLog
+    from app.models.training import Exercise
+
+    student = User.query.get_or_404(student_id)
+    exercise_id = request.form.get('exercise_id', type=int)
+    weight_kg = request.form.get('weight_kg', type=float)
+    reps = request.form.get('reps', type=int)
+    sets = request.form.get('sets', type=int)
+    notes = request.form.get('notes', '')
+
+    if not exercise_id:
+        flash('Selecione um exercicio.', 'danger')
+        return redirect(url_for('instructor.student_detail', id=student_id))
+
+    log = WorkoutLog(
+        user_id=student_id,
+        exercise_id=exercise_id,
+        instructor_id=current_user.id,
+        weight_kg=weight_kg,
+        reps=reps,
+        sets=sets,
+        notes=notes
+    )
+    db.session.add(log)
+    db.session.commit()
+
+    flash('Carga registrada com sucesso!', 'success')
+    return redirect(url_for('instructor.student_detail', id=student_id))
+
+
+@instructor_bp.route('/student/<int:student_id>/workout-history/<int:exercise_id>')
+@login_required
+@instructor_required
+def workout_history_api(student_id, exercise_id):
+    """API: historico de carga de um exercicio."""
+    from app.models.workout_log import WorkoutLog
+
+    logs = WorkoutLog.query.filter_by(
+        user_id=student_id,
+        exercise_id=exercise_id
+    ).order_by(WorkoutLog.logged_at.desc()).limit(20).all()
+
+    return jsonify([{
+        'date': log.logged_at.strftime('%d/%m/%Y'),
+        'weight_kg': log.weight_kg,
+        'reps': log.reps,
+        'sets': log.sets,
+        'notes': log.notes
+    } for log in logs])
+
+
+# ==================== OBSERVACOES POR ALUNO ====================
+
+@instructor_bp.route('/student/<int:student_id>/add-note', methods=['POST'])
+@login_required
+@instructor_required
+def add_student_note(student_id):
+    """Adicionar observacao sobre o aluno."""
+    from app.models.student_note import StudentNote, NoteType
+
+    student = User.query.get_or_404(student_id)
+    content = request.form.get('content', '').strip()
+    note_type_str = request.form.get('note_type', 'general')
+
+    if not content:
+        flash('A observacao nao pode estar vazia.', 'danger')
+        return redirect(url_for('instructor.student_detail', id=student_id))
+
+    try:
+        note_type = NoteType(note_type_str)
+    except ValueError:
+        note_type = NoteType.GENERAL
+
+    note = StudentNote(
+        student_id=student_id,
+        instructor_id=current_user.id,
+        note_type=note_type,
+        content=content
+    )
+    db.session.add(note)
+    db.session.commit()
+
+    flash('Observacao adicionada com sucesso!', 'success')
+    return redirect(url_for('instructor.student_detail', id=student_id))
+
+
+# ==================== QR CODE CHECK-IN ====================
+
+@instructor_bp.route('/qr-checkin')
+@login_required
+@instructor_required
+def qr_checkin():
+    """Tela de leitura de QR Code para check-in."""
+    return render_template('instructor/qr_checkin.html')
+
+
+@instructor_bp.route('/api/qr-checkin', methods=['POST'])
+@login_required
+@instructor_required
+def process_qr_checkin():
+    """API: processar QR Code de check-in."""
+    import hashlib
+    data = request.get_json()
+    qr_data = data.get('qr_data', '')
+
+    # QR format: "checkin:{user_id}:{date}:{token}"
+    parts = qr_data.split(':')
+    if len(parts) != 4 or parts[0] != 'checkin':
+        return jsonify({'success': False, 'error': 'QR Code invalido'})
+
+    try:
+        user_id = int(parts[1])
+        qr_date = parts[2]
+        token = parts[3]
+    except (ValueError, IndexError):
+        return jsonify({'success': False, 'error': 'QR Code invalido'})
+
+    # Validate date (must be today)
+    today_str = datetime.now().strftime('%Y-%m-%d')
+    if qr_date != today_str:
+        return jsonify({'success': False, 'error': 'QR Code expirado (data diferente)'})
+
+    # Validate token
+    student = User.query.get(user_id)
+    if not student or student.role != 'student':
+        return jsonify({'success': False, 'error': 'Aluno nao encontrado'})
+
+    expected_token = hashlib.sha256(f"{user_id}:{qr_date}:{student.password_hash[:10]}".encode()).hexdigest()[:12]
+    if token != expected_token:
+        return jsonify({'success': False, 'error': 'QR Code invalido'})
+
+    # Find today's booking for this student with this instructor
+    today = datetime.now().date()
+    booking = Booking.query.join(ClassSchedule).filter(
+        Booking.user_id == user_id,
+        Booking.date == today,
+        Booking.status == BookingStatus.CONFIRMED,
+        ClassSchedule.instructor_id == current_user.id
+    ).first()
+
+    if not booking:
+        return jsonify({'success': False, 'error': 'Nenhuma aula agendada para este aluno hoje'})
+
+    booking.status = BookingStatus.COMPLETED
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'student_name': student.name,
+        'message': f'Check-in de {student.name} realizado com sucesso!'
+    })
+
+
+# ==================== GERENCIAMENTO DE HORARIOS (AGENDAMENTO) ====================
+
+@instructor_bp.route('/schedules')
+@login_required
+@instructor_required
+def list_schedules():
+    """Lista todos os horarios do sistema (Acesso total conforme solicitado)"""
+    schedules = ClassSchedule.query.order_by(
+        ClassSchedule.weekday,
+        ClassSchedule.start_time
+    ).all()
+
+    # Agrupar por dia da semana
+    schedules_by_day = {}
+    for day_num, day_name in WEEKDAYS:
+        schedules_by_day[day_name] = [s for s in schedules if s.weekday == day_num]
+
+    return render_template('instructor/schedules/list.html',
+                         schedules_by_day=schedules_by_day,
+                         weekdays=WEEKDAYS)
+
+
+@instructor_bp.route('/schedules/create', methods=['GET', 'POST'])
+@login_required
+@instructor_required
+def create_schedule():
+    """Criar novo horario (enviar para aprovação do admin)"""
+    if request.method == 'POST':
+        start_time_val = time.fromisoformat(request.form['start_time'])
+        end_time_val = time.fromisoformat(request.form['end_time'])
+        weekdays_selected = request.form.getlist('weekdays')
+
+        if not weekdays_selected:
+            flash('Selecione pelo menos um dia da semana.', 'danger')
+            return redirect(url_for('instructor.create_schedule'))
+
+        modality = Modality.query.get_or_404(int(request.form['modality_id']))
+        instructor_id = int(request.form['instructor_id'])
+        capacity = int(request.form['capacity'])
+        duration = modality.default_duration
+
+        created_count = 0
+        dummy_date = date.today()
+        dt_start = datetime.combine(dummy_date, start_time_val)
+        dt_end = datetime.combine(dummy_date, end_time_val)
+        
+        current_time = dt_start
+        while current_time + timedelta(minutes=duration) <= dt_end:
+            slot_start = current_time.time()
+            current_time += timedelta(minutes=duration)
+            slot_end = current_time.time()
+            
+            for weekday in weekdays_selected:
+                schedule = ClassSchedule(
+                    modality_id=modality.id,
+                    instructor_id=instructor_id,
+                    weekday=int(weekday),
+                    start_time=slot_start,
+                    end_time=slot_end,
+                    capacity=capacity,
+                    is_active=True,
+                    is_approved=False,  # Requer aprovação
+                    created_by_id=current_user.id
+                )
+                db.session.add(schedule)
+                created_count += 1
+
+        db.session.commit()
+
+        flash(f'{created_count} horários criados e enviados para aprovação do administrador!', 'success')
+        return redirect(url_for('instructor.list_schedules'))
+
+    modalities = Modality.query.filter_by(is_active=True).order_by(Modality.name).all()
+    # No caso do instrutor, ele pode criar para si mesmo ou para outros? 
+    # "Podendo cancelar aulas que eles abriram, ou que tem como seu nome de instrutor"
+    # Sugere que eles podem ser instrutores. Vamos listar todos os instrutores ativos.
+    instructors = User.query.filter(
+        User.role.in_(['instructor', 'admin']),
+        User.is_active == True
+    ).order_by(User.name).all()
+
+    return render_template('instructor/schedules/form.html',
+                         schedule=None,
+                         modalities=modalities,
+                         instructors=instructors,
+                         weekdays=WEEKDAYS)
+
+
+@instructor_bp.route('/schedules/cancel/<int:id>', methods=['POST'])
+@login_required
+@instructor_required
+def cancel_schedule_template(id):
+    """Cancela (desabilita) um horário que o instrutor abriu ou é o instrutor"""
+    schedule = ClassSchedule.query.get_or_404(id)
+    
+    # Regra: Pode cancelar se abriu OU se é o instrutor
+    can_cancel = current_user.role == 'admin' or \
+                 schedule.created_by_id == current_user.id or \
+                 schedule.instructor_id == current_user.id
+                 
+    if not can_cancel:
+        flash('Você não tem permissão para cancelar este horário.', 'danger')
+        return redirect(url_for('instructor.list_schedules'))
+
+    schedule.is_active = False
+    db.session.commit()
+
+    flash('Horário desativado com sucesso.', 'info')
+    return redirect(url_for('instructor.list_schedules'))
 
 

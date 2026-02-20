@@ -19,11 +19,8 @@
 <ul class="nav nav-tabs mb-4" role="tablist">
     {% for day_num, day_name in weekdays %}
     <li class="nav-item" role="presentation">
-        <button class="nav-link {{ 'active' if loop.first }}"
-                id="tab-{{ day_num }}"
-                data-bs-toggle="tab"
-                data-bs-target="#content-{{ day_num }}"
-                type="button" role="tab">
+        <button class="nav-link {{ 'active' if loop.first }}" id="tab-{{ day_num }}" data-bs-toggle="tab"
+            data-bs-target="#content-{{ day_num }}" type="button" role="tab">
             {{ day_name }}
             {% if schedules_by_day[day_name] %}
             <span class="badge bg-primary ms-1">{{ schedules_by_day[day_name]|length }}</span>
@@ -35,8 +32,7 @@
 
 <div class="tab-content">
     {% for day_num, day_name in weekdays %}
-    <div class="tab-pane fade {{ 'show active' if loop.first }}"
-         id="content-{{ day_num }}" role="tabpanel">
+    <div class="tab-pane fade {{ 'show active' if loop.first }}" id="content-{{ day_num }}" role="tabpanel">
 
         {% set day_schedules = schedules_by_day[day_name] %}
 
@@ -44,19 +40,24 @@
         <div class="row g-3">
             {% for schedule in day_schedules %}
             <div class="col-md-4">
-                <div class="card {{ 'border-secondary' if not schedule.is_active }}">
+                <div
+                    class="card h-100 {{ 'border-warning shadow-sm' if not schedule.is_approved }} {{ 'border-secondary opacity-75' if not schedule.is_active }}">
                     <div class="card-header d-flex justify-content-between align-items-center"
-                         style="background-color: {{ schedule.modality.color }}20; border-left: 4px solid {{ schedule.modality.color }};">
-                        <div>
+                        style="background-color: {{ schedule.modality.color }}20; border-left: 4px solid {{ schedule.modality.color }};">
+                        <div class="text-truncate">
                             <span class="me-2">{{ schedule.modality.icon or '💪' }}</span>
                             <strong>{{ schedule.modality.name }}</strong>
                             {% if schedule.modality.requires_gender_segregation %}
                             <i class="fas fa-venus-mars text-info ms-1" title="Segregacao por sexo"></i>
                             {% endif %}
                         </div>
-                        {% if not schedule.is_active %}
-                        <span class="badge bg-secondary">Inativo</span>
-                        {% endif %}
+                        <div>
+                            {% if not schedule.is_approved %}
+                            <span class="badge bg-warning text-dark">Pendente</span>
+                            {% elif not schedule.is_active %}
+                            <span class="badge bg-secondary">Inativo</span>
+                            {% endif %}
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="mb-2">
@@ -73,19 +74,37 @@
                             {{ schedule.capacity }} vagas
                         </div>
 
+                        {% if not schedule.is_approved %}
+                        <div class="d-grid gap-2">
+                            <form action="{{ url_for('admin_schedules.approve_schedule', id=schedule.id) }}"
+                                method="POST">
+                                <button type="submit" class="btn btn-sm btn-success w-100">
+                                    <i class="fas fa-check me-1"></i> Aprovar
+                                </button>
+                            </form>
+                            <form action="{{ url_for('admin_schedules.reject_schedule', id=schedule.id) }}"
+                                method="POST" onsubmit="return confirm('Rejeitar este horário?')">
+                                <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+                                    <i class="fas fa-times me-1"></i> Rejeitar
+                                </button>
+                            </form>
+                        </div>
+                        {% else %}
                         <div class="btn-group w-100">
                             <a href="{{ url_for('admin_schedules.edit_schedule', id=schedule.id) }}"
-                               class="btn btn-sm btn-outline-primary">
+                                class="btn btn-sm btn-outline-primary">
                                 <i class="fas fa-edit"></i> Editar
                             </a>
                             <form action="{{ url_for('admin_schedules.toggle_schedule', id=schedule.id) }}"
-                                  method="POST" class="d-inline">
-                                <button type="submit" class="btn btn-sm btn-outline-{{ 'warning' if schedule.is_active else 'success' }}">
+                                method="POST" class="d-inline">
+                                <button type="submit"
+                                    class="btn btn-sm btn-outline-{{ 'warning' if schedule.is_active else 'success' }}">
                                     <i class="fas fa-{{ 'pause' if schedule.is_active else 'play' }}"></i>
                                     {{ 'Pausar' if schedule.is_active else 'Ativar' }}
                                 </button>
                             </form>
                         </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>

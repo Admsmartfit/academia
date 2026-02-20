@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Grade de Horários{% endblock %}
+
+{% block extra_css %}
+<style>
+    .instructor-header {
+        background: linear-gradient(135deg, #FF6B35 0%, #db592a 100%);
+        color: white;
+        padding: 30px 0;
+        margin-bottom: 30px;
+        border-radius: 0 0 20px 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="instructor-header shadow-sm mt-0">
+    <div class="container text-center">
+        <h1 class="h3 mb-1">Grade de Horários</h1>
+        <p class="mb-0 opacity-75">
+            <i class="fas fa-calendar-alt me-1"></i> Gerenciamento de Aulas
+        </p>
+    </div>
+</header>
+
+<div class="container mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0">Horários Disponíveis</h4>
+        <a href="{{ url_for('instructor.create_schedule') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Sugerir Novo Horário
+        </a>
+    </div>
+
+    <!-- Navegacao por abas dos dias da semana -->
+    <ul class="nav nav-pills mb-4 overflow-auto flex-nowrap pb-2" role="tablist">
+        {% for day_num, day_name in weekdays %}
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {{ 'active' if loop.first }} me-2" id="tab-{{ day_num }}" data-bs-toggle="tab"
+                data-bs-target="#content-{{ day_num }}" type="button" role="tab">
+                {{ day_name }}
+                {% if schedules_by_day[day_name] %}
+                <span class="badge {{ 'bg-light text-primary' if loop.first else 'bg-primary' }} ms-1">
+                    {{ schedules_by_day[day_name]|length }}
+                </span>
+                {% endif %}
+            </button>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <div class="tab-content">
+        {% for day_num, day_name in weekdays %}
+        <div class="tab-pane fade {{ 'show active' if loop.first }}" id="content-{{ day_num }}" role="tabpanel">
+
+            {% set day_schedules = schedules_by_day[day_name] %}
+
+            {% if day_schedules %}
+            <div class="row g-3">
+                {% for schedule in day_schedules %}
+                <div class="col-md-4">
+                    <div
+                        class="card h-100 shadow-sm {{ 'border-warning' if not schedule.is_approved }} {{ 'opacity-50' if not schedule.is_active }}">
+                        <div class="card-header d-flex justify-content-between align-items-center"
+                            style="background-color: {{ schedule.modality.color }}20; border-left: 4px solid {{ schedule.modality.color }};">
+                            <div class="text-truncate mr-2">
+                                <span class="me-2">{{ schedule.modality.icon or '💪' }}</span>
+                                <strong>{{ schedule.modality.name }}</strong>
+                            </div>
+                            <div>
+                                {% if not schedule.is_approved %}
+                                <span class="badge bg-warning text-dark"
+                                    title="Aguardando aprovação do administrador">Pendente</span>
+                                {% endif %}
+                                {% if not schedule.is_active %}
+                                <span class="badge bg-secondary">Cancelado</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-2">
+                                <i class="far fa-clock text-muted me-2"></i>
+                                <strong>{{ schedule.start_time.strftime('%H:%M') }}</strong> -
+                                {{ schedule.end_time.strftime('%H:%M') }}
+                            </div>
+                            <div class="mb-2">
+                                <i class="far fa-user text-muted me-2"></i>
+                                {{ schedule.instructor.name }}
+                            </div>
+                            <div class="mb-3">
+                                <i class="far fa-users text-muted me-2"></i>
+                                {{ schedule.capacity }} vagas
+                            </div>
+
+                            {% if schedule.is_active %}
+                            {% set can_cancel = current_user.role == 'admin' or schedule.created_by_id ==
+                            current_user.id or schedule.instructor_id == current_user.id %}
+                            {% if can_cancel %}
+                            <form action="{{ url_for('instructor.cancel_schedule_template', id=schedule.id) }}"
+                                method="POST"
+                                onsubmit="return confirm('Tem certeza que deseja cancelar este horário?')">
+                                <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+                                    <i class="fas fa-times me-1"></i> Cancelar Aula
+                                </button>
+                            </form>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5 bg-light rounded-3">
+                <i class="far fa-calendar-times fa-3x text-muted mb-3"></i>
+                <p class="text-muted">Nenhum horário cadastrado para {{ day_name }}</p>
+                <a href="{{ url_for('instructor.create_schedule') }}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i>Adicionar Horário
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
