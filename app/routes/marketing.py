@@ -1,7 +1,6 @@
-# app/routes/marketing.py
-
 from flask import Blueprint, render_template
-from app.models import Package, Modality, User
+from flask_login import current_user
+from app.models import Package, Modality, User, WorkoutLog
 from app import db
 from sqlalchemy import func
 
@@ -34,6 +33,18 @@ def index():
     # Calcula total de XP de todos os alunos
     total_xp = db.session.query(func.sum(User.xp)).filter(User.role == 'student').scalar() or 0
     
+    # Calcula total de "Quilos Levantados" pela comunidade
+    total_weight = db.session.query(func.sum(WorkoutLog.weight_kg * WorkoutLog.reps * WorkoutLog.sets)).scalar() or 0
+    
+    # Resumo do usuário logado (se houver)
+    user_summary = None
+    if current_user.is_authenticated:
+        user_summary = {
+            'xp': current_user.xp,
+            'level': current_user.level,
+            'name': current_user.name
+        }
+
     # Converte packages para dict para o simulador (JS)
     packages_json = []
     for p in packages:
@@ -56,6 +67,8 @@ def index():
         modalities=modalities,
         top_users=top_users,
         total_xp=total_xp,
+        total_weight=total_weight,
+        user_summary=user_summary,
         anonymize_name=anonymize_name
     )
 

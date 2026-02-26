@@ -35,26 +35,41 @@
     <nav
         style="position: absolute; top: 0; width: 100%; padding: 20px 5%; display: flex; justify-content: space-between; align-items: center; z-index: 10;">
         <div class="logo">
-            <h2 style="margin: 0;">BIO<span class="text-accent">HACK</span>ACADEMIA</h2>
+            <h2 style="margin: 0; letter-spacing: 2px; font-weight: 800;">BIO<span class="text-accent">HACK</span>
+                STUDIO</h2>
         </div>
-        <div>
-            <a href="/login" class="btn-neon" style="text-decoration: none; font-size: 0.9rem;">Área do Aluno</a>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            {% if user_summary %}
+            <div style="text-align: right; line-height: 1.2;">
+                <div style="font-size: 0.8rem; color: var(--text-secondary);">Bem-vindo, <strong>{{
+                        user_summary.name.split()[0] }}</strong></div>
+                <div style="font-size: 0.9rem; color: var(--accent);">{{ user_summary.xp }} XP | Nv. {{
+                    user_summary.level }}</div>
+            </div>
+            {% endif %}
+            <a href="/login" class="btn-neon" style="text-decoration: none; font-size: 0.9rem;">
+                {% if user_summary %}Meu Dashboard{% else %}Entrar / Agendar{% endif %}
+            </a>
         </div>
     </nav>
 
     <!-- 1. Hero Section -->
     <section class="hero-section">
         <div class="hero-bg"
-            style="background: linear-gradient(rgba(26, 26, 46, 0.7), rgba(26, 26, 46, 0.9)), url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop'); background-size: cover; background-position: center;">
+            style="background: linear-gradient(rgba(10, 10, 10, 0.7), rgba(10, 10, 10, 1)), url('https://images.unsplash.com/photo-1593079831268-3381b0db4a77?q=80&w=1469&auto=format&fit=crop'); background-size: cover; background-position: center;">
         </div>
 
         <div class="hero-content">
-            <h1 class="hero-headline">HYPER-RECRUTAMENTO <span class="text-accent">NEURAL</span></h1>
+            <h1 class="hero-headline">A EVOLUÇÃO DA <span class="text-accent">HIPERTROFIA</span></h1>
             <p class="hero-subheadline">
-                40 Minutos de Ciência, Zero Desculpas. A primeira metodologia que utiliza a Corrente FES para atingir
-                98% das suas fibras musculares.
+                Ciência, Tecnologia e Musculação de Elite. Potencializamos seus resultados de ganho de massa unindo o
+                treinamento de força à tecnologia <strong>Ezbody Wireless</strong>.
             </p>
-            <a href="#planos" class="btn-neon">Garantir Minha Sessão Experimental</a>
+            <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                <a href="#planos" class="btn-neon">Agendar Sessão Experimental</a>
+                <a href="#ciencia" class="btn-neon"
+                    style="background: transparent; border: 1px solid var(--accent);">Conhecer o Método</a>
+            </div>
 
             <!-- Trust Badges -->
             <div class="trust-badges">
@@ -86,51 +101,50 @@
 
             <div class="problems-grid">
                 <div class="problem-card">
-                    <div class="problem-icon"><i class="fas fa-clock"></i></div>
-                    <h3>Sem Tempo</h3>
-                    <p class="problem-text">"Preciso treinar 1h por dia, 5x por semana, mas minha agenda não permite."
-                    </p>
+                    <div class="problem-icon"><i class="fas fa-bolt"></i></div>
+                    <h3>Recrutamento Máximo</h3>
+                    <p class="problem-text">"Sinto que meus treinos normais não atingem todos os músculos."</p>
                     <div class="solution-arrow"><i class="fas fa-arrow-down text-accent"></i></div>
-                    <p class="solution-text"><strong class="text-accent">Com FES:</strong> 20 minutos, 2x por semana.
-                        Mesmo resultado.</p>
+                    <p class="solution-text"><strong class="text-accent">Ezbody:</strong> Ativação de até 90% das fibras
+                        simultaneamente, incluindo Tipo II (Essenciais para hipertrofia).</p>
                 </div>
 
                 <div class="problem-card">
-                    <div class="problem-icon"><i class="fas fa-chart-line" style="transform: rotate(-10deg);"></i></div>
-                    <h3>Platô de Resultados</h3>
-                    <p class="problem-text">"Treino há meses e nada muda. Estou estagnado no mesmo corpo."</p>
+                    <div class="problem-icon"><i class="fas fa-shield-alt"></i></div>
+                    <h3>Proteção Articular</h3>
+                    <p class="problem-text">"Adoro treinar pesado, mas meus joelhos e ombros estão sofrendo."</p>
                     <div class="solution-arrow"><i class="fas fa-arrow-down text-accent"></i></div>
-                    <p class="solution-text"><strong class="text-accent">Com FES:</strong> Ativa fibras Tipo II que seu
-                        cérebro nunca recruta voluntariamente.</p>
+                    <p class="solution-text"><strong class="text-accent">Ezbody:</strong> Aumento do estresse metabólico
+                        sem a necessidade de cargas articulares extremas.</p>
                 </div>
 
                 <div class="problem-card">
                     <div class="problem-icon"><i class="fas fa-brain"></i></div>
-                    <h3>Fibras Dormentes</h3>
-                    <p class="problem-text">"Treino convencional só ativa 30% das fibras musculares. 70% estão
-                        dormindo."</p>
+                    <h3>Conexão Mente-Músculo</h3>
+                    <p class="problem-text">"Tenho dificuldade em sentar o músculo trabalhar em certos exercícios."</p>
                     <div class="solution-arrow"><i class="fas fa-arrow-down text-accent"></i></div>
-                    <p class="solution-text"><strong class="text-accent">Com FES:</strong> Eletroestimulação recruta até
-                        98% das fibras em cada sessão.</p>
+                    <p class="solution-text"><strong class="text-accent">Ezbody:</strong> A tecnologia auxilia o aluno a
+                        "sentir" o músculo, melhorando a consciência corporal.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- 3. Ciência FES (Authority Section Enhanced) -->
-    <section class="authority-section">
+    <!-- 3. Ciência Ezbody (Authority Section Enhanced) -->
+    <section id="ciencia" class="authority-section">
         <div class="container" style="max-width: 1000px; margin: 0 auto; text-align: center;">
-            <h2 style="font-size: 2.5rem; margin-bottom: 20px;">A CIÊNCIA DO <span class="text-accent">FES</span></h2>
+            <h2 style="font-size: 2.5rem; margin-bottom: 20px;">TECNOLOGIA <span class="text-accent">EZBODY
+                    WIRELESS</span></h2>
             <p style="font-size: 1.1rem; color: var(--text-secondary); max-width: 700px; margin: 0 auto;">
-                Functional Electrical Stimulation — a mesma tecnologia utilizada na fisioterapia olímpica
-                e reabilitação de elite, agora aplicada ao treinamento de alta performance.
+                A liberdade do movimento sem fios aliada ao recrutamento muscular profundo. Não é apenas um treino
+                rápido, é um <strong>Treino Inteligente</strong>.
             </p>
 
             <div class="graphic-container">
                 <!-- SVG Animation: Muscle Fiber Activation -->
                 <div class="fiber-animation">
                     <div class="fiber-group">
-                        <h4 style="margin-bottom: 20px; color: var(--text-secondary);">TREINO CONVENCIONAL</h4>
+                        <h4 style="margin-bottom: 20px; color: var(--text-secondary);">MUSCULAÇÃO CONVENCIONAL</h4>
                         <div class="fiber-bar-container">
                             <div class="fiber-bar fiber-bar-traditional">
                                 <div class="fiber-fill" style="width: 30%;"></div>
@@ -147,70 +161,61 @@
                     <div class="fiber-vs">VS</div>
 
                     <div class="fiber-group">
-                        <h4 style="margin-bottom: 20px; color: var(--accent);">TREINO FES</h4>
+                        <h4 style="margin-bottom: 20px; color: var(--accent);">MÉTODO BIOHACK (Ezbody)</h4>
                         <div class="fiber-bar-container">
                             <div class="fiber-bar fiber-bar-fes">
-                                <div class="fiber-fill fes-fill" style="width: 98%;"></div>
+                                <div class="fiber-fill fes-fill" style="width: 90%;"></div>
                             </div>
-                            <span class="fiber-label text-accent" style="font-weight: bold;">98% das fibras</span>
+                            <span class="fiber-label text-accent" style="font-weight: bold;">90% das fibras (Tipo
+                                II)</span>
                         </div>
                         <div class="fiber-dots">
                             {% for i in range(20) %}
-                            <span class="fiber-dot active-fes {% if i < 20 %}pulse-delay-{{ i % 5 }}{% endif %}"></span>
+                            <span class="fiber-dot active-fes {% if i < 18 %}pulse-delay-{{ i % 5 }}{% endif %}"></span>
                             {% endfor %}
                         </div>
                     </div>
                 </div>
 
                 <div class="badge-anvisa">
-                    <i class="fas fa-shield-alt"></i>
-                    <span>Tecnologia aprovada pela ANVISA | Mesma base da fisioterapia olímpica</span>
+                    <i class="fas fa-microchip"></i>
+                    <span>Biofeedback em tempo real | Total liberdade de movimento</span>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- 4. Comparativo Visual: FES vs Tradicional -->
+    <!-- 4. Comparativo Visual: Ezbody vs Tradicional -->
     <section class="compare-section">
         <div class="container" style="max-width: 900px; margin: 0 auto; text-align: center;">
-            <h2 style="font-size: 2.5rem; margin-bottom: 50px;">FES vs TREINO <span
+            <h2 style="font-size: 2.5rem; margin-bottom: 50px;">EZBODY vs TREINO <span
                     class="text-accent">TRADICIONAL</span></h2>
 
             <div class="compare-table">
                 <div class="compare-row compare-header">
                     <div class="compare-label">Critério</div>
-                    <div class="compare-trad">Tradicional</div>
-                    <div class="compare-fes">FES</div>
+                    <div class="compare-trad">Academia Comum</div>
+                    <div class="compare-fes">Biohack Studio</div>
                 </div>
                 <div class="compare-row">
-                    <div class="compare-label">Tempo por sessão</div>
-                    <div class="compare-trad">60-90 min</div>
-                    <div class="compare-fes highlight">20-40 min</div>
+                    <div class="compare-label">Densidade de Treino</div>
+                    <div class="compare-trad">Baixa/Média</div>
+                    <div class="compare-fes highlight">Extrema (Turbo Fibras)</div>
                 </div>
                 <div class="compare-row">
-                    <div class="compare-label">Ativação muscular</div>
-                    <div class="compare-trad">~30%</div>
-                    <div class="compare-fes highlight">~98%</div>
+                    <div class="compare-label">Recrutamento Fibras Tipo II</div>
+                    <div class="compare-trad">Apenas com Carga Alta</div>
+                    <div class="compare-fes highlight">Desde o 1º Segundo</div>
                 </div>
                 <div class="compare-row">
-                    <div class="compare-label">Frequência semanal</div>
-                    <div class="compare-trad">4-6x</div>
-                    <div class="compare-fes highlight">2-3x</div>
+                    <div class="compare-label">Estresse Articular</div>
+                    <div class="compare-trad">Alto (Pesos Livres)</div>
+                    <div class="compare-fes highlight">Mínimo (Eletro-estimulação)</div>
                 </div>
                 <div class="compare-row">
-                    <div class="compare-label">Resultados visíveis</div>
-                    <div class="compare-trad">8-12 semanas</div>
-                    <div class="compare-fes highlight">4-6 semanas</div>
-                </div>
-                <div class="compare-row">
-                    <div class="compare-label">Risco de lesão</div>
-                    <div class="compare-trad">Moderado</div>
-                    <div class="compare-fes highlight">Mínimo</div>
-                </div>
-                <div class="compare-row">
-                    <div class="compare-label">Supervisão</div>
-                    <div class="compare-trad">Opcional</div>
-                    <div class="compare-fes highlight">100% supervisionado</div>
+                    <div class="compare-label">Acompanhamento</div>
+                    <div class="compare-trad">Solitário</div>
+                    <div class="compare-fes highlight">Personal Biohacker</div>
                 </div>
             </div>
         </div>
@@ -259,25 +264,26 @@
 
             <div class="cycle-timeline">
                 <div class="cycle-card">
-                    <h3>DIA 01</h3>
+                    <h3>FASE 01</h3>
                     <div style="font-size: 3rem; margin: 15px 0;">⚡</div>
-                    <h4>FES (40')</h4>
+                    <h4>EZBODY (BIOHACKING)</h4>
                     <p style="font-size: 0.9rem; color: #ccc;">
-                        Choque neural e exaustão metabólica. O sistema nervoso central atinge o pico de estimulação.
+                        Choque neural e recrutamento de fibras profundas. O sistema nervoso central atinge o pico de
+                        estimulação sem sobrecarga articular.
                     </p>
                 </div>
 
                 <div style="display: flex; align-items: center;">
-                    <i class="fas fa-arrow-right text-accent" style="font-size: 2rem;"></i>
+                    <i class="fas fa-plus text-accent" style="font-size: 2rem;"></i>
                 </div>
 
                 <div class="cycle-card">
-                    <h3>DIA 02</h3>
+                    <h3>FASE 02</h3>
                     <div style="font-size: 3rem; margin: 15px 0;">🏋️</div>
-                    <h4>PESO LIVRE (40')</h4>
+                    <h4>FORÇA (PESO LIVRE)</h4>
                     <p style="font-size: 0.9rem; color: #ccc;">
-                        Consolidação mecânica. Com o rastro de ativação do FES, você levanta mais peso com mais
-                        densidade.
+                        Consolidação mecânica. Com o rastro de ativação do Ezbody, seu músculo responde 3x mais ao peso
+                        convencional.
                     </p>
                 </div>
             </div>
@@ -322,18 +328,19 @@
     <!-- 8. Pricing Plans -->
     <section id="planos" class="pricing-section">
         <div class="container" style="max-width: 1200px; margin: 0 auto; text-align: center;">
-            <h2 style="font-size: 2.5rem; margin-bottom: 50px;">INVESTIMENTO EM <span
-                    class="text-accent">PERFORMANCE</span></h2>
+            <h2 style="font-size: 2.5rem; margin-bottom: 50px;">SESSÕES DE <span class="text-accent">PERFORMANCE</span>
+            </h2>
 
             <div class="pricing-grid">
                 {% for pkg in packages %}
                 <div class="pricing-card {% if pkg.is_featured %}popular{% endif %}">
                     {% if pkg.is_featured %}
-                    <span class="badge-popular">MAIS POPULAR</span>
+                    <span class="badge-popular">MAIS ESCOLHIDO</span>
                     {% endif %}
-                    <h3>{{ pkg.name }}</h3>
+                    <h3 style="letter-spacing: 1px;">{{ pkg.name }}</h3>
                     <p class="credits-info">{{ pkg.description or '' }}</p>
-                    <div class="price {% if pkg.is_featured %}text-accent{% endif %}">{{ pkg.credits }} CRÉDITOS</div>
+                    <div class="price {% if pkg.is_featured %}text-accent{% endif %}" style="font-size: 1.8rem;">{{
+                        pkg.credits }} SESSÕES</div>
                     <div style="font-size: 1.3rem; margin-bottom: 20px; color: var(--text-secondary);">
                         R$ {{ "%.2f"|format(pkg.price) }}
                     </div>
@@ -445,17 +452,23 @@
             <!-- Contador em tempo real -->
             <div class="hall-counter">
                 <div class="counter-item">
-                    <span class="counter-value text-accent" id="fibrasCounter"
-                        data-target="{{ (total_xp|int) * 47 }}">0</span>
-                    <span class="counter-label">Fibras Ativadas Hoje</span>
+                    <div style="font-size: 1.5rem; color: var(--text-secondary); margin-bottom: 5px;"><i
+                            class="fas fa-weight-hanging"></i></div>
+                    <span class="counter-value text-accent" id="weightCounter"
+                        data-target="{{ total_weight|int }}">0</span>
+                    <span class="counter-label">KG Levantados pela Comunidade</span>
                 </div>
                 <div class="counter-item">
+                    <div style="font-size: 1.5rem; color: var(--text-secondary); margin-bottom: 5px;"><i
+                            class="fas fa-star"></i></div>
                     <span class="counter-value text-accent">{{ "{:,}".format(total_xp|int) }}</span>
-                    <span class="counter-label">XP Total Gerado</span>
+                    <span class="counter-label">XP Total Acumulado</span>
                 </div>
                 <div class="counter-item">
+                    <div style="font-size: 1.5rem; color: var(--text-secondary); margin-bottom: 5px;"><i
+                            class="fas fa-user-check"></i></div>
                     <span class="counter-value" style="color: #06B6D4;">{{ top_users|length * 15 }}+</span>
-                    <span class="counter-label">Alunos Ativos</span>
+                    <span class="counter-label">Biohackers Ativos</span>
                 </div>
             </div>
 
@@ -640,21 +653,21 @@
             observer.observe(el);
         });
 
-        // Fibras ativadas counter animation
-        var fibrasEl = document.getElementById('fibrasCounter');
-        if (fibrasEl) {
-            var fibrasObserver = new IntersectionObserver(function (entries) {
+        // Weight counter animation
+        var weightEl = document.getElementById('weightCounter');
+        if (weightEl) {
+            var weightObserver = new IntersectionObserver(function (entries) {
                 entries.forEach(function (entry) {
                     if (entry.isIntersecting) {
-                        var target = parseInt(fibrasEl.getAttribute('data-target')) || 0;
+                        var target = parseInt(weightEl.getAttribute('data-target')) || 0;
                         if (target > 0) {
-                            animateCounter(fibrasEl, target, 2500);
+                            animateCounter(weightEl, target, 2500);
                         }
-                        fibrasObserver.unobserve(entry.target);
+                        weightObserver.unobserve(entry.target);
                     }
                 });
             }, { threshold: 0.3 });
-            fibrasObserver.observe(fibrasEl);
+            weightObserver.observe(weightEl);
         }
     </script>
     <script src="{{ url_for('static', filename='js/gamification.js') }}"></script>
