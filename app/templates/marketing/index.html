@@ -234,7 +234,7 @@
                     {% if mod.is_featured %}
                     <span class="modality-badge">Tecnologia Exclusiva</span>
                     {% endif %}
-                    <div class="modality-icon" style="color: {{ mod.color }};">
+                    <div class="modality-icon dynamic-color" data-color="{{ mod.color }}">
                         {% if mod.icon %}
                         {{ mod.icon }}
                         {% else %}
@@ -357,8 +357,8 @@
                             pkg.validity_days }} dias</li>
                         {% endif %}
                     </ul>
-                    <a href="/shop" class="btn-neon"
-                        style="{% if not pkg.is_featured %}background-color: transparent; border: 1px solid var(--accent);{% endif %} text-decoration: none;">
+                    <a href="/shop" class="btn-neon {% if not pkg.is_featured %}btn-outline{% endif %}"
+                        style="text-decoration: none;">
                         {% if pkg.is_featured %}Quero Este{% else %}Selecionar{% endif %}
                     </a>
                 </div>
@@ -651,6 +651,13 @@
 
         document.querySelectorAll('.problem-card, .modality-card, .testimonial-card, .compare-row, .hall-row').forEach(function (el) {
             observer.observe(el);
+        });
+
+        // Dynamic colors for modalities
+        document.querySelectorAll('.dynamic-color').forEach(function (el) {
+            if (el.dataset.color) {
+                el.style.color = el.dataset.color;
+            }
         });
 
         // Weight counter animation
