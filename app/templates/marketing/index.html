@@ -82,15 +82,26 @@
             style="background: linear-gradient(rgba(10, 10, 10, 0.7), rgba(10, 10, 10, 1)), url('https://images.unsplash.com/photo-1593079831268-3381b0db4a77?q=80&w=1469&auto=format&fit=crop'); background-size: cover; background-position: center;">
         </div>
 
-        <div class="hero-content">
-            <h1 class="hero-headline text-contrast">A EVOLUÇÃO DA <span class="text-accent">HIPERTROFIA</span></h1>
-            <p class="hero-subheadline text-contrast">
-                Ciência, Tecnologia e Musculação de Elite. Potencializamos seus resultados de ganho de massa unindo o
-                treinamento de força à tecnologia <strong>Ezbody Wireless</strong>.
+        <div style="z-index: 2; text-align: center; max-width: 1000px; padding: 0 20px;">
+            <div style="display: inline-block; padding: 6px 16px; background: rgba(0, 242, 255, 0.1); border: 1px solid var(--cyan-glow); border-radius: 50px; color: var(--cyan-electric); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 30px; font-weight: 600;">
+                <i class="fas fa-microchip me-2"></i> PROTOCOLOS DE ALTA PRECISÃO
+            </div>
+
+            <h1 style="font-size: clamp(3rem, 10vw, 6rem); line-height: 0.95; margin-bottom: 30px;">
+                REPROGRAME <br><span style="color: var(--cyan-electric); text-shadow: 0 0 30px var(--cyan-glow);">A SUA BIOLOGIA.</span>
+            </h1>
+
+            <p style="font-size: 1.25rem; color: var(--text-dim); margin-bottom: 50px; max-width: 700px; margin-left: auto; margin-right: auto; line-height: 1.6;">
+                Treinamento de elite unindo tecnologia <strong>Ezbody Wireless</strong> e ciência de biohacking para resultados que a biologia comum levaria meses para entregar.
             </p>
-            <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-                <a href="#planos" class="btn-neon">Agendar Sessão Experimental</a>
-                <a href="#ciencia" class="btn-neon btn-outline">Conhecer o Método</a>
+
+            <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+                <a href="{% if current_user.is_authenticated %}{{ url_for('student.schedule') }}{% else %}{{ url_for('auth.register') }}{% endif %}" class="btn-neon">
+                    <i class="fas fa-bolt me-2"></i> AGENDAR SESSÃO EXPERIMENTAL
+                </a>
+                <a href="{{ url_for('auth.register') }}" class="btn-neon btn-outline">
+                    COMEÇAR AGORA <i class="fas fa-arrow-right ms-2"></i>
+                </a>
             </div>
 
             <!-- Trust Badges -->

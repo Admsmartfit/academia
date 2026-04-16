@@ -190,8 +190,12 @@ def schedule():
         Subscription.credits_used < Subscription.credits_total
     ).all()
 
+    has_bookings = Booking.query.filter_by(user_id=current_user.id).first() is not None
+    is_eligible_for_trial = not has_bookings
+
     return render_template('student/schedule_v2.html',
-                           active_subscriptions=active_subscriptions)
+                           active_subscriptions=active_subscriptions,
+                           is_eligible_for_trial=is_eligible_for_trial)
 
 
 @student_bp.route('/book/<int:schedule_id>', methods=['POST'])
@@ -204,15 +208,56 @@ def book_class(schedule_id):
     subscription_id = request.form.get('subscription_id')
     booking_type = request.form.get('booking_type', 'avulso')
 
-    if not date_str or not subscription_id:
-        flash('Dados incompletos para agendamento.', 'danger')
+    if not date_str:
+        flash('Data não informada.', 'danger')
         return redirect(url_for('student.schedule'))
 
     try:
         date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        flash('Data inválida.', 'danger')
+        return redirect(url_for('student.schedule'))
+
+    # ===== FLUXO 1: SESSÃO EXPERIMENTAL GRATUITA =====
+    if subscription_id == 'experimental':
+        if Booking.query.filter_by(user_id=current_user.id).count() > 0:
+            flash('Você já utilizou a sua sessão experimental gratuita.', 'danger')
+            return redirect(url_for('student.schedule'))
+
+        booking = Booking(
+            user_id=current_user.id,
+            subscription_id=None,
+            schedule_id=schedule.id,
+            date=date,
+            status=BookingStatus.CONFIRMED,
+            is_recurring=False,
+            cost_at_booking=0
+        )
+        db.session.add(booking)
+
+        # Automação CRM: mover lead para TRIAL
+        try:
+            from app.models.crm import Lead, LeadStatus
+            lead = Lead.query.filter_by(converted_user_id=current_user.id).first()
+            if lead and lead.status == LeadStatus.NEW:
+                lead.status = LeadStatus.TRIAL
+                lead.trial_class_date = datetime.utcnow()
+        except Exception:
+            pass
+
+        db.session.commit()
+        flash('Sessão Experimental agendada com sucesso! Bem-vindo ao Biohacking Studio.', 'success')
+        return redirect(url_for('student.my_bookings'))
+
+    # ===== FLUXO 2: AGENDAMENTO NORMAL (COM CRÉDITOS) =====
+    if not subscription_id:
+        flash('Nenhuma assinatura selecionada para debitar créditos.', 'danger')
+        return redirect(url_for('student.schedule'))
+
+    try:
         subscription_id = int(subscription_id)
     except ValueError:
-        flash('Data ou assinatura invalida.', 'danger')
+        flash('Assinatura inválida.', 'danger')
         return redirect(url_for('student.schedule'))
 
     subscription = Subscription.query.filter_by(
@@ -1062,6 +1107,10 @@ def api_get_slots():
     ).filter(
         Subscription.credits_used < Subscription.credits_total
     ).first() is not None
+
+    # Trial gratuito também conta como "tem acesso"
+    if not has_credits:
+        has_credits = Booking.query.filter_by(user_id=current_user.id).count() == 0
 
     while current_date <= end_date:
         if current_date < today:

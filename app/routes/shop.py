@@ -12,6 +12,7 @@ shop_bp = Blueprint('shop', __name__, url_prefix='/shop')
 
 
 @shop_bp.route('/')
+@shop_bp.route('/packages')
 def packages():
     """Loja de pacotes - estilo e-commerce"""
     packages = Package.query.filter_by(is_active=True).order_by(

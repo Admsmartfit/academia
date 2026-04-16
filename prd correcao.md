@@ -1,133 +1,142 @@
-PRD: Correção do Calendário e Rebranding (Biohacking Studio)
-Versão: 1.2 (Bugfix e Identidade Visual)
-Módulos Afetados: Área do Aluno (/student), Templates Base e Configurações Globais.
+Compreendo perfeitamente o que aconteceu. Identificou dois problemas distintos de integração que são muito comuns durante a implementação de novas regras de negócio:
 
-1. Visão Geral
-Este documento descreve as etapas para corrigir o bug de renderização do calendário na nova interface de agendamento (Two-Pane Layout) e aplicar a mudança global de nomenclatura de "Academia" (ou termos genéricos) para "Biohacking Studio", integrando a logomarca da empresa no sistema.
+1. **O Bloqueio do Botão (O "Falso" Sem Créditos):** No backend nós criámos a regra que liberta o passe gratuito (`is_eligible_for_trial`), mas a **tabela de horários** no HTML ainda tem a regra antiga ("chumbada") que desativa o botão de agendar se o aluno não tiver `active_subscriptions` (planos pagos). A tabela está a ignorar o passe livre.
+2. **O Erro 404 (Página Não Encontrada):** O link `/shop/packages` está a tentar aceder ao ficheiro de rotas da Loja (`app/routes/shop.py`), mas a rota específica `/packages` ou o Blueprint inteiro da loja não está registado corretamente na aplicação.
 
-Etapa 1: Correção do Bug do Calendário (Flatpickr)
-1.1. Causa Raiz
-O Flatpickr constrói o calendário injetando HTML ao lado do input original. Se o input tem a classe .d-none (Bootstrap), ele pode herdar comportamentos que quebram a visibilidade. Além disso, se o base.html não possuir uma tag {% block scripts %}, o JavaScript não será renderizado na página final.
+Abaixo está o **PRD de Correção Definitiva** para desbloquear as vendas e os agendamentos.
 
-1.2. Solução no arquivo app/templates/student/schedule_v2.html
-Modificaremos a injeção do CSS e JS garantindo que eles carreguem corretamente dentro da página, e ajustaremos a tag do input.
+---
 
-Ação: Substitua completamente a estrutura do container do calendário e mova os scripts para o final do {% block content %}.
+# PRD: Desbloqueio do Agendamento Experimental e Fix 404
 
-HTML
-<div class="card">
-    <div class="card-body p-3 d-flex justify-content-center">
-        <div id="inline-calendar"></div>
-    </div>
-    <div class="card-footer bg-white text-muted small text-center">
-        <span class="badge bg-success opacity-75">&nbsp;</span> Disponível 
-        <span class="badge bg-warning opacity-75 text-dark ms-2">&nbsp;</span> Poucas vagas
-    </div>
-</div>
-Ação: No final do arquivo schedule_v2.html (logo antes de fechar o {% block content %}), insira as dependências diretamente para garantir a execução:
+**Versão:** 2.7 (Bugfix Crítico)
+**Arquivos Afetados:** `app/templates/student/schedule.html` e `app/routes/shop.py`
 
-HTML
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script>
+## Passo 1: Correção da Tabela de Agendamento (Frontend)
 
-    <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        let heatmapData = {};
-        let selectedDateStr = new Date().toISOString().split('T')[0];
+Vamos ensinar a tabela de horários a reconhecer a sessão experimental e a **ativar o botão de Agendar** para os novos clientes, enviando a palavra `experimental` em vez do ID de um plano pago.
+
+**Ação:** Abra o ficheiro `app/templates/student/schedule.html` e localize a secção onde a tabela de horários é gerada (perto da linha onde diz `<td class="text-center">`). 
+
+Substitua as antigas validações (`{% elif not active_subscriptions %}`) por este bloco corrigido:
+
+```html
+<td class="text-center">
+    {% if schedule.user_booked %}
+        <span class="badge bg-info">Já agendado</span>
+    {% elif schedule.gender_restricted %}
+        <button class="btn btn-sm btn-secondary" disabled title="{{ schedule.gender_message }}">
+            <i class="fas fa-ban"></i> Restrito
+        </button>
+        <br><small class="text-danger">{{ schedule.gender_message }}</small>
+    {% elif not parq_ok %}
+        <a href="{{ url_for('health.fill_parq') }}" class="btn btn-sm btn-warning text-dark">
+            Requer Avaliação
+        </a>
+    {% elif schedule.requires_ems and not schedule.ems_ok %}
+        <a href="{{ url_for('health.fill_ems') }}" class="btn btn-sm btn-warning text-dark">
+            Requer Anamnese
+        </a>
+    {% elif schedule.available_spots <= 0 %}
+        <button class="btn btn-sm btn-secondary" disabled>Lotado</button>
         
-        // Renderizar numa div em vez de input evita bugs de ocultação
-        const fp = flatpickr("#inline-calendar", {
-            inline: true,
-            locale: "pt",
-            defaultDate: "today",
-            minDate: "today",
-            onChange: function(selectedDates, dateStr, instance) {
-                selectedDateStr = dateStr;
-                if(typeof fetchSlots === "function") fetchSlots(dateStr, dateStr);
-            },
-            onMonthChange: function(selectedDates, dateStr, instance) {
-                if(typeof fetchHeatmap === "function") fetchHeatmap(instance.currentYear, instance.currentMonth);
-            },
-            onReady: function(selectedDates, dateStr, instance) {
-                if(typeof fetchHeatmap === "function") fetchHeatmap(instance.currentYear, instance.currentMonth);
-                if(typeof fetchSlots === "function") fetchSlots(dateStr, dateStr);
-            },
-            onDayCreate: function(dObj, dStr, fp, dayElem) {
-                const dateString = dayElem.dateObj.toISOString().split('T')[0];
-                if (heatmapData[dateString]) {
-                    dayElem.classList.add(`status-${heatmapData[dateString].status}`);
-                }
-            }
-        });
+    {% elif not active_subscriptions and not is_eligible_for_trial %}
+        <button class="btn btn-sm btn-secondary" disabled>Sem créditos</button>
+        
+    {% else %}
+        <form action="{{ url_for('student.book_class', schedule_id=schedule.id) }}" method="POST" class="d-inline booking-form">
+            <input type="hidden" name="date" value="{{ selected_date.strftime('%Y-%m-%d') }}">
+            
+            <input type="hidden" name="subscription_id" class="subscription-input" 
+                   value="{% if is_eligible_for_trial %}experimental{% elif active_subscriptions %}{{ active_subscriptions[0].id }}{% endif %}">
+                   
+            <button type="submit" class="btn btn-sm btn-primary fw-bold text-dark">
+                <i class="fas fa-bolt me-1"></i> Agendar
+            </button>
+        </form>
+    {% endif %}
+</td>
+```
 
-        // (Mantenha aqui as funções fetchHeatmap, fetchSlots e renderSlots do PRD anterior)
-    });
-    </script>
-{% endblock %}
-Etapa 2: Atualização de Branding (Biohacking Studio)
-O sistema deve refletir a identidade corporativa. Removeremos jargões genéricos e implementaremos a logo do Studio.
+---
 
-2.1. Variáveis e Títulos (Backend & Jinja)
-Onde houver variáveis de sistema ou configurações de nome, elas devem ser padronizadas.
+## Passo 2: Ocultar o Alerta de Erro "Sem Créditos"
 
-Arquivo alvo: config.py ou chamadas no __init__.py.
+Ainda no mesmo ficheiro `schedule.html`, se o utilizador for novo, não lhe devemos mostrar o alerta amarelo a mandar comprar um plano, pois ele tem direito ao passe gratuito.
 
-Ação: Garantir que o nome da aplicação (SITE_NAME ou equivalente) retorne Biohacking Studio.
+**Ação:** Vá ao topo do ficheiro `schedule.html` e garanta que o painel inteligente está escrito com esta validação:
 
-Ação: Em app/templates/base.html, atualizar a tag de título principal:
+```html
+{% if active_subscriptions or is_eligible_for_trial %}
+    <div class="card mb-4 border-0 shadow-sm" style="background: var(--bg-card, #0f172a);">
+        <div class="card-body p-4">
+            <h6 class="mb-3 fw-bold" style="color: var(--cyan-electric, #00f2ff);">
+                <i class="fas fa-microchip me-2"></i> SEU ACESSO
+            </h6>
+            
+            <div class="row g-3">
+                {% if is_eligible_for_trial %}
+                <div class="col-md-6">
+                    <div class="form-check custom-radio-box p-3 rounded" style="border: 2px solid #00f2ff; background: rgba(0, 242, 255, 0.05);">
+                        <input class="form-check-input subscription-radio" type="radio" name="subscription_select" id="sub_exp" value="experimental" checked>
+                        <label class="form-check-label w-100 cursor-pointer text-white" for="sub_exp">
+                            <strong style="color: #00f2ff;"><i class="fas fa-bolt text-warning me-1"></i> Primeira Sessão Gratuita</strong>
+                        </label>
+                    </div>
+                </div>
+                {% endif %}
+                
+                </div>
+        </div>
+    </div>
+{% else %}
+    <div class="alert alert-warning border-0" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
+        <i class="fas fa-exclamation-triangle me-2"></i> Os seus créditos acabaram. 
+        <a href="{{ url_for('shop.packages') }}" class="alert-link text-white fw-bold ms-1 text-decoration-none border-bottom">Ver Planos</a>.
+    </div>
+{% endif %}
+```
 
-HTML
-<title>{% block title %}{% endblock %} | Biohacking Studio</title>
-2.2. Atualização da Barra de Navegação (navbar.html)
-Substituir o texto padrão no cabeçalho pelo uso de uma logomarca oficial, com fallback elegante (caso a imagem demore a carregar).
+---
 
-Arquivo alvo: app/templates/includes/navbar.html (ou o arquivo que contém o menu superior no seu projeto).
+## Passo 3: Correção do Erro 404 (`/shop/packages`)
 
-Ação:
+Se a página dos pacotes diz "não encontrada", a rota está ausente do ficheiro da loja.
 
-HTML
-<a class="navbar-brand d-flex align-items-center" href="{{ url_for('student.dashboard') }}">
-    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Biohacking Studio" height="40" class="d-inline-block align-text-top me-2" onerror="this.style.display='none';">
-    <span class="fw-bold text-primary">Biohacking Studio</span>
-</a>
-2.3. Renomear Termos de UI (User Interface)
-Uma varredura e substituição devem ser feitas nas páginas principais (Login, Dashboard, Headers) para trocar nomenclaturas.
+**Ação 1:** Abra o ficheiro `app/routes/shop.py` e adicione (ou substitua) a rota `/packages` desta forma exata:
 
-Regras de Substituição Textual:
+```python
+# app/routes/shop.py
 
-"Academia" ou "Academia System" ➔ "Biohacking Studio"
+from flask import Blueprint, render_template
+from flask_login import login_required
+from app.models.package import Package
 
-"Bem-vindo à Academia" ➔ "Bem-vindo ao Biohacking Studio"
+shop_bp = Blueprint('shop', __name__, url_prefix='/shop')
 
-"Minha Academia" ➔ "Meu Studio"
+@shop_bp.route('/packages')
+@login_required
+def packages():
+    """Página de listagem de planos do Biohacking Studio"""
+    # Procura todos os pacotes ativos na base de dados
+    packages = Package.query.filter_by(is_active=True).order_by(Package.price.asc()).all()
+    
+    return render_template('shop/packages.html', packages=packages)
 
-"biohack" (minúsculo/incompleto) ➔ "Biohacking Studio"
+# Restante do seu código da loja (checkout, pagamento, etc...)
+```
 
-Arquivos Principais para Varredura:
+**Ação 2 (Garantia Máxima):** Abra o seu ficheiro `app/__init__.py` e confirme que a loja está a ser importada e registada. Deverá ter algo semelhante a isto nas configurações das rotas:
 
-app/templates/auth/login.html e register.html (Títulos de formulário).
+```python
+# app/__init__.py
+# Localize a secção onde os blueprints são registados:
 
-app/templates/student/dashboard.html (Mensagens de boas-vindas).
+from app.routes.shop import shop_bp
+app.register_blueprint(shop_bp)
+```
 
-app/templates/admin/dashboard.html (Visão geral do administrador).
-
-2.4. Atualização de E-mails e Notificações (WhatsApp/CRM)
-Se o sistema possui disparos automáticos, o texto das templates precisa refletir a marca.
-
-Arquivo alvo (exemplo): Modelos de whatsapp_template.py ou funções no notification_service.py.
-
-Ação: O texto base dos gatilhos de WhatsApp deve dizer:
-
-"Olá {nome}, seu agendamento no Biohacking Studio está confirmado para..." ao invés de "na academia".
-
-3. Plano de Ação para Execução (Resumo)
-Copiar a imagem logo.png fornecida pelo designer para a pasta app/static/img/.
-
-Aplicar as mudanças de id e injeção de script no schedule_v2.html para resolver a ausência do calendário na tela.
-
-Rodar um Find and Replace global no diretório de templates (app/templates/) substituindo as palavras-chave conforme as regras definidas na Seção 2.3.
-
-Substituir o cabeçalho no arquivo principal da navbar.
-
-Recarregar a aplicação e limpar o cache do navegador (Ctrl+F5) para testar o carregamento do CSS/JS do calendário e a nova logo.
+### O que acontece agora?
+1. O seu novo Lead cadastra-se e vai para o calendário. O botão "+ Agendar" agora estará **AZUL e CLICÁVEL**, porque o sistema sabe que a variável `is_eligible_for_trial` existe.
+2. Ao clicar, o sistema fará o agendamento a custo zero e moverá o cliente na aba do CRM.
+3. Se os créditos dele acabarem mais tarde e ele clicar em "Ver Planos", o sistema encontrará perfeitamente o ficheiro `shop.py` e carregará a página dos pacotes sem o temido erro 404.
