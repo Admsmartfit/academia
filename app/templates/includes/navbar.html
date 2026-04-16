@@ -3,8 +3,9 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow">
     <div class="container">
         <a class="navbar-brand d-flex align-items-center" href="{{ url_for('marketing.index') }}">
-            <i class="fas fa-dumbbell me-2 text-primary"></i>
-            <span class="fw-bold">Academia</span>
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Biohacking Studio" height="40"
+                 class="d-inline-block align-text-top me-2" onerror="this.style.display='none';">
+            <span class="fw-bold text-primary">Biohacking Studio</span>
             {% if current_user.is_authenticated %}
             {% if current_user.is_admin %}
             <span class="badge bg-danger ms-2" style="font-size: 0.6rem;">ADMIN</span>

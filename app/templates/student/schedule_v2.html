@@ -2,7 +2,7 @@
 
 {% block title %}Grade de Horarios{% endblock %}
 
-{% block head %}
+{% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <style>
     /* ===== Calendario Inline Flatpickr ===== */
@@ -118,7 +118,7 @@
         #calendar-body { max-height: none !important; }
     }
 </style>
-{% endblock %}
+{% endblock extra_css %}
 
 {% block content %}
 <div class="container py-4">
@@ -187,8 +187,8 @@
                     </button>
                 </div>
                 <div id="calendar-body">
-                    <div class="card-body p-2">
-                        <input type="text" id="inline-calendar" class="d-none">
+                    <div class="card-body p-2 d-flex justify-content-center">
+                        <div id="inline-calendar"></div>
                     </div>
                     <div class="card-footer bg-white border-top-0 pt-0 pb-2 px-3">
                         <div class="d-flex gap-3 small text-muted">

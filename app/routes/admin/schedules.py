@@ -1,6 +1,6 @@
 # app/routes/admin/schedules.py
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from app.models import ClassSchedule, Modality, User, ScheduleSlotGender, Gender, Booking, BookingStatus
 from app import db
@@ -37,6 +37,7 @@ def list_schedules():
         schedules_by_day[day_name] = [s for s in schedules if s.weekday == day_num]
 
     return render_template('admin/schedules/list.html',
+                         schedules=schedules,
                          schedules_by_day=schedules_by_day,
                          weekdays=WEEKDAYS)
 
@@ -209,6 +210,29 @@ def reject_schedule(id):
         db.session.commit()
         flash('Horario rejeitado e removido.', 'info')
     return redirect(url_for('admin_schedules.list_schedules'))
+
+
+@schedules_bp.route('/bulk-delete', methods=['POST'])
+@login_required
+@admin_required
+def bulk_delete():
+    """Exclui múltiplos horários simultaneamente."""
+    data = request.get_json()
+    schedule_ids = data.get('ids', [])
+
+    if not schedule_ids:
+        return jsonify({'success': False, 'message': 'Nenhum horário selecionado.'}), 400
+
+    try:
+        ClassSchedule.query.filter(ClassSchedule.id.in_(schedule_ids)).delete(synchronize_session=False)
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'message': f'{len(schedule_ids)} horários foram excluídos com sucesso.'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Erro ao excluir: {str(e)}'}), 500
 
 
 # ==================== GERENCIAMENTO DE GENERO ====================

@@ -1,125 +1,205 @@
 {% extends "admin/base.html" %}
 
-{% block page_title %}Grade de Horarios{% endblock %}
+{% block page_title %}Gerenciar Grades de Horários{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0">Grade de Horarios</h4>
-    <div>
-        <a href="{{ url_for('admin_schedules.gender_management') }}" class="btn btn-outline-info me-2">
-            <i class="fas fa-venus-mars me-2"></i>Gerenciar Sexo
-        </a>
-        <a href="{{ url_for('admin_schedules.create_schedule') }}" class="btn btn-primary">
-            <i class="fas fa-plus me-2"></i>Novo Horario
-        </a>
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0"><i class="fas fa-calendar-alt text-primary me-2"></i>Grades de Horários</h2>
+            <p class="text-muted mb-0">Gerencie os horários das aulas por dia da semana.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-outline-danger d-none" id="btnBulkDelete" onclick="deleteSelected()">
+                <i class="fas fa-trash"></i> Excluir Selecionados (<span id="selectedCount">0</span>)
+            </button>
+            <a href="{{ url_for('admin_schedules.gender_management') }}" class="btn btn-outline-info">
+                <i class="fas fa-venus-mars me-1"></i>Gerenciar Sexo
+            </a>
+            <a href="{{ url_for('admin_schedules.create_schedule') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Novo Horário
+            </a>
+        </div>
     </div>
-</div>
 
-<!-- Navegacao por abas dos dias da semana -->
-<ul class="nav nav-tabs mb-4" role="tablist">
-    {% for day_num, day_name in weekdays %}
-    <li class="nav-item" role="presentation">
-        <button class="nav-link {{ 'active' if loop.first }}" id="tab-{{ day_num }}" data-bs-toggle="tab"
-            data-bs-target="#content-{{ day_num }}" type="button" role="tab">
-            {{ day_name }}
-            {% if schedules_by_day[day_name] %}
-            <span class="badge bg-primary ms-1">{{ schedules_by_day[day_name]|length }}</span>
-            {% endif %}
-        </button>
-    </li>
-    {% endfor %}
-</ul>
+    <div class="card mb-4 shadow-sm border-0">
+        <div class="card-body p-3">
+            <div class="input-group">
+                <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                <input type="text" id="searchInput" class="form-control"
+                    placeholder="Buscar por modalidade ou instrutor (Ex: Musculação, Carlos)..."
+                    onkeyup="filterSchedules()">
+            </div>
+        </div>
+    </div>
 
-<div class="tab-content">
-    {% for day_num, day_name in weekdays %}
-    <div class="tab-pane fade {{ 'show active' if loop.first }}" id="content-{{ day_num }}" role="tabpanel">
+    {# Mapeamento: índice = weekday no banco (0=Dom, 1=Seg, ..., 6=Sáb) #}
+    {% set days = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'] %}
+    {% set grouped_schedules = schedules | groupby('weekday') %}
 
-        {% set day_schedules = schedules_by_day[day_name] %}
-
-        {% if day_schedules %}
-        <div class="row g-3">
-            {% for schedule in day_schedules %}
-            <div class="col-md-4">
-                <div
-                    class="card h-100 {{ 'border-warning shadow-sm' if not schedule.is_approved }} {{ 'border-secondary opacity-75' if not schedule.is_active }}">
-                    <div class="card-header d-flex justify-content-between align-items-center"
-                        style="background-color: {{ schedule.modality.color }}20; border-left: 4px solid {{ schedule.modality.color }};">
-                        <div class="text-truncate">
-                            <span class="me-2">{{ schedule.modality.icon or '💪' }}</span>
-                            <strong>{{ schedule.modality.name }}</strong>
-                            {% if schedule.modality.requires_gender_segregation %}
-                            <i class="fas fa-venus-mars text-info ms-1" title="Segregacao por sexo"></i>
-                            {% endif %}
-                        </div>
-                        <div>
-                            {% if not schedule.is_approved %}
-                            <span class="badge bg-warning text-dark">Pendente</span>
-                            {% elif not schedule.is_active %}
-                            <span class="badge bg-secondary">Inativo</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-2">
-                            <i class="far fa-clock text-muted me-2"></i>
-                            <strong>{{ schedule.start_time.strftime('%H:%M') }}</strong> -
-                            {{ schedule.end_time.strftime('%H:%M') }}
-                        </div>
-                        <div class="mb-2">
-                            <i class="far fa-user text-muted me-2"></i>
-                            {{ schedule.instructor.name }}
-                        </div>
-                        <div class="mb-3">
-                            <i class="far fa-users text-muted me-2"></i>
-                            {{ schedule.capacity }} vagas
-                        </div>
-
-                        {% if not schedule.is_approved %}
-                        <div class="d-grid gap-2">
-                            <form action="{{ url_for('admin_schedules.approve_schedule', id=schedule.id) }}"
-                                method="POST">
-                                <button type="submit" class="btn btn-sm btn-success w-100">
-                                    <i class="fas fa-check me-1"></i> Aprovar
-                                </button>
-                            </form>
-                            <form action="{{ url_for('admin_schedules.reject_schedule', id=schedule.id) }}"
-                                method="POST" onsubmit="return confirm('Rejeitar este horário?')">
-                                <button type="submit" class="btn btn-sm btn-outline-danger w-100">
-                                    <i class="fas fa-times me-1"></i> Rejeitar
-                                </button>
-                            </form>
-                        </div>
-                        {% else %}
-                        <div class="btn-group w-100">
-                            <a href="{{ url_for('admin_schedules.edit_schedule', id=schedule.id) }}"
-                                class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-edit"></i> Editar
-                            </a>
-                            <form action="{{ url_for('admin_schedules.toggle_schedule', id=schedule.id) }}"
-                                method="POST" class="d-inline">
-                                <button type="submit"
-                                    class="btn btn-sm btn-outline-{{ 'warning' if schedule.is_active else 'success' }}">
-                                    <i class="fas fa-{{ 'pause' if schedule.is_active else 'play' }}"></i>
-                                    {{ 'Pausar' if schedule.is_active else 'Ativar' }}
-                                </button>
-                            </form>
-                        </div>
-                        {% endif %}
+    <div class="accordion shadow-sm" id="schedulesAccordion">
+        {% for weekday, day_schedules in grouped_schedules %}
+        <div class="accordion-item border-0 border-bottom">
+            <h2 class="accordion-header" id="heading{{ weekday }}">
+                <button class="accordion-button bg-light fw-bold text-dark" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#collapse{{ weekday }}"
+                    aria-expanded="true" aria-controls="collapse{{ weekday }}">
+                    <i class="far fa-calendar-day me-2"></i> {{ days[weekday] }}
+                    <span class="badge bg-secondary rounded-pill ms-2">{{ day_schedules|list|length }} aulas</span>
+                </button>
+            </h2>
+            <div id="collapse{{ weekday }}" class="accordion-collapse collapse show"
+                aria-labelledby="heading{{ weekday }}">
+                <div class="accordion-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 schedule-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 40px; padding-left: 20px;">
+                                        <input class="form-check-input select-all-day" type="checkbox"
+                                            data-day="{{ weekday }}" onclick="toggleDay(this)">
+                                    </th>
+                                    <th>Horário</th>
+                                    <th>Modalidade</th>
+                                    <th>Instrutor</th>
+                                    <th>Capacidade</th>
+                                    <th>Status</th>
+                                    <th class="text-end pe-4">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for schedule in day_schedules %}
+                                <tr class="schedule-row">
+                                    <td style="padding-left: 20px;">
+                                        <input class="form-check-input schedule-checkbox"
+                                            type="checkbox" value="{{ schedule.id }}"
+                                            onchange="updateBulkButton()">
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold text-primary">
+                                            <i class="far fa-clock me-1"></i>
+                                            {{ schedule.start_time.strftime('%H:%M') }} - {{ schedule.end_time.strftime('%H:%M') }}
+                                        </div>
+                                    </td>
+                                    <td class="search-target fw-semibold">
+                                        {{ schedule.modality.icon or '' }} {{ schedule.modality.name }}
+                                        {% if schedule.modality.requires_gender_segregation %}
+                                        <i class="fas fa-venus-mars text-info ms-1" title="Segregação por sexo"></i>
+                                        {% endif %}
+                                    </td>
+                                    <td class="search-target">{{ schedule.instructor.name }}</td>
+                                    <td>{{ schedule.capacity }} vagas</td>
+                                    <td>
+                                        {% if not schedule.is_approved %}
+                                        <span class="badge bg-warning text-dark">Pendente</span>
+                                        {% elif schedule.is_active %}
+                                        <span class="badge bg-success">Ativo</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Inativo</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        {% if not schedule.is_approved %}
+                                        <form action="{{ url_for('admin_schedules.approve_schedule', id=schedule.id) }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-success" title="Aprovar">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        </form>
+                                        <form action="{{ url_for('admin_schedules.reject_schedule', id=schedule.id) }}" method="POST" class="d-inline"
+                                            onsubmit="return confirm('Rejeitar este horário?')">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Rejeitar">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </form>
+                                        {% else %}
+                                        <a href="{{ url_for('admin_schedules.edit_schedule', id=schedule.id) }}"
+                                            class="btn btn-sm btn-outline-primary" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form action="{{ url_for('admin_schedules.toggle_schedule', id=schedule.id) }}" method="POST" class="d-inline">
+                                            <button type="submit"
+                                                class="btn btn-sm btn-outline-{{ 'warning' if schedule.is_active else 'success' }}"
+                                                title="{{ 'Pausar' if schedule.is_active else 'Ativar' }}">
+                                                <i class="fas fa-{{ 'pause' if schedule.is_active else 'play' }}"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
-            {% endfor %}
         </div>
         {% else %}
-        <div class="text-center py-5">
-            <i class="far fa-calendar-times fa-3x text-muted mb-3"></i>
-            <p class="text-muted">Nenhum horario cadastrado para {{ day_name }}</p>
-            <a href="{{ url_for('admin_schedules.create_schedule') }}" class="btn btn-outline-primary btn-sm">
-                <i class="fas fa-plus me-1"></i>Adicionar Horario
-            </a>
+        <div class="text-center py-5 bg-white rounded shadow-sm">
+            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+            <h5>Nenhuma grade de horário cadastrada.</h5>
+            <p class="text-muted">Clique em "Novo Horário" para começar.</p>
         </div>
-        {% endif %}
+        {% endfor %}
     </div>
-    {% endfor %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function filterSchedules() {
+        const input = document.getElementById('searchInput').value.toLowerCase();
+        const rows = document.querySelectorAll('.schedule-row');
+        rows.forEach(row => {
+            const targets = row.querySelectorAll('.search-target');
+            let match = false;
+            targets.forEach(target => {
+                if (target.textContent.toLowerCase().includes(input)) match = true;
+            });
+            row.style.display = match ? '' : 'none';
+        });
+    }
+
+    function toggleDay(checkbox) {
+        const day = checkbox.getAttribute('data-day');
+        const collapseDiv = document.getElementById('collapse' + day);
+        collapseDiv.querySelectorAll('.schedule-checkbox').forEach(cb => {
+            if (cb.closest('tr').style.display !== 'none') cb.checked = checkbox.checked;
+        });
+        updateBulkButton();
+    }
+
+    function updateBulkButton() {
+        const selected = document.querySelectorAll('.schedule-checkbox:checked').length;
+        const btn = document.getElementById('btnBulkDelete');
+        document.getElementById('selectedCount').textContent = selected;
+        btn.classList.toggle('d-none', selected === 0);
+    }
+
+    function deleteSelected() {
+        const ids = Array.from(document.querySelectorAll('.schedule-checkbox:checked'))
+            .map(cb => parseInt(cb.value));
+        if (ids.length === 0) return;
+
+        if (confirm(`Tem certeza que deseja excluir ${ids.length} horário(s)? Esta ação não pode ser desfeita.`)) {
+            fetch("{{ url_for('admin_schedules.bulk_delete') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ ids: ids })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Erro: ' + data.message);
+                }
+            })
+            .catch(() => alert('Ocorreu um erro ao processar a solicitação.'));
+        }
+    }
+</script>
 {% endblock %}

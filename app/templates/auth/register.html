@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Cadastro - Academia{% endblock %}
+{% block title %}Cadastro{% endblock %}
 
 {% block content %}
 <div class="min-vh-100 d-flex align-items-center justify-content-center"
@@ -9,8 +9,9 @@
         <div class="row justify-content-center">
             <div class="col-md-6">
                 <div class="text-center mb-4">
-                    <i class="fas fa-dumbbell fa-3x text-white mb-3"></i>
-                    <h2 class="text-white">Academia</h2>
+                    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Biohacking Studio" height="60"
+                         class="mb-3" onerror="this.style.display='none';">
+                    <h2 class="text-white fw-bold">Biohacking Studio</h2>
                 </div>
 
                 {% if show_fes_banner %}
