@@ -30,18 +30,22 @@
 
     <style>
         /* CSS Reset de Segurança contra Overflow Horizontal */
-        *, *::before, *::after {
+        *,
+        *::before,
+        *::after {
             box-sizing: border-box;
         }
 
-        html, body {
+        html,
+        body {
             overflow-x: hidden;
             width: 100%;
             margin: 0;
             padding: 0;
         }
 
-        img, svg {
+        img,
+        svg {
             max-width: 100%;
             height: auto;
         }
@@ -86,8 +90,7 @@
             </p>
             <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
                 <a href="#planos" class="btn-neon">Agendar Sessão Experimental</a>
-                <a href="#ciencia" class="btn-neon"
-                    style="background: transparent; border: 1px solid var(--accent);">Conhecer o Método</a>
+                <a href="#ciencia" class="btn-neon btn-outline">Conhecer o Método</a>
             </div>
 
             <!-- Trust Badges -->
