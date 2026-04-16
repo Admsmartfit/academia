@@ -248,6 +248,28 @@ def bulk_delete():
         return jsonify({'success': False, 'message': f'Erro ao excluir: {str(e)}'}), 500
 
 
+@schedules_bp.route('/bulk-approve', methods=['POST'])
+@login_required
+@admin_required
+def bulk_approve():
+    """Aprova múltiplos horários simultaneamente."""
+    data = request.get_json()
+    ids = data.get('ids', [])
+
+    if not ids:
+        return jsonify({'success': False, 'message': 'Nenhum ID fornecido.'}), 400
+
+    try:
+        schedules = ClassSchedule.query.filter(ClassSchedule.id.in_(ids)).all()
+        for s in schedules:
+            s.is_approved = True
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'{len(ids)} horários aprovados com sucesso.'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 # ==================== GERENCIAMENTO DE GENERO ====================
 
 @schedules_bp.route('/gender-management')

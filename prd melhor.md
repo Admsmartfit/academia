@@ -1,296 +1,244 @@
-Com base nas suas observações e nas imagens fornecidas, identifiquei perfeitamente os dois pontos de atrito:
+Compreendo perfeitamente. O problema de contraste ocorreu porque a nova variável Ciano Elétrico (`#00f2ff`) que aplicámos na identidade visual foi herdada por elementos de texto da tabela (como as horas). Como a tabela tem um fundo branco (padrão do Bootstrap no Admin), o texto ciano tornou-se ilegível.
 
-1.  **Landing Page (Tela Inicial):** O overflow (tela maior que o monitor) geralmente é causado por margens negativas em elementos `.row` do Bootstrap que não estão contidos em um `.container-fluid` com `overflow-x: hidden`. O contraste ruim (fundo claro com letra branca) dificulta a leitura.
-2.  **Gerenciamento de Grades (`/admin/schedules/`):** Uma lista plana de dezenas de horários torna-se insustentável. Precisamos agrupar os horários por **Dia da Semana** (usando *Accordions*), adicionar uma **Barra de Busca Dinâmica** e implementar a **Exclusão em Massa (Bulk Delete)** via checkboxes.
+Além disso, a adição de um botão de **Aprovação em Massa** é essencial para a eficiência do gestor, permitindo validar múltiplos horários sugeridos pelos professores de uma só vez.
 
-Abaixo está o **PRD Detalhado** com os códigos prontos para o assistente aplicar as melhorias no seu repositório.
-
----
-
-# PRD: Melhorias de UX/UI - Landing Page e Gerenciamento de Grades
-
-**Versão:** 1.3 (UX e Produtividade Admin)
-**Módulos Afetados:** Marketing (Landing Page) e Admin (Schedules)
-
-## Etapa 1: Correção Visual da Tela Inicial (Landing Page)
-
-**Objetivo:** Eliminar a barra de rolagem horizontal (overflow) e melhorar o contraste do texto sobre o fundo azul.
-
-### 1.1. Ajuste no CSS (`app/static/css/landing.css`)
-Adicione ou substitua as seguintes regras no arquivo CSS da landing page para travar o eixo horizontal e adicionar uma camada de contraste ao texto.
-
-```css
-/* app/static/css/landing.css */
-
-/* 1. Bloqueia a rolagem horizontal que faz a tela parecer maior */
-html, body {
-    overflow-x: hidden;
-    max-width: 100vw;
-}
-
-/* 2. Melhora o contraste no bloco principal (Hero Section) */
-/* Caso o fundo seja claro, adicionamos um leve sombreamento no texto ou escurecemos o overlay */
-.hero-section {
-    position: relative;
-    /* Se usar imagem de fundo, adicione um overlay mais escuro: */
-    /* background: linear-gradient(rgba(0, 50, 100, 0.7), rgba(0, 50, 100, 0.7)), url('../img/hero.png') center/cover; */
-}
-
-/* 3. Classe utilitária para garantir legibilidade do texto branco */
-.text-contrast {
-    color: #ffffff !important;
-    text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.6), 0px 0px 10px rgba(0, 0, 0, 0.4);
-}
-
-/* 4. Alternativa: Mudar a cor do texto para um azul escuro se o fundo for muito claro */
-.bg-light-blue .text-white {
-    color: #0d233a !important; /* Azul marinho escuro ao invés de branco */
-    text-shadow: none;
-}
-```
-*Nota ao implementador:* Aplique a classe `.text-contrast` nos elementos `<h1>` e `<p>` do *Hero* no arquivo `app/templates/marketing/index.html`.
+Abaixo, apresento o **PRD de Correção UI/UX e Nova Funcionalidade**, acompanhado do código completo.
 
 ---
 
-## Etapa 2: Refatoração da Lista de Horários do Admin
+# PRD: Correção de Contraste e Aprovação em Massa
 
-**Objetivo:** Transformar a lista plana em "Sanfonas" (Accordions) separadas por dias da semana, adicionar busca em tempo real e checkboxes para exclusão em lote.
+**Versão:** 2.3 (UI Fix & Admin Efficiency)
+**Módulo:** Gestão de Horários (Admin)
+**Arquivos Afetados:** `app/routes/admin/schedules.py` e `app/templates/admin/schedules/list.html`
 
-### 2.1. Backend: Nova rota para Exclusão em Lote
-Precisamos de um endpoint para receber os IDs selecionados e deletá-los de uma só vez.
+## 1. Melhoria de Contraste (UI)
+* **Problema:** Texto das horas em azul claro sobre fundo branco é ilegível.
+* **Solução:** Transformar as horas numa *badge* (etiqueta) escura e sólida (`bg-dark` com texto `white`). Isso não apenas resolve o problema de acessibilidade instantaneamente, como confere um visual mais estruturado à tabela de horários.
 
-* **Arquivo alvo:** `app/routes/admin/schedules.py`
-* **Ação:** Adicione o seguinte código ao final do arquivo:
+## 2. Nova Ação em Massa: "Aprovar Selecionados"
+* **Backend:** Criação de um novo endpoint (`/api/availability/bulk-approve`) para alterar o status `is_approved = True` em lote.
+* **Frontend:** Adição de um botão verde ("Aprovar") ao lado do botão vermelho ("Eliminar") que aparece apenas quando há 1 ou mais itens selecionados.
+
+---
+
+## Passo 1: Atualização do Backend (`schedules.py`)
+
+Adicione a nova rota `api_bulk_approve` no final do arquivo `app/routes/admin/schedules.py`. Certifique-se de manter a rota de `api_bulk_delete` que criámos anteriormente.
 
 ```python
-# app/routes/admin/schedules.py
+# app/routes/admin/schedules.py (Adicionar no final do arquivo)
 
-from flask import request, jsonify
-
-@admin_schedules_bp.route('/bulk-delete', methods=['POST'])
+@schedules_bp.route('/api/availability/bulk-approve', methods=['POST'])
 @login_required
 @admin_required
-def bulk_delete():
-    """Exclui múltiplos horários simultaneamente."""
+def api_bulk_approve():
+    """Endpoint para aprovação em massa via AJAX"""
     data = request.get_json()
-    schedule_ids = data.get('ids', [])
+    ids = data.get('ids', [])
     
-    if not schedule_ids:
-        return jsonify({'success': False, 'message': 'Nenhum horário selecionado.'}), 400
+    if not ids:
+        return jsonify({'success': False, 'message': 'Nenhum ID fornecido'}), 400
 
     try:
-        # Busca os horários e os exclui
-        # Obs: Se houver restrição de chave estrangeira com Bookings, 
-        # pode ser necessário fazer deleção em cascata ou soft delete (is_active = False).
-        ClassSchedule.query.filter(ClassSchedule.id.in_(schedule_ids)).delete(synchronize_session=False)
-        db.session.commit()
+        # Busca as grades selecionadas e atualiza o status de aprovação
+        schedules = ClassSchedule.query.filter(ClassSchedule.id.in_(ids)).all()
         
-        return jsonify({
-            'success': True, 
-            'message': f'{len(schedule_ids)} horários foram excluídos com sucesso.'
-        })
+        for s in schedules:
+            s.is_approved = True
+            
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'{len(ids)} horários aprovados com sucesso.'})
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'message': f'Erro ao excluir: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': str(e)}), 500
 ```
 
-### 2.2. Frontend: Novo Template da Lista (`list.html`)
-Vamos reescrever a página para usar o componente Accordion do Bootstrap, agrupar via Jinja2 e adicionar a lógica JavaScript.
+---
 
-* **Arquivo alvo:** `app/templates/admin/schedules/list.html`
-* **Ação:** Substitua o conteúdo pelo código abaixo:
+## Passo 2: Atualização do Frontend (`list.html`)
+
+Substitua completamente o código do arquivo `app/templates/admin/schedules/list.html`. 
+*Neste arquivo, fixei as horas dentro de `badges` de alto contraste e implementei os dois botões e as respetivas lógicas de comunicação em massa.*
 
 ```html
 {% extends "admin/base.html" %}
 
-{% block title %}Gerenciar Grades de Horários{% endblock %}
+{% block title %}Gestão de Horários | Biohacking Studio{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="mb-0"><i class="fas fa-calendar-alt text-primary me-2"></i>Grades de Horários</h2>
-            <p class="text-muted">Gerencie os horários das aulas por dia da semana.</p>
+            <h2 class="mb-0 fw-bold">Gestão de Horários</h2>
+            <p class="text-muted">Agrupamento inteligente por dia da semana.</p>
         </div>
         <div>
-            <button class="btn btn-outline-danger me-2 d-none" id="btnBulkDelete" onclick="deleteSelected()">
-                <i class="fas fa-trash"></i> Excluir Selecionados (<span id="selectedCount">0</span>)
+            <button id="btnBulkApprove" class="btn btn-outline-success d-none me-2" onclick="handleBulkApprove()">
+                <i class="fas fa-check me-2"></i>Aprovar (<span id="countApprove">0</span>)
             </button>
-            <a href="{{ url_for('admin_schedules.create') }}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Novo Horário
+            <button id="btnBulkDelete" class="btn btn-outline-danger d-none me-2" onclick="handleBulkDelete()">
+                <i class="fas fa-trash me-2"></i>Eliminar (<span id="countSelected">0</span>)
+            </button>
+            
+            <a href="{{ url_for('admin_schedules.create') }}" class="btn btn-primary text-dark fw-bold">
+                <i class="fas fa-plus me-2"></i>Novo Horário
             </a>
         </div>
     </div>
 
-    <div class="card mb-4 shadow-sm border-0">
-        <div class="card-body p-3">
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-body p-2">
             <div class="input-group">
-                <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-                <input type="text" id="searchInput" class="form-control" placeholder="Buscar por modalidade ou instrutor (Ex: Musculação, Carlos)..." onkeyup="filterSchedules()">
+                <span class="input-group-text bg-transparent border-0"><i class="fas fa-search text-muted"></i></span>
+                <input type="text" id="scheduleSearch" class="form-control border-0" placeholder="Filtrar por modalidade, professor ou status..." onkeyup="filterSchedules()">
             </div>
         </div>
     </div>
 
-    {% set days = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'] %}
-    {% set grouped_schedules = schedules | groupby('weekday') %}
+    {% set weekdays = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'] %}
+    {% set grouped = schedules | groupby('weekday') %}
 
-    <div class="accordion shadow-sm" id="schedulesAccordion">
-        {% for weekday, day_schedules in grouped_schedules %}
-        <div class="accordion-item border-0 border-bottom">
-            <h2 class="accordion-header" id="heading{{ weekday }}">
-                <button class="accordion-button bg-light fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ weekday }}" aria-expanded="true" aria-controls="collapse{{ weekday }}">
-                    <i class="far fa-calendar-day me-2"></i> {{ days[weekday] }} 
-                    <span class="badge bg-secondary rounded-pill ms-2">{{ day_schedules|length }} aulas</span>
+    <div class="accordion" id="accordionSchedules">
+        {% for weekday_idx, day_items in grouped %}
+        <div class="accordion-item mb-3 border-0 shadow-sm rounded">
+            <h2 class="accordion-header">
+                <button class="accordion-button bg-white text-dark fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#day-{{ weekday_idx }}">
+                    <i class="fas fa-calendar-day me-2 text-primary"></i> {{ weekdays[weekday_idx] }}
+                    <span class="badge bg-light text-dark border ms-3">{{ day_items | length }} slots</span>
                 </button>
             </h2>
-            <div id="collapse{{ weekday }}" class="accordion-collapse collapse show" aria-labelledby="heading{{ weekday }}">
-                <div class="accordion-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0 schedule-table">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width: 40px; padding-left: 20px;">
-                                        <input class="form-check-input select-all-day" type="checkbox" data-day="{{ weekday }}" onclick="toggleDay(this)">
-                                    </th>
-                                    <th>Horário</th>
-                                    <th>Modalidade</th>
-                                    <th>Instrutor</th>
-                                    <th>Capacidade</th>
-                                    <th>Status</th>
-                                    <th class="text-end pe-4">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for schedule in day_schedules %}
-                                <tr class="schedule-row">
-                                    <td style="padding-left: 20px;">
-                                        <input class="form-check-input schedule-checkbox" type="checkbox" value="{{ schedule.id }}" onchange="updateBulkButton()">
-                                    </td>
-                                    <td>
-                                        <div class="fw-bold text-primary">
-                                            <i class="far fa-clock me-1"></i>
-                                            {{ schedule.start_time.strftime('%H:%M') }} - {{ schedule.end_time.strftime('%H:%M') }}
-                                        </div>
-                                    </td>
-                                    <td class="search-target fw-semibold">{{ schedule.modality.name }}</td>
-                                    <td class="search-target">{{ schedule.instructor.name }}</td>
-                                    <td>{{ schedule.capacity }} vagas</td>
-                                    <td>
-                                        {% if schedule.is_active %}
-                                            <span class="badge bg-success">Ativo</span>
-                                        {% else %}
-                                            <span class="badge bg-danger">Inativo</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-end pe-4">
-                                        <a href="{{ url_for('admin_schedules.edit', id=schedule.id) }}" class="btn btn-sm btn-outline-primary" title="Editar">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+            <div id="day-{{ weekday_idx }}" class="accordion-collapse collapse show">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 50px;" class="text-center">
+                                    <input type="checkbox" class="form-check-input" onchange="toggleDaySelection('{{ weekday_idx }}', this)">
+                                </th>
+                                <th>Horário</th>
+                                <th>Modalidade</th>
+                                <th>Instrutor</th>
+                                <th>Status</th>
+                                <th class="text-end">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody class="day-group-{{ weekday_idx }}">
+                            {% for schedule in day_items %}
+                            <tr class="schedule-row" data-searchable="{{ schedule.modality.name }} {{ schedule.instructor.name }}">
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input row-checkbox" value="{{ schedule.id }}" onchange="updateBulkUI()">
+                                </td>
+                                <td><span class="badge bg-dark text-white px-3 py-2 fs-6">{{ schedule.start_time.strftime('%H:%M') }}</span></td>
+                                <td class="text-dark fw-medium">{{ schedule.modality.name }}</td>
+                                <td class="text-secondary">{{ schedule.instructor.name }}</td>
+                                <td>
+                                    {% if schedule.is_approved %}
+                                    <span class="badge bg-success-subtle text-success">Aprovado</span>
+                                    {% else %}
+                                    <span class="badge bg-warning-subtle text-warning">Pendente</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if not schedule.is_approved %}
+                                    <form action="{{ url_for('admin_schedules.approve_schedule', id=schedule.id) }}" method="POST" class="d-inline">
+                                        <button class="btn btn-sm btn-link text-success text-decoration-none"><i class="fas fa-check"></i> Aprovar</button>
+                                    </form>
+                                    {% endif %}
+                                    <form action="{{ url_for('admin_schedules.reject_schedule', id=schedule.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminar este horário permanentemente?');">
+                                        <button class="btn btn-sm btn-link text-danger text-decoration-none"><i class="fas fa-times"></i> Rejeitar</button>
+                                    </form>
+                                    <a href="{{ url_for('admin_schedules.edit', id=schedule.id) }}" class="btn btn-sm btn-light"><i class="fas fa-edit"></i></a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
-        </div>
-        {% else %}
-        <div class="text-center py-5 bg-white rounded shadow-sm">
-            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
-            <h5>Nenhuma grade de horário cadastrada.</h5>
-            <p class="text-muted">Clique em "Novo Horário" para começar.</p>
         </div>
         {% endfor %}
     </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
 <script>
-    // Filtro de Busca em Tempo Real
+    // 1. Busca Dinâmica
     function filterSchedules() {
-        const input = document.getElementById('searchInput').value.toLowerCase();
-        const rows = document.querySelectorAll('.schedule-row');
-
+        let input = document.getElementById('scheduleSearch').value.toLowerCase();
+        let rows = document.querySelectorAll('.schedule-row');
         rows.forEach(row => {
-            const targets = row.querySelectorAll('.search-target');
-            let match = false;
-            targets.forEach(target => {
-                if (target.textContent.toLowerCase().includes(input)) {
-                    match = true;
-                }
-            });
-            row.style.display = match ? '' : 'none';
+            let text = row.getAttribute('data-searchable').toLowerCase();
+            row.style.display = text.includes(input) ? '' : 'none';
         });
     }
 
-    // Selecionar todos de um dia específico
-    function toggleDay(checkbox) {
-        const day = checkbox.getAttribute('data-day');
-        const collapseDiv = document.getElementById('collapse' + day);
-        const childCheckboxes = collapseDiv.querySelectorAll('.schedule-checkbox');
-        
-        childCheckboxes.forEach(cb => {
-            // Ignora os que estão escondidos pela busca
-            if(cb.closest('tr').style.display !== 'none') {
-                cb.checked = checkbox.checked;
-            }
-        });
-        updateBulkButton();
+    // 2. Seleção por Dia
+    function toggleDaySelection(dayIdx, master) {
+        let checkboxes = document.querySelectorAll('.day-group-' + dayIdx + ' .row-checkbox');
+        checkboxes.forEach(cb => cb.checked = master.checked);
+        updateBulkUI();
     }
 
-    // Atualiza visibilidade e contador do botão de Exclusão em Lote
-    function updateBulkButton() {
-        const selected = document.querySelectorAll('.schedule-checkbox:checked').length;
-        const btn = document.getElementById('btnBulkDelete');
-        const countSpan = document.getElementById('selectedCount');
+    // 3. Interface de Ações em Massa (Mostra botões de Excluir e Aprovar)
+    function updateBulkUI() {
+        let selected = document.querySelectorAll('.row-checkbox:checked');
+        let btnDelete = document.getElementById('btnBulkDelete');
+        let btnApprove = document.getElementById('btnBulkApprove');
         
-        countSpan.textContent = selected;
-        if (selected > 0) {
-            btn.classList.remove('d-none');
+        document.getElementById('countSelected').innerText = selected.length;
+        document.getElementById('countApprove').innerText = selected.length;
+        
+        if(selected.length > 0) {
+            btnDelete.classList.remove('d-none');
+            btnApprove.classList.remove('d-none');
         } else {
-            btn.classList.add('d-none');
+            btnDelete.classList.add('d-none');
+            btnApprove.classList.add('d-none');
         }
     }
 
-    // Função de Exclusão em Lote (AJAX)
-    function deleteSelected() {
-        const checkboxes = document.querySelectorAll('.schedule-checkbox:checked');
-        const ids = Array.from(checkboxes).map(cb => parseInt(cb.value));
+    // 4. Lógica de Eliminação (AJAX)
+    async function handleBulkDelete() {
+        let ids = Array.from(document.querySelectorAll('.row-checkbox:checked')).map(cb => cb.value);
+        if(!confirm(`Deseja eliminar permanentemente ${ids.length} horários?`)) return;
 
-        if (ids.length === 0) return;
-
-        if (confirm(`Tem certeza que deseja excluir ${ids.length} horário(s) selecionado(s)? Esta ação não pode ser desfeita.`)) {
-            
-            fetch("{{ url_for('admin_schedules.bulk_delete') }}", {
+        try {
+            // Utilizando o Jinja url_for para garantir a rota correta do blueprint
+            const response = await fetch('{{ url_for("admin_schedules.api_bulk_delete") }}', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({ ids: ids })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(data.message);
-                    location.reload(); // Recarrega para atualizar a interface
-                } else {
-                    alert("Erro: " + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                alert("Ocorreu um erro ao processar a solicitação.");
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ids: ids})
             });
+            const result = await response.json();
+            if(result.success) location.reload();
+            else alert("Erro: " + result.message);
+        } catch (e) {
+            alert("Erro na comunicação com o servidor.");
+        }
+    }
+
+    // 5. Lógica de Aprovação em Massa (AJAX)
+    async function handleBulkApprove() {
+        let ids = Array.from(document.querySelectorAll('.row-checkbox:checked')).map(cb => cb.value);
+        if(!confirm(`Deseja aprovar ${ids.length} horários selecionados?`)) return;
+
+        try {
+            const response = await fetch('{{ url_for("admin_schedules.api_bulk_approve") }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ids: ids})
+            });
+            const result = await response.json();
+            if(result.success) location.reload();
+            else alert("Erro: " + result.message);
+        } catch (e) {
+            alert("Erro na comunicação com o servidor.");
         }
     }
 </script>
 {% endblock %}
 ```
 
-### O que isso resolve:
-1. **Sanfonas por Dia:** Em vez de rolar infinitamente, o administrador vê os dias da semana. Ele pode encolher dias que não está trabalhando e focar, por exemplo, só na "Segunda-feira".
-2. **Busca Rápida:** O script em JS (sem necessidade de plugins pesados) filtra as linhas da tabela instantaneamente ao digitar o nome do professor ou da aula.
-3. **Exclusão Rápida:** O usuário pode clicar no checkbox do cabeçalho da "Segunda-feira" para selecionar todas as aulas da segunda, e clicar em **Excluir Selecionados** no topo da página. Simples e limpo.
+Com estas alterações:
+1. O horário passará a estar encapsulado num quadrado preto com letras brancas (`<span class="badge bg-dark text-white...">`), tornando a identificação imediata e perfeitamente legível.
+2. O botão de "Aprovar" verde aparecerá ao lado do "Eliminar" e processará a aprovação múltipla de uma só vez, enviando os dados de forma limpa para a API que acabou de adicionar.
