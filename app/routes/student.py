@@ -178,87 +178,11 @@ def subscription_detail(id):
 @student_bp.route('/schedule')
 @login_required
 def schedule():
-    """Grade de agendamento"""
-    
-    # Enforce Profile Completion
+    """Grade de agendamento (Two-Pane Layout)"""
     if not current_user.cpf or not current_user.gender:
         flash('Por favor, complete seu cadastro (CPF e Sexo) antes de agendar aulas.', 'warning')
         return redirect(url_for('student.profile'))
 
-    # Data selecionada (hoje por padrao)
-    selected_date_str = request.args.get('date')
-    if selected_date_str:
-        try:
-            selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
-        except ValueError:
-            selected_date = datetime.now().date()
-    else:
-        selected_date = datetime.now().date()
-
-    # Nao permitir agendar no passado
-    if selected_date < datetime.now().date():
-        selected_date = datetime.now().date()
-
-    # Dia da semana (0=dom no nosso sistema, 6=sab)
-    # Python: 0=segunda, 6=domingo
-    weekday = selected_date.weekday()
-    if weekday == 6:  # Domingo no Python = 6, queremos 0
-        weekday = 0
-    else:
-        weekday += 1  # Segunda=1, Terca=2, etc.
-
-    # Buscar aulas do dia (apenas aprovadas)
-    schedules = ClassSchedule.query.filter_by(
-        weekday=weekday,
-        is_active=True,
-        is_approved=True
-    ).order_by(ClassSchedule.start_time).all()
-
-    # Adicionar info de vagas e status do usuario
-    for sched in schedules:
-        sched.current_bookings = Booking.query.filter_by(
-            schedule_id=sched.id,
-            date=selected_date,
-            status=BookingStatus.CONFIRMED
-        ).count()
-        sched.available_spots = sched.capacity - sched.current_bookings
-
-        # Verificar se usuario ja agendou
-        sched.user_booked = Booking.query.filter_by(
-            user_id=current_user.id,
-            schedule_id=sched.id,
-            date=selected_date,
-            status=BookingStatus.CONFIRMED
-        ).first()
-
-        # Verificar genero
-        sched.gender_restricted = False
-        sched.slot_gender = None
-        sched.gender_message = None
-
-        if sched.modality.requires_gender_segregation:
-            can_book, msg = GenderDistributionService.can_user_book_slot(
-                current_user, sched.id, selected_date
-            )
-            if not can_book:
-                sched.gender_restricted = True
-                sched.gender_message = msg
-
-            # Obter genero do slot para exibicao
-            slot_gender = ScheduleSlotGender.get_slot_gender(sched.id, selected_date)
-            if slot_gender:
-                sched.slot_gender = slot_gender
-
-        # Verificar requisitos de saude (EMS, etc) para exibicao
-        sched.requires_ems = "Eletroestimulacao" in sched.modality.name or "FES" in sched.modality.name or "Eletrolipo" in sched.modality.name
-
-        if sched.requires_ems:
-            from app.models.health import ScreeningType
-            sched.ems_ok = current_user.has_valid_screening(ScreeningType.EMS)
-        else:
-            sched.ems_ok = True
-
-    # Assinaturas ativas para selecao
     active_subscriptions = Subscription.query.filter_by(
         user_id=current_user.id,
         status=SubscriptionStatus.ACTIVE
@@ -266,34 +190,19 @@ def schedule():
         Subscription.credits_used < Subscription.credits_total
     ).all()
 
-    # Calcular datas da semana para navegacao
-    week_dates = []
-    start_of_week = selected_date - timedelta(days=selected_date.weekday())
-    for i in range(7):
-        week_dates.append(start_of_week + timedelta(days=i))
-
-    # Verificar status global do PAR-Q
-    from app.models.health import ScreeningType, ScreeningStatus
-    parq_status = current_user.get_screening_status(ScreeningType.PARQ)
-    parq_ok = parq_status == ScreeningStatus.APTO
-
-    return render_template('student/schedule.html',
-        schedules=schedules,
-        selected_date=selected_date,
-        active_subscriptions=active_subscriptions,
-        week_dates=week_dates,
-        parq_ok=parq_ok
-    )
+    return render_template('student/schedule_v2.html',
+                           active_subscriptions=active_subscriptions)
 
 
 @student_bp.route('/book/<int:schedule_id>', methods=['POST'])
 @login_required
 def book_class(schedule_id):
-    """Agendar uma aula"""
+    """Agendar uma aula (Avulso ou Recorrente)"""
 
     schedule = ClassSchedule.query.get_or_404(schedule_id)
     date_str = request.form.get('date')
     subscription_id = request.form.get('subscription_id')
+    booking_type = request.form.get('booking_type', 'avulso')
 
     if not date_str or not subscription_id:
         flash('Dados incompletos para agendamento.', 'danger')
@@ -311,13 +220,12 @@ def book_class(schedule_id):
         user_id=current_user.id
     ).first_or_404()
 
-    # Validar agendamento (Geral)
+    # Validacoes comuns (data, assinatura, saude, genero)
     can_book, error_msg = Booking.validate_booking(current_user, schedule, date, subscription)
     if not can_book:
         flash(error_msg, 'danger')
-        return redirect(url_for('student.schedule', date=date_str))
+        return redirect(url_for('student.schedule'))
 
-    # Validar triagem de saúde (PAR-Q / EMS)
     can_access, screening_msg = current_user.can_access_modality(schedule.modality)
     if not can_access:
         flash(screening_msg, 'warning')
@@ -327,22 +235,57 @@ def book_class(schedule_id):
             return redirect(url_for('health.fill_ems'))
         return redirect(url_for('student.dashboard'))
 
-
-    # Validar restricao de genero para modalidades segregadas
     if schedule.modality.requires_gender_segregation:
         can_book_gender, gender_msg = GenderDistributionService.can_user_book_slot(
             current_user, schedule.id, date
         )
         if not can_book_gender:
             flash(gender_msg, 'danger')
-            return redirect(url_for('student.schedule', date=date_str))
+            return redirect(url_for('student.schedule'))
 
-    # Verificar se a data esta dentro da validade da assinatura
     if date > subscription.end_date:
         flash(f'Esta data esta fora da validade do seu pacote (ate {subscription.end_date.strftime("%d/%m/%Y")}).', 'danger')
-        return redirect(url_for('student.schedule', date=date_str))
+        return redirect(url_for('student.schedule'))
 
-    # Criar agendamento
+    # ---- Fluxo Recorrente ----
+    if booking_type == 'recorrente':
+        cost = schedule.modality.credits_cost
+        if subscription.credits_remaining < cost:
+            flash(f'Você precisa de pelo menos {cost} crédito(s) para criar agendamento recorrente.', 'warning')
+            return redirect(url_for('student.schedule'))
+
+        existing = RecurringBooking.query.filter_by(
+            user_id=current_user.id,
+            schedule_id=schedule.id,
+            is_active=True
+        ).first()
+
+        if existing:
+            flash('Você já possui um agendamento recorrente ativo para este horário.', 'warning')
+            return redirect(url_for('student.my_recurring'))
+
+        recurring = RecurringBooking(
+            user_id=current_user.id,
+            subscription_id=subscription.id,
+            schedule_id=schedule.id,
+            frequency=FrequencyType.WEEKLY,
+            start_date=date,
+            end_date=subscription.end_date,
+            next_occurrence=date,
+            is_active=True
+        )
+        db.session.add(recurring)
+        db.session.commit()
+
+        recurring.create_next_booking()
+        flash(
+            f'Agendamento RECORRENTE criado com sucesso! Toda semana às {schedule.start_time.strftime("%H:%M")}, '
+            f'a partir de {date.strftime("%d/%m/%Y")}.',
+            'success'
+        )
+        return redirect(url_for('student.my_bookings'))
+
+    # ---- Fluxo Avulso ----
     booking = Booking(
         user_id=current_user.id,
         subscription_id=subscription.id,
@@ -352,15 +295,11 @@ def book_class(schedule_id):
         is_recurring=False,
         cost_at_booking=schedule.modality.credits_cost
     )
-
     db.session.add(booking)
-
-    # Debitar credito
     subscription.credits_used += schedule.modality.credits_cost
-
     db.session.commit()
 
-    flash(f'Aula agendada com sucesso! {schedule.modality.name} em {date.strftime("%d/%m/%Y")} as {schedule.start_time.strftime("%H:%M")}', 'success')
+    flash(f'Aula agendada com sucesso! {schedule.modality.name} em {date.strftime("%d/%m/%Y")} às {schedule.start_time.strftime("%H:%M")}', 'success')
     return redirect(url_for('student.my_bookings'))
 
 
@@ -1017,6 +956,197 @@ def convert_xp(rule_id):
         flash(f'Erro na conversao: {result["error"]}', 'danger')
 
     return redirect(url_for('student.xp_credits'))
+
+
+@student_bp.route('/api/availability/summary')
+@login_required
+def api_availability_summary():
+    """Retorna o resumo de vagas do mes para pintar o calendario (Heatmap)"""
+    from app.models.health import ScreeningStatus
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+
+    if not start_date_str or not end_date_str:
+        return jsonify({'error': 'start_date and end_date are required'}), 400
+
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'Invalid date format'}), 400
+
+    summary = {}
+    current_date = start_date
+    today = datetime.now().date()
+
+    while current_date <= end_date:
+        # Nao processar datas passadas
+        if current_date < today:
+            current_date += timedelta(days=1)
+            continue
+
+        weekday = current_date.weekday()
+        weekday_db = 0 if weekday == 6 else weekday + 1
+
+        schedules = ClassSchedule.query.filter_by(
+            weekday=weekday_db,
+            is_active=True,
+            is_approved=True
+        ).all()
+
+        total_spots_day = 0
+        total_capacity = 0
+
+        for sched in schedules:
+            current_bookings = Booking.query.filter_by(
+                schedule_id=sched.id,
+                date=current_date,
+                status=BookingStatus.CONFIRMED
+            ).count()
+
+            spots = sched.capacity - current_bookings
+            total_spots_day += max(0, spots)
+            total_capacity += sched.capacity
+
+        date_str = current_date.strftime('%Y-%m-%d')
+
+        if total_capacity == 0:
+            status = 'none'
+        elif total_spots_day == 0:
+            status = 'full'
+        elif total_spots_day <= (total_capacity * 0.2):
+            status = 'few'
+        else:
+            status = 'available'
+
+        if status != 'none':
+            summary[date_str] = {
+                'spots': total_spots_day,
+                'status': status
+            }
+
+        current_date += timedelta(days=1)
+
+    return jsonify(summary)
+
+
+@student_bp.route('/api/slots')
+@login_required
+def api_get_slots():
+    """Retorna os horarios detalhados para uma data ou intervalo"""
+    from app.models.health import ScreeningType, ScreeningStatus
+
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+
+    if not start_date_str:
+        return jsonify({'error': 'start_date is required'}), 400
+
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else start_date
+    except ValueError:
+        return jsonify({'error': 'Invalid date format'}), 400
+
+    slots_data = []
+    current_date = start_date
+    today = datetime.now().date()
+
+    parq_ok = current_user.get_screening_status(ScreeningType.PARQ) == ScreeningStatus.APTO
+    ems_ok = current_user.has_valid_screening(ScreeningType.EMS)
+
+    # Assinaturas ativas para indicar se usuario tem creditos
+    has_credits = Subscription.query.filter_by(
+        user_id=current_user.id,
+        status=SubscriptionStatus.ACTIVE
+    ).filter(
+        Subscription.credits_used < Subscription.credits_total
+    ).first() is not None
+
+    while current_date <= end_date:
+        if current_date < today:
+            current_date += timedelta(days=1)
+            continue
+
+        weekday = current_date.weekday()
+        weekday_db = 0 if weekday == 6 else weekday + 1
+
+        schedules = ClassSchedule.query.filter_by(
+            weekday=weekday_db,
+            is_active=True,
+            is_approved=True
+        ).order_by(ClassSchedule.start_time).all()
+
+        day_slots = []
+        for sched in schedules:
+            current_bookings = Booking.query.filter_by(
+                schedule_id=sched.id,
+                date=current_date,
+                status=BookingStatus.CONFIRMED
+            ).count()
+
+            available_spots = sched.capacity - current_bookings
+
+            user_booked = Booking.query.filter_by(
+                user_id=current_user.id,
+                schedule_id=sched.id,
+                date=current_date,
+                status=BookingStatus.CONFIRMED
+            ).first() is not None
+
+            gender_restricted = False
+            gender_message = ""
+            if sched.modality.requires_gender_segregation:
+                can_book, msg = GenderDistributionService.can_user_book_slot(current_user, sched.id, current_date)
+                if not can_book:
+                    gender_restricted = True
+                    gender_message = msg
+
+            requires_ems = (
+                "Eletroestimulacao" in sched.modality.name or
+                "FES" in sched.modality.name or
+                "Eletrolipo" in sched.modality.name
+            )
+
+            # Verificar genero do slot para exibicao
+            slot_gender_val = None
+            if sched.modality.requires_gender_segregation:
+                sg = ScheduleSlotGender.get_slot_gender(sched.id, current_date)
+                if sg:
+                    slot_gender_val = sg.value
+
+            day_slots.append({
+                'id': sched.id,
+                'start_time': sched.start_time.strftime('%H:%M'),
+                'end_time': sched.end_time.strftime('%H:%M'),
+                'modality_name': sched.modality.name,
+                'modality_icon': sched.modality.icon or '',
+                'modality_requires_gender': sched.modality.requires_gender_segregation,
+                'slot_gender': slot_gender_val,
+                'instructor_name': sched.instructor.name,
+                'available_spots': available_spots,
+                'capacity': sched.capacity,
+                'user_booked': user_booked,
+                'gender_restricted': gender_restricted,
+                'gender_message': gender_message,
+                'requires_ems': requires_ems,
+                'ems_ok': ems_ok,
+                'parq_ok': parq_ok,
+                'has_credits': has_credits,
+                'credits_cost': sched.modality.credits_cost
+            })
+
+        if day_slots:
+            slots_data.append({
+                'date': current_date.strftime('%Y-%m-%d'),
+                'date_formatted': current_date.strftime('%d/%m/%Y'),
+                'weekday_name': ['Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado', 'Domingo'][current_date.weekday()],
+                'slots': day_slots
+            })
+
+        current_date += timedelta(days=1)
+
+    return jsonify({'data': slots_data})
 
 
 @student_bp.route('/api/credit-preview/<int:credits_needed>')

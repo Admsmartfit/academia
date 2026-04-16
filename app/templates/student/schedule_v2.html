@@ -1,0 +1,606 @@
+{% extends "base.html" %}
+
+{% block title %}Grade de Horarios{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+    /* ===== Calendario Inline Flatpickr ===== */
+    .flatpickr-calendar.inline {
+        width: 100% !important;
+        max-width: 100%;
+        box-shadow: none;
+        border: none;
+        background: transparent;
+    }
+    .flatpickr-innerContainer,
+    .flatpickr-rContainer {
+        width: 100%;
+    }
+    .dayContainer {
+        width: 100%;
+        min-width: unset;
+        max-width: unset;
+    }
+    .flatpickr-day {
+        max-width: unset;
+        flex-basis: 14.2857%;
+        border-radius: 50%;
+    }
+
+    /* ===== Heatmap: colorir dias no calendario ===== */
+    .flatpickr-day.status-available {
+        background-color: #d1e7dd !important;
+        color: #0f5132 !important;
+        border-color: #a3cfbb !important;
+    }
+    .flatpickr-day.status-few {
+        background-color: #fff3cd !important;
+        color: #664d03 !important;
+        border-color: #ffe69c !important;
+    }
+    .flatpickr-day.status-full {
+        background-color: #e9ecef !important;
+        color: #adb5bd !important;
+        text-decoration: line-through;
+    }
+    .flatpickr-day.status-available.selected,
+    .flatpickr-day.status-few.selected {
+        background-color: #0d6efd !important;
+        color: #fff !important;
+        border-color: #0d6efd !important;
+        text-decoration: none;
+    }
+
+    /* ===== Layout Duas Colunas (Desktop) ===== */
+    @media (min-width: 992px) {
+        .layout-twopane {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        .pane-calendar {
+            flex: 0 0 340px;
+            position: sticky;
+            top: 70px;
+        }
+        .pane-slots {
+            flex: 1;
+            min-width: 0;
+        }
+    }
+
+    /* ===== Carrinho de Agendamento ===== */
+    .cart-recorrencia {
+        background: #f8f9fa;
+        border-left: 4px solid #0d6efd;
+        border-radius: 0 6px 6px 0;
+        padding: 15px;
+        margin-top: 12px;
+        display: none;
+        animation: slideDown 0.2s ease;
+    }
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-8px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ===== Slot Cards ===== */
+    .slot-card {
+        border-left: 3px solid #dee2e6;
+        transition: border-color 0.2s;
+    }
+    .slot-card:hover {
+        border-left-color: #0d6efd;
+    }
+    .slot-card .spots-badge {
+        font-size: 0.75rem;
+    }
+
+    /* ===== Spinner overlay ===== */
+    #slots-loader { display: none; }
+
+    /* ===== Mobile: calendário recolhível ===== */
+    @media (max-width: 991px) {
+        .pane-calendar {
+            margin-bottom: 16px;
+        }
+        #calendar-toggle-btn {
+            display: inline-block;
+        }
+        #calendar-body {
+            transition: max-height 0.3s ease;
+            overflow: hidden;
+        }
+    }
+    @media (min-width: 992px) {
+        #calendar-toggle-btn { display: none; }
+        #calendar-body { max-height: none !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+            <h2 class="mb-0"><i class="fas fa-calendar-alt text-primary"></i> Agendar Aula</h2>
+            <p class="text-muted mb-0 small">Selecione uma data no calendário para ver os horários</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <div class="btn-group" role="group" aria-label="Modo de visão">
+                <button type="button" class="btn btn-primary btn-sm active" id="btn-view-cal">
+                    <i class="fas fa-calendar"></i> Calendário
+                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm" id="btn-view-list">
+                    <i class="fas fa-list"></i> Ver Semana
+                </button>
+            </div>
+            <a href="{{ url_for('student.my_bookings') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-bookmark"></i> Minhas Aulas
+            </a>
+        </div>
+    </div>
+
+    <!-- Selecao de Assinatura -->
+    {% if active_subscriptions %}
+    <div class="card mb-3 border-0 bg-light">
+        <div class="card-body py-2">
+            <div class="d-flex align-items-center flex-wrap gap-3">
+                <span class="text-muted small fw-semibold"><i class="fas fa-credit-card me-1"></i>Usar créditos de:</span>
+                {% for sub in active_subscriptions %}
+                <div class="form-check form-check-inline mb-0">
+                    <input class="form-check-input subscription-radio" type="radio" name="subscription_select"
+                        id="sub_{{ sub.id }}" value="{{ sub.id }}"
+                        {% if loop.first %}checked{% endif %}
+                        data-credits="{{ sub.credits_remaining }}"
+                        data-end-date="{{ sub.end_date.strftime('%d/%m/%Y') }}">
+                    <label class="form-check-label small" for="sub_{{ sub.id }}">
+                        <strong>{{ sub.package.name }}</strong>
+                        <span class="text-muted">— {{ sub.credits_remaining }} crédito(s) | até {{ sub.end_date.strftime('%d/%m/%Y') }}</span>
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning mb-3">
+        <i class="fas fa-exclamation-triangle"></i>
+        Você não possui créditos disponíveis.
+        <a href="{{ url_for('shop.packages') }}" class="alert-link">Adquira um pacote</a> para agendar aulas.
+    </div>
+    {% endif %}
+
+    <!-- Layout Two-Pane -->
+    <div class="layout-twopane">
+
+        <!-- Coluna Esquerda: Calendário -->
+        <div class="pane-calendar" id="calendar-container">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                    <span class="fw-semibold small"><i class="fas fa-calendar-alt text-primary me-1"></i>Calendário</span>
+                    <button class="btn btn-sm btn-link text-muted p-0" id="calendar-toggle-btn" aria-label="Recolher calendário">
+                        <i class="fas fa-chevron-up" id="cal-toggle-icon"></i>
+                    </button>
+                </div>
+                <div id="calendar-body">
+                    <div class="card-body p-2">
+                        <input type="text" id="inline-calendar" class="d-none">
+                    </div>
+                    <div class="card-footer bg-white border-top-0 pt-0 pb-2 px-3">
+                        <div class="d-flex gap-3 small text-muted">
+                            <span><span class="badge bg-success opacity-75">&nbsp;&nbsp;</span> Disponível</span>
+                            <span><span class="badge bg-warning opacity-75 text-dark">&nbsp;&nbsp;</span> Poucas vagas</span>
+                            <span><span class="badge bg-secondary opacity-50">&nbsp;&nbsp;</span> Lotado</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coluna Direita: Horários -->
+        <div class="pane-slots" id="slots-section">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0" id="slots-title">
+                        <i class="fas fa-clock text-muted me-1"></i>
+                        <span id="slots-title-text">Selecione uma data no calendário</span>
+                    </h6>
+                    <div class="spinner-border spinner-border-sm text-primary" role="status" id="slots-loader">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                </div>
+                <div class="card-body p-3" id="slots-container">
+                    <div class="text-center py-5 text-muted">
+                        <i class="fas fa-hand-point-left fa-2x mb-3 opacity-50"></i>
+                        <p class="mb-0">Clique em um dia do calendário para ver os horários disponíveis.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /layout-twopane -->
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    // ============================================================
+    //  Estado Global
+    // ============================================================
+    let heatmapData = {};
+    const todayStr = new Date().toISOString().split('T')[0];
+    let selectedDateStr = todayStr;
+
+    // ============================================================
+    //  Flatpickr – Calendário Inline
+    // ============================================================
+    const fp = flatpickr("#inline-calendar", {
+        inline: true,
+        locale: "pt",
+        defaultDate: "today",
+        minDate: "today",
+
+        onChange: function (selectedDates, dateStr) {
+            selectedDateStr = dateStr;
+            // Em mobile: rolar suavemente até os slots
+            if (window.innerWidth < 992) {
+                document.getElementById('slots-section').scrollIntoView({ behavior: 'smooth' });
+            }
+            fetchSlots(dateStr, dateStr);
+        },
+
+        onMonthChange: function (selectedDates, dateStr, instance) {
+            fetchHeatmap(instance.currentYear, instance.currentMonth);
+        },
+
+        onReady: function (selectedDates, dateStr, instance) {
+            fetchHeatmap(instance.currentYear, instance.currentMonth);
+            fetchSlots(todayStr, todayStr);
+        },
+
+        onDayCreate: function (dObj, dStr, fp, dayElem) {
+            const d = dayElem.dateObj.toISOString().split('T')[0];
+            if (heatmapData[d]) {
+                dayElem.classList.add('status-' + heatmapData[d].status);
+            }
+        }
+    });
+
+    // ============================================================
+    //  Heatmap: buscar resumo do mês
+    // ============================================================
+    function fetchHeatmap(year, month) {
+        // month é 0-indexado no flatpickr
+        const start = new Date(year, month, 1).toISOString().split('T')[0];
+        const end   = new Date(year, month + 1, 0).toISOString().split('T')[0];
+
+        fetch(`/student/api/availability/summary?start_date=${start}&end_date=${end}`)
+            .then(r => r.json())
+            .then(data => {
+                heatmapData = data;
+                fp.redraw();
+            })
+            .catch(() => {});
+    }
+
+    // ============================================================
+    //  Slots: buscar e renderizar
+    // ============================================================
+    function fetchSlots(startDate, endDate) {
+        const titleEl = document.getElementById('slots-title-text');
+        const loader  = document.getElementById('slots-loader');
+        const container = document.getElementById('slots-container');
+
+        if (startDate === endDate) {
+            const parts = startDate.split('-');
+            titleEl.textContent = `Horários de ${parts[2]}/${parts[1]}/${parts[0]}`;
+        } else {
+            titleEl.textContent = 'Semana completa';
+        }
+
+        loader.style.display = 'inline-block';
+        container.innerHTML = '';
+
+        fetch(`/student/api/slots?start_date=${startDate}&end_date=${endDate}`)
+            .then(r => r.json())
+            .then(response => {
+                loader.style.display = 'none';
+                renderSlots(response.data);
+            })
+            .catch(() => {
+                loader.style.display = 'none';
+                container.innerHTML = `<div class="alert alert-danger">Erro ao carregar horários. Tente novamente.</div>`;
+            });
+    }
+
+    // ============================================================
+    //  Renderizar Slots no DOM
+    // ============================================================
+    function renderSlots(data) {
+        const container = document.getElementById('slots-container');
+
+        if (!data || data.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-calendar-times fa-3x mb-3 opacity-50"></i>
+                    <p class="mb-0">Nenhuma aula disponível para esta seleção.</p>
+                </div>`;
+            return;
+        }
+
+        let html = '';
+        data.forEach(day => {
+            html += `<h6 class="mt-3 mb-2 border-bottom pb-2 text-secondary small fw-semibold">
+                        <i class="fas fa-calendar-day me-1"></i>${day.weekday_name}, ${day.date_formatted}
+                     </h6>`;
+            day.slots.forEach(slot => {
+                html += buildSlotCard(slot, day.date, day.date_formatted);
+            });
+        });
+
+        container.innerHTML = html;
+        bindCartEvents();
+    }
+
+    // ============================================================
+    //  Construir HTML de um card de slot
+    // ============================================================
+    function buildSlotCard(slot, date, dateFmt) {
+        const cartId = `cart-${slot.id}-${date}`;
+
+        // Badge de vagas
+        let spotsBadge = '';
+        if (slot.available_spots > 3) {
+            spotsBadge = `<span class="badge bg-success spots-badge">${slot.available_spots} vagas</span>`;
+        } else if (slot.available_spots > 0) {
+            spotsBadge = `<span class="badge bg-warning text-dark spots-badge">${slot.available_spots} vaga(s)</span>`;
+        } else {
+            spotsBadge = `<span class="badge bg-danger spots-badge">Lotado</span>`;
+        }
+
+        // Badge de gênero
+        let genderBadge = '';
+        if (slot.modality_requires_gender && slot.slot_gender) {
+            if (slot.slot_gender === 'female') {
+                genderBadge = `<span class="badge bg-danger ms-1" title="Exclusivo Feminino"><i class="fas fa-venus"></i></span>`;
+            } else {
+                genderBadge = `<span class="badge bg-primary ms-1" title="Exclusivo Masculino"><i class="fas fa-mars"></i></span>`;
+            }
+        } else if (slot.modality_requires_gender) {
+            genderBadge = `<span class="badge bg-secondary ms-1" title="Segregação por sexo"><i class="fas fa-venus-mars"></i></span>`;
+        }
+
+        // Botão de ação
+        const actionHtml = getSlotActionHtml(slot, date, dateFmt, cartId);
+
+        // Carrinho de recorrência (visível apenas quando "Agendar" for clicado)
+        const cartHtml = buildCartHtml(slot, date, dateFmt, cartId);
+
+        return `
+        <div class="card mb-2 slot-card">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                    <div style="min-width:0">
+                        <div class="fw-semibold">${slot.start_time} – ${slot.end_time}</div>
+                        <div class="text-muted small">
+                            ${slot.modality_icon ? slot.modality_icon + ' ' : ''}
+                            <strong>${slot.modality_name}</strong>${genderBadge}
+                            · ${slot.instructor_name}
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                        ${spotsBadge}
+                        ${actionHtml}
+                    </div>
+                </div>
+                ${cartHtml}
+            </div>
+        </div>`;
+    }
+
+    // ============================================================
+    //  Lógica do botão de ação (regras de negócio)
+    // ============================================================
+    function getSlotActionHtml(slot, date, dateFmt, cartId) {
+        if (slot.user_booked)
+            return `<span class="badge bg-info">Já agendado</span>`;
+        if (slot.gender_restricted)
+            return `<span class="badge bg-secondary" title="${slot.gender_message}">Restrito</span>`;
+        if (slot.available_spots <= 0)
+            return `<span class="badge bg-danger">Lotado</span>`;
+        if (!slot.parq_ok)
+            return `<a href="/health/parq" class="btn btn-sm btn-warning text-dark">
+                        <i class="fas fa-exclamation-triangle"></i> Requer Avaliação
+                    </a>`;
+        if (!slot.ems_ok && slot.requires_ems)
+            return `<a href="/health/ems" class="btn btn-sm btn-warning text-dark">
+                        <i class="fas fa-exclamation-triangle"></i> Requer Anamnese
+                    </a>`;
+        if (!slot.has_credits)
+            return `<a href="/shop/packages" class="btn btn-sm btn-outline-secondary">Sem créditos</a>`;
+
+        return `<button class="btn btn-sm btn-primary btn-open-cart" data-target="${cartId}">
+                    <i class="fas fa-plus"></i> Agendar
+                </button>`;
+    }
+
+    // ============================================================
+    //  Carrinho de Agendamento (Avulso / Recorrente)
+    // ============================================================
+    function buildCartHtml(slot, date, dateFmt, cartId) {
+        const parts = date.split('-');
+        const weekdayNames = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+        const d = new Date(date + 'T00:00:00');
+        const dayName = weekdayNames[d.getDay()];
+
+        return `
+        <div class="cart-recorrencia" id="${cartId}">
+            <h6 class="mb-3"><i class="fas fa-calendar-check text-primary me-1"></i>Como você quer agendar?</h6>
+            <form method="POST" action="/student/book/${slot.id}" class="booking-cart-form">
+                <input type="hidden" name="date" value="${date}">
+                <input type="hidden" name="subscription_id" class="dynamic-sub-id" value="">
+                <input type="hidden" name="booking_type" class="booking-type-input" value="avulso">
+
+                <div class="row g-2 mb-3">
+                    <div class="col-12 col-sm-6">
+                        <label class="d-flex align-items-start gap-2 p-3 border rounded cursor-pointer booking-option active"
+                               data-type="avulso" data-cart="${cartId}">
+                            <input type="radio" name="booking_type_ui_${slot.id}" value="avulso" class="mt-1 flex-shrink-0" checked>
+                            <div>
+                                <div class="fw-semibold small">Apenas ${dateFmt}</div>
+                                <div class="text-muted" style="font-size:0.75rem">Aula avulsa · ${slot.credits_cost} crédito(s)</div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="d-flex align-items-start gap-2 p-3 border rounded cursor-pointer booking-option"
+                               data-type="recorrente" data-cart="${cartId}">
+                            <input type="radio" name="booking_type_ui_${slot.id}" value="recorrente" class="mt-1 flex-shrink-0">
+                            <div>
+                                <div class="fw-semibold small">Toda ${dayName} às ${slot.start_time}</div>
+                                <div class="text-muted" style="font-size:0.75rem">Recorrente semanal</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-cancel-cart"
+                            data-target="${cartId}">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        <i class="fas fa-check me-1"></i>Confirmar
+                    </button>
+                </div>
+            </form>
+        </div>`;
+    }
+
+    // ============================================================
+    //  Eventos do Carrinho
+    // ============================================================
+    function bindCartEvents() {
+        // Abrir carrinho
+        document.querySelectorAll('.btn-open-cart').forEach(btn => {
+            btn.addEventListener('click', function () {
+                // Fechar todos os outros
+                document.querySelectorAll('.cart-recorrencia').forEach(c => c.style.display = 'none');
+
+                const cartId = this.getAttribute('data-target');
+                const cart   = document.getElementById(cartId);
+                cart.style.display = 'block';
+
+                // Injetar subscription selecionada
+                const activeSub = document.querySelector('input[name="subscription_select"]:checked');
+                if (activeSub) {
+                    cart.querySelector('.dynamic-sub-id').value = activeSub.value;
+                }
+            });
+        });
+
+        // Fechar carrinho
+        document.querySelectorAll('.btn-cancel-cart').forEach(btn => {
+            btn.addEventListener('click', function () {
+                document.getElementById(this.getAttribute('data-target')).style.display = 'none';
+            });
+        });
+
+        // Toggle visual opção avulso / recorrente
+        document.querySelectorAll('.booking-option').forEach(label => {
+            label.addEventListener('click', function () {
+                const cartId = this.getAttribute('data-cart');
+                const type   = this.getAttribute('data-type');
+                const cart   = document.getElementById(cartId);
+
+                // Reset visual
+                cart.querySelectorAll('.booking-option').forEach(l => l.classList.remove('active', 'border-primary', 'bg-light'));
+                this.classList.add('active', 'border-primary', 'bg-light');
+
+                // Atualizar hidden input que o form vai enviar
+                cart.querySelector('.booking-type-input').value = type;
+            });
+        });
+
+        // Confirmar agendamento
+        document.querySelectorAll('.booking-cart-form').forEach(form => {
+            form.addEventListener('submit', function (e) {
+                const tipo = this.querySelector('.booking-type-input').value;
+                const msg  = tipo === 'recorrente'
+                    ? 'Confirmar agendamento RECORRENTE semanal? Créditos serão debitados a cada semana.'
+                    : 'Confirmar agendamento desta aula? Um crédito será debitado.';
+                if (!confirm(msg)) e.preventDefault();
+            });
+        });
+
+        // Atualizar sub quando mudar radio de assinatura
+        document.querySelectorAll('.subscription-radio').forEach(radio => {
+            radio.addEventListener('change', function () {
+                document.querySelectorAll('.dynamic-sub-id').forEach(inp => {
+                    inp.value = this.value;
+                });
+            });
+        });
+    }
+
+    // ============================================================
+    //  Toggle Visão Calendário vs Visão Lista (FR04)
+    // ============================================================
+    document.getElementById('btn-view-list').addEventListener('click', function () {
+        this.classList.add('active');
+        this.classList.remove('btn-outline-primary');
+        this.classList.add('btn-primary');
+
+        const calBtn = document.getElementById('btn-view-cal');
+        calBtn.classList.remove('active', 'btn-primary');
+        calBtn.classList.add('btn-outline-primary');
+
+        document.getElementById('calendar-container').style.display = 'none';
+
+        // Carregar 7 dias a partir da data selecionada
+        const start = selectedDateStr;
+        const d = new Date(start + 'T00:00:00');
+        d.setDate(d.getDate() + 6);
+        const end = d.toISOString().split('T')[0];
+
+        document.getElementById('slots-title-text').textContent = 'Próximos 7 dias';
+        fetchSlots(start, end);
+    });
+
+    document.getElementById('btn-view-cal').addEventListener('click', function () {
+        this.classList.add('active', 'btn-primary');
+        this.classList.remove('btn-outline-primary');
+
+        const listBtn = document.getElementById('btn-view-list');
+        listBtn.classList.remove('active', 'btn-primary');
+        listBtn.classList.add('btn-outline-primary');
+
+        document.getElementById('calendar-container').style.display = '';
+        fetchSlots(selectedDateStr, selectedDateStr);
+    });
+
+    // ============================================================
+    //  Mobile: recolher/expandir calendário
+    // ============================================================
+    const calToggleBtn  = document.getElementById('calendar-toggle-btn');
+    const calBody       = document.getElementById('calendar-body');
+    const calToggleIcon = document.getElementById('cal-toggle-icon');
+    let calExpanded     = true;
+
+    calBody.style.maxHeight = calBody.scrollHeight + 'px';
+
+    calToggleBtn.addEventListener('click', function () {
+        calExpanded = !calExpanded;
+        calBody.style.maxHeight = calExpanded ? calBody.scrollHeight + 'px' : '0px';
+        calToggleIcon.className = calExpanded ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
+    });
+
+});
+</script>
+{% endblock %}
