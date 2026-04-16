@@ -1,142 +1,195 @@
-Compreendo perfeitamente o que aconteceu. Identificou dois problemas distintos de integração que são muito comuns durante a implementação de novas regras de negócio:
+PRD: Redesign da Loja (High-Ticket Pricing Page)
+Versão: 3.0 (Marketing & CRO)
+Ficheiro Afetado: app/templates/shop/packages.html
 
-1. **O Bloqueio do Botão (O "Falso" Sem Créditos):** No backend nós criámos a regra que liberta o passe gratuito (`is_eligible_for_trial`), mas a **tabela de horários** no HTML ainda tem a regra antiga ("chumbada") que desativa o botão de agendar se o aluno não tiver `active_subscriptions` (planos pagos). A tabela está a ignorar o passe livre.
-2. **O Erro 404 (Página Não Encontrada):** O link `/shop/packages` está a tentar aceder ao ficheiro de rotas da Loja (`app/routes/shop.py`), mas a rota específica `/packages` ou o Blueprint inteiro da loja não está registado corretamente na aplicação.
+1. Estratégia de Design & Marketing Aplicada
+Nomeação Premium: Em vez de "Comprar Pacotes", mudamos o texto para "Protocolos de Performance". Aumenta instantaneamente o valor percebido.
 
-Abaixo está o **PRD de Correção Definitiva** para desbloquear as vendas e os agendamentos.
+Decoy Effect (Efeito Isco): Destacamos visualmente um pacote (geralmente o plano do meio ou o que tem a flag is_featured), colocando-lhe uma faixa de "RECOMENDADO" e preenchendo o botão com o Neon Ciano, enquanto os outros pacotes recebem botões transparentes (btn-outline).
 
----
+Imersão Visual: A grelha de pacotes vai flutuar sobre a textura de Biohacking (fundo azul profundo com brilhos radiais) e a logomarca de água do estúdio, eliminando o branco de "hospital" do Bootstrap padrão.
 
-# PRD: Desbloqueio do Agendamento Experimental e Fix 404
+Tipografia de Preço: O símbolo "R$" fica pequeno, os números principais ficam gigantes (fonte Outfit com peso 900), e os cêntimos ficam em cinzento. É uma técnica psicológica para o preço parecer menor.
 
-**Versão:** 2.7 (Bugfix Crítico)
-**Arquivos Afetados:** `app/templates/student/schedule.html` e `app/routes/shop.py`
+Passo Único: Substituição do Template da Loja
+Ação: Substitua completamente o conteúdo do seu ficheiro app/templates/shop/packages.html pelo código abaixo:
 
-## Passo 1: Correção da Tabela de Agendamento (Frontend)
+HTML
+{% extends "base.html" %}
 
-Vamos ensinar a tabela de horários a reconhecer a sessão experimental e a **ativar o botão de Agendar** para os novos clientes, enviando a palavra `experimental` em vez do ID de um plano pago.
+{% block title %}Protocolos de Performance | Biohacking Studio{% endblock %}
 
-**Ação:** Abra o ficheiro `app/templates/student/schedule.html` e localize a secção onde a tabela de horários é gerada (perto da linha onde diz `<td class="text-center">`). 
-
-Substitua as antigas validações (`{% elif not active_subscriptions %}`) por este bloco corrigido:
-
-```html
-<td class="text-center">
-    {% if schedule.user_booked %}
-        <span class="badge bg-info">Já agendado</span>
-    {% elif schedule.gender_restricted %}
-        <button class="btn btn-sm btn-secondary" disabled title="{{ schedule.gender_message }}">
-            <i class="fas fa-ban"></i> Restrito
-        </button>
-        <br><small class="text-danger">{{ schedule.gender_message }}</small>
-    {% elif not parq_ok %}
-        <a href="{{ url_for('health.fill_parq') }}" class="btn btn-sm btn-warning text-dark">
-            Requer Avaliação
-        </a>
-    {% elif schedule.requires_ems and not schedule.ems_ok %}
-        <a href="{{ url_for('health.fill_ems') }}" class="btn btn-sm btn-warning text-dark">
-            Requer Anamnese
-        </a>
-    {% elif schedule.available_spots <= 0 %}
-        <button class="btn btn-sm btn-secondary" disabled>Lotado</button>
-        
-    {% elif not active_subscriptions and not is_eligible_for_trial %}
-        <button class="btn btn-sm btn-secondary" disabled>Sem créditos</button>
-        
-    {% else %}
-        <form action="{{ url_for('student.book_class', schedule_id=schedule.id) }}" method="POST" class="d-inline booking-form">
-            <input type="hidden" name="date" value="{{ selected_date.strftime('%Y-%m-%d') }}">
-            
-            <input type="hidden" name="subscription_id" class="subscription-input" 
-                   value="{% if is_eligible_for_trial %}experimental{% elif active_subscriptions %}{{ active_subscriptions[0].id }}{% endif %}">
-                   
-            <button type="submit" class="btn btn-sm btn-primary fw-bold text-dark">
-                <i class="fas fa-bolt me-1"></i> Agendar
-            </button>
-        </form>
-    {% endif %}
-</td>
-```
-
----
-
-## Passo 2: Ocultar o Alerta de Erro "Sem Créditos"
-
-Ainda no mesmo ficheiro `schedule.html`, se o utilizador for novo, não lhe devemos mostrar o alerta amarelo a mandar comprar um plano, pois ele tem direito ao passe gratuito.
-
-**Ação:** Vá ao topo do ficheiro `schedule.html` e garanta que o painel inteligente está escrito com esta validação:
-
-```html
-{% if active_subscriptions or is_eligible_for_trial %}
-    <div class="card mb-4 border-0 shadow-sm" style="background: var(--bg-card, #0f172a);">
-        <div class="card-body p-4">
-            <h6 class="mb-3 fw-bold" style="color: var(--cyan-electric, #00f2ff);">
-                <i class="fas fa-microchip me-2"></i> SEU ACESSO
-            </h6>
-            
-            <div class="row g-3">
-                {% if is_eligible_for_trial %}
-                <div class="col-md-6">
-                    <div class="form-check custom-radio-box p-3 rounded" style="border: 2px solid #00f2ff; background: rgba(0, 242, 255, 0.05);">
-                        <input class="form-check-input subscription-radio" type="radio" name="subscription_select" id="sub_exp" value="experimental" checked>
-                        <label class="form-check-label w-100 cursor-pointer text-white" for="sub_exp">
-                            <strong style="color: #00f2ff;"><i class="fas fa-bolt text-warning me-1"></i> Primeira Sessão Gratuita</strong>
-                        </label>
-                    </div>
-                </div>
-                {% endif %}
-                
-                </div>
-        </div>
-    </div>
-{% else %}
-    <div class="alert alert-warning border-0" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
-        <i class="fas fa-exclamation-triangle me-2"></i> Os seus créditos acabaram. 
-        <a href="{{ url_for('shop.packages') }}" class="alert-link text-white fw-bold ms-1 text-decoration-none border-bottom">Ver Planos</a>.
-    </div>
-{% endif %}
-```
-
----
-
-## Passo 3: Correção do Erro 404 (`/shop/packages`)
-
-Se a página dos pacotes diz "não encontrada", a rota está ausente do ficheiro da loja.
-
-**Ação 1:** Abra o ficheiro `app/routes/shop.py` e adicione (ou substitua) a rota `/packages` desta forma exata:
-
-```python
-# app/routes/shop.py
-
-from flask import Blueprint, render_template
-from flask_login import login_required
-from app.models.package import Package
-
-shop_bp = Blueprint('shop', __name__, url_prefix='/shop')
-
-@shop_bp.route('/packages')
-@login_required
-def packages():
-    """Página de listagem de planos do Biohacking Studio"""
-    # Procura todos os pacotes ativos na base de dados
-    packages = Package.query.filter_by(is_active=True).order_by(Package.price.asc()).all()
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+<style>
+    /* Ajustes específicos de E-commerce Biohacking */
+    body {
+        background-color: var(--bg-deep, #05070a);
+        color: var(--text-main, #f8fafc);
+    }
     
-    return render_template('shop/packages.html', packages=packages)
+    .protocol-card {
+        background: var(--bg-card, #0f172a);
+        border: 1px solid rgba(0, 242, 255, 0.1);
+        border-radius: 16px;
+        padding: 40px 30px;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .protocol-card:hover {
+        transform: translateY(-10px);
+        border-color: var(--cyan-electric, #00f2ff);
+        box-shadow: 0 10px 40px rgba(0, 242, 255, 0.15);
+    }
+    
+    /* Destaque para o plano mais rentável (CRO) */
+    .protocol-card.featured {
+        border-color: rgba(0, 242, 255, 0.5);
+        background: linear-gradient(180deg, #0f172a 0%, #0a101f 100%);
+        transform: scale(1.05); /* Ligeiramente maior que os outros */
+        z-index: 2;
+    }
+    
+    .protocol-card.featured:hover {
+        transform: scale(1.05) translateY(-10px);
+    }
 
-# Restante do seu código da loja (checkout, pagamento, etc...)
-```
+    .protocol-badge {
+        position: absolute;
+        top: 25px;
+        right: -35px;
+        background: var(--cyan-electric, #00f2ff);
+        color: #000;
+        padding: 5px 40px;
+        font-weight: 800;
+        font-size: 0.75rem;
+        transform: rotate(45deg);
+        letter-spacing: 2px;
+        box-shadow: 0 0 15px rgba(0, 242, 255, 0.5);
+    }
+    
+    /* Tipografia Psicológica de Preço */
+    .price-tag {
+        font-family: 'Outfit', sans-serif;
+        font-size: 3.5rem;
+        font-weight: 900;
+        line-height: 1;
+        margin: 20px 0;
+        color: white;
+    }
+    
+    .price-currency {
+        font-size: 1.5rem;
+        vertical-align: top;
+        color: var(--cyan-electric, #00f2ff);
+        margin-right: 5px;
+    }
+    
+    .feature-list {
+        list-style: none;
+        padding: 0;
+        margin: 30px 0;
+        flex-grow: 1;
+    }
+    
+    .feature-list li {
+        margin-bottom: 15px;
+        color: var(--text-dim, #94a3b8);
+        display: flex;
+        align-items: center;
+        font-size: 0.95rem;
+    }
+    
+    .feature-list li i {
+        color: var(--cyan-electric, #00f2ff);
+        margin-right: 12px;
+        font-size: 1.1rem;
+    }
 
-**Ação 2 (Garantia Máxima):** Abra o seu ficheiro `app/__init__.py` e confirme que a loja está a ser importada e registada. Deverá ter algo semelhante a isto nas configurações das rotas:
+    /* Ajuste para mobile */
+    @media (max-width: 992px) {
+        .protocol-card.featured {
+            transform: scale(1);
+        }
+        .protocol-card.featured:hover {
+            transform: translateY(-5px);
+        }
+    }
+</style>
+{% endblock %}
 
-```python
-# app/__init__.py
-# Localize a secção onde os blueprints são registados:
+{% block content %}
+<div class="bg-brand-texture" style="min-height: 100vh; padding: 60px 0; position: relative;">
+    <div class="logo-watermark" style="top: 10%; right: -10%;"></div>
 
-from app.routes.shop import shop_bp
-app.register_blueprint(shop_bp)
-```
+    <div class="container" style="max-width: 1100px; position: relative; z-index: 2;">
+        
+        <div class="text-center mb-5 pb-3">
+            <div style="display: inline-block; padding: 6px 16px; background: rgba(0, 242, 255, 0.1); border: 1px solid var(--cyan-glow, rgba(0,242,255,0.4)); border-radius: 50px; color: var(--cyan-electric, #00f2ff); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 20px; font-weight: 600;">
+                <i class="fas fa-shopping-cart me-2"></i> CHECKOUT SEGURO
+            </div>
+            <h1 style="font-size: clamp(2.5rem, 5vw, 4rem); font-weight: 900; margin-bottom: 15px; font-family: 'Outfit', sans-serif;">
+                PROTOCOLOS DE <span style="color: var(--cyan-electric, #00f2ff); text-shadow: 0 0 30px rgba(0,242,255,0.4);">PERFORMANCE</span>
+            </h1>
+            <p style="color: var(--text-dim, #94a3b8); font-size: 1.15rem; max-width: 600px; margin: 0 auto;">
+                Escolha o plano ideal para recodificar a sua biologia. Sessões monitorizadas de 20 minutos com tecnologia FES.
+            </p>
+        </div>
 
-### O que acontece agora?
-1. O seu novo Lead cadastra-se e vai para o calendário. O botão "+ Agendar" agora estará **AZUL e CLICÁVEL**, porque o sistema sabe que a variável `is_eligible_for_trial` existe.
-2. Ao clicar, o sistema fará o agendamento a custo zero e moverá o cliente na aba do CRM.
-3. Se os créditos dele acabarem mais tarde e ele clicar em "Ver Planos", o sistema encontrará perfeitamente o ficheiro `shop.py` e carregará a página dos pacotes sem o temido erro 404.
+        <div class="row g-4 justify-content-center align-items-center">
+            {% for package in packages %}
+            {% set is_highlighted = package.is_featured or (loop.index == 2 and packages|length == 3) %}
+            
+            <div class="col-lg-4 col-md-6">
+                <div class="protocol-card {% if is_highlighted %}featured{% endif %}">
+                    
+                    {% if is_highlighted %}
+                    <div class="protocol-badge">RECOMENDADO</div>
+                    {% endif %}
+                    
+                    <h3 style="font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 1.5rem; margin-bottom: 5px;">{{ package.name }}</h3>
+                    <p style="color: var(--cyan-electric, #00f2ff); font-weight: 600; font-size: 0.9rem; letter-spacing: 1px;">
+                        <i class="fas fa-bolt text-warning me-1"></i> {{ package.credits }} SESSÕES
+                    </p>
+                    
+                    <div class="price-tag">
+                        <span class="price-currency">R$</span>{{ "%.0f"|format(package.price) }}<span style="font-size: 1.2rem; color: #64748b; font-weight: 600;">,{{ "%.2f"|format(package.price)|string|slice(-2) }}</span>
+                    </div>
+                    
+                    {% if package.description %}
+                    <p style="color: var(--text-dim, #94a3b8); font-size: 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 20px; min-height: 60px;">
+                        {{ package.description }}
+                    </p>
+                    {% else %}
+                    <div style="border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;"></div>
+                    {% endif %}
+                    
+                    <ul class="feature-list">
+                        <li><i class="fas fa-check-circle"></i> Válido por {{ package.validity_days }} dias</li>
+                        <li><i class="fas fa-check-circle"></i> Acesso total a FES (Ezbody)</li>
+                        <li><i class="fas fa-check-circle"></i> Agendamento na App Biohacking</li>
+                        <li><i class="fas fa-check-circle"></i> Suporte Personalizado</li>
+                    </ul>
+                    
+                    <a href="{{ url_for('shop.package_detail', id=package.id) }}" class="btn-neon {% if not is_highlighted %}btn-outline{% endif %} w-100 justify-content-center mt-auto" style="padding: 15px;">
+                        INICIAR PROTOCOLO
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-box-open fa-4x mb-3 opacity-25" style="color: var(--text-dim, #94a3b8);"></i>
+                <h4 style="color: var(--text-dim, #94a3b8);">A carregar novos protocolos...</h4>
+                <p class="text-muted">Nenhum plano disponível de momento.</p>
+            </div>
+            {% endfor %}
+        </div>
+        
+    </div>
+</div>
+{% endblock %}

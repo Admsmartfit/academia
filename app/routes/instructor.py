@@ -110,6 +110,8 @@ def dashboard():
     now = datetime.now()
     current_time = now.time() if selected_date == today else None
 
+    all_students = User.query.filter_by(role='student', is_active=True).order_by(User.name).all()
+
     return render_template('instructor/dashboard.html',
                          schedules=schedules,
                          selected_date=selected_date,
@@ -117,7 +119,8 @@ def dashboard():
                          prev_date=prev_date,
                          next_date=next_date,
                          current_time=current_time,
-                         day_metrics=day_metrics)
+                         day_metrics=day_metrics,
+                         all_students=all_students)
 
 # Check-in removido - sistema considera presença automaticamente
 
@@ -766,4 +769,89 @@ def cancel_schedule_template(id):
     flash('Horário desativado com sucesso.', 'info')
     return redirect(url_for('instructor.list_schedules'))
 
+
+@instructor_bp.route('/schedules/<int:schedule_id>/add-student', methods=['POST'])
+@login_required
+@instructor_required
+def add_student_to_schedule(schedule_id):
+    """Insere manualmente um aluno em um horário (Walk-in)"""
+    from app.models import Subscription, SubscriptionStatus
+
+    schedule = ClassSchedule.query.get_or_404(schedule_id)
+    student_id = request.form.get('student_id')
+    target_date_str = request.form.get('date')
+
+    if not student_id or not target_date_str:
+        flash('Aluno e data são obrigatórios.', 'danger')
+        return redirect(url_for('instructor.dashboard'))
+
+    student = User.query.get(student_id)
+    if not student or student.role != 'student':
+        flash('Aluno inválido.', 'danger')
+        return redirect(url_for('instructor.dashboard', date=target_date_str))
+
+    target_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
+
+    # 1. Verificar capacidade
+    current_bookings = Booking.query.filter(
+        Booking.schedule_id == schedule.id,
+        Booking.date == target_date,
+        Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.COMPLETED])
+    ).count()
+
+    if current_bookings >= schedule.capacity:
+        flash('Ação bloqueada: A aula já atingiu o limite máximo de alunos.', 'danger')
+        return redirect(url_for('instructor.dashboard', date=target_date_str))
+
+    # 2. Verificar duplicidade
+    existing = Booking.query.filter_by(
+        user_id=student.id, schedule_id=schedule.id,
+        date=target_date, status=BookingStatus.CONFIRMED
+    ).first()
+
+    if existing:
+        flash('Este aluno já está agendado nesta aula.', 'warning')
+        return redirect(url_for('instructor.dashboard', date=target_date_str))
+
+    # 3. Lógica financeira e passe livre
+    active_sub = Subscription.query.filter_by(
+        user_id=student.id, status=SubscriptionStatus.ACTIVE
+    ).filter(Subscription.credits_used < Subscription.credits_total).first()
+
+    cost = schedule.modality.credits_cost
+    sub_id = None
+
+    if active_sub:
+        active_sub.credits_used += cost
+        sub_id = active_sub.id
+    else:
+        has_past_bookings = Booking.query.filter_by(user_id=student.id).first() is not None
+        if not has_past_bookings:
+            cost = 0  # Sessão experimental gratuita
+            try:
+                from app.models.crm import Lead, LeadStatus
+                lead = Lead.query.filter_by(converted_user_id=student.id).first()
+                if lead and lead.status == LeadStatus.NEW:
+                    lead.status = LeadStatus.TRIAL
+                    lead.trial_class_date = datetime.utcnow()
+            except Exception:
+                pass
+        else:
+            flash(f'O aluno {student.name} não possui créditos ativos e já utilizou a sua aula experimental.', 'danger')
+            return redirect(url_for('instructor.dashboard', date=target_date_str))
+
+    # 4. Criar agendamento
+    booking = Booking(
+        user_id=student.id,
+        subscription_id=sub_id,
+        schedule_id=schedule.id,
+        date=target_date,
+        status=BookingStatus.CONFIRMED,
+        cost_at_booking=cost
+    )
+    db.session.add(booking)
+    db.session.commit()
+
+    flash(f'Aluno {student.name} inserido com sucesso na turma!', 'success')
+    return redirect(url_for('instructor.dashboard', date=target_date_str))
 

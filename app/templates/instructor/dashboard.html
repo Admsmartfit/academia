@@ -234,14 +234,14 @@
                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center">
                             <div class="modality-circle me-3" data-color="{{ sched.modality.color }}">
-                                {{ sched.modality.icon if sched.modality.icon else '💪' }}
+                                {{ sched.modality.icon if sched.modality.icon else '⚡' }}
                             </div>
                             <div>
-                                <h6 class="mb-0">
+                                <h6 class="mb-0 fw-bold">
                                     {{ sched.modality.name }}
                                     {% if is_current %}
-                                    <span class="badge bg-warning text-dark ms-2">
-                                        <i class="fas fa-circle fa-xs me-1"></i>Agora
+                                    <span class="badge ms-2" style="background-color: var(--primary-color); color: var(--text-dark, #020617);">
+                                        <i class="fas fa-circle fa-xs me-1 text-danger"></i>A Decorrer
                                     </span>
                                     {% endif %}
                                 </h6>
@@ -251,10 +251,59 @@
                                 </small>
                             </div>
                         </div>
-                        <div class="text-end">
-                            <span class="badge bg-light text-dark border">
-                                {{ sched.today_bookings|length }}/{{ sched.capacity }}
+                        <div class="text-end d-flex align-items-center gap-2">
+                            <span class="badge border text-dark fw-bold px-2 py-1" style="background: #f8f9fa;">
+                                <i class="fas fa-users me-1 text-muted"></i>{{ sched.today_bookings|length }}/{{ sched.capacity }}
                             </span>
+                            {% if sched.today_bookings|length < sched.capacity %}
+                            <button type="button" class="btn btn-sm fw-bold border-0 shadow-sm"
+                                style="background: var(--primary-color, #00f2ff); color: #020617;"
+                                data-bs-toggle="modal" data-bs-target="#addStudentModal{{ sched.id }}"
+                                title="Encaixar Aluno">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            {% else %}
+                            <button type="button" class="btn btn-sm btn-secondary fw-bold border-0 opacity-50" disabled title="Turma Cheia">
+                                MAX
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Modal Walk-in -->
+                    <div class="modal fade" id="addStudentModal{{ sched.id }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <form action="{{ url_for('instructor.add_student_to_schedule', schedule_id=sched.id) }}" method="POST">
+                                <div class="modal-content border-0 shadow">
+                                    <div class="modal-header border-0" style="background: #0f172a;">
+                                        <h5 class="modal-title fw-bold text-white">
+                                            <i class="fas fa-user-plus me-2" style="color: #00f2ff;"></i>Encaixar Aluno na Turma
+                                        </h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body p-4">
+                                        <input type="hidden" name="date" value="{{ selected_date.strftime('%Y-%m-%d') }}">
+                                        <div class="alert border-0 mb-3" style="background: rgba(0, 242, 255, 0.05); color: #0f172a; border-left: 3px solid #00f2ff !important;">
+                                            <i class="fas fa-info-circle me-2" style="color: #00f2ff;"></i>
+                                            Adicionando à aula de <strong>{{ sched.modality.name }}</strong> das <strong>{{ sched.start_time.strftime('%H:%M') }}</strong>. O crédito será debitado automaticamente.
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Selecione o Aluno:</label>
+                                            <input class="form-control form-control-lg border-2" list="globalStudentsList" id="studentSelectInput{{ sched.id }}" placeholder="Digite o nome do aluno..." autocomplete="off">
+                                            <input type="hidden" name="student_id" id="hiddenStudentId{{ sched.id }}" required>
+                                            <div class="form-text mt-2"><i class="fas fa-search me-1"></i> Comece a escrever para filtrar.</div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer bg-light border-0">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                        <button type="submit" class="btn fw-bold"
+                                            style="background: var(--primary-color, #00f2ff); color: #020617;"
+                                            onclick="setHiddenStudentId('{{ sched.id }}')">
+                                            <i class="fas fa-bolt me-1"></i> Confirmar Inserção
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
                         </div>
                     </div>
                     <div class="card-body p-0">
@@ -562,6 +611,12 @@
     </div>
 </div>
 
+<datalist id="globalStudentsList">
+    {% for student in all_students %}
+        <option data-value="{{ student.id }}" value="{{ student.name }} | {{ student.email }}"></option>
+    {% endfor %}
+</datalist>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -631,6 +686,18 @@
     function clearSelection() {
         document.querySelectorAll('.bulk-checkbox:checked').forEach(cb => cb.checked = false);
         updateBulkActionsBar();
+    }
+
+    // Walk-in: converte texto do datalist global para o ID numérico do aluno
+    function setHiddenStudentId(scheduleId) {
+        var inputVal = document.getElementById('studentSelectInput' + scheduleId).value;
+        var datalist = document.getElementById('globalStudentsList');
+        for (var i = 0; i < datalist.options.length; i++) {
+            if (datalist.options[i].value === inputVal) {
+                document.getElementById('hiddenStudentId' + scheduleId).value = datalist.options[i].getAttribute('data-value');
+                break;
+            }
+        }
     }
 </script>
 {% endblock %}

@@ -144,58 +144,44 @@
         </div>
     </div>
 
-    <!-- Selecao de Assinatura / Passe de Acesso -->
-    <div class="card mb-4 border-0 shadow-sm" style="background: var(--bg-card, #0f172a);">
-        <div class="card-body p-4">
-            <h6 class="mb-3 fw-bold" style="color: var(--cyan-electric, #00f2ff);">
-                <i class="fas fa-microchip me-2"></i> PASSE DE ACESSO
-            </h6>
+    <!-- Smart Bar de Autorização de Acesso -->
+    {% if active_subscriptions or is_eligible_for_trial %}
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center p-3 mb-4 rounded shadow-sm"
+        style="background: var(--bg-card, #0f172a); border: 1px solid rgba(0, 242, 255, 0.2);">
 
-            <div class="row g-3">
+        <div class="d-flex align-items-center mb-3 mb-md-0">
+            <div class="rounded-circle d-flex justify-content-center align-items-center me-3"
+                style="width: 42px; height: 42px; background: rgba(0, 242, 255, 0.1); color: var(--cyan-electric, #00f2ff); font-size: 1.2rem; flex-shrink: 0;">
+                <i class="fas fa-microchip"></i>
+            </div>
+            <div>
+                <h6 class="mb-0 fw-bold text-white" style="letter-spacing: 1px; font-family: 'Outfit', sans-serif;">AUTORIZAÇÃO DE ACESSO</h6>
+                <small style="color: var(--text-dim, #94a3b8);">Selecione a origem dos créditos</small>
+            </div>
+        </div>
+
+        <div>
+            <select class="form-select fw-bold shadow-none" id="global_subscription_select"
+                style="background-color: #05070a; color: #00f2ff; border: 1px solid #00f2ff; min-width: 280px; cursor: pointer;">
                 {% if is_eligible_for_trial %}
-                <div class="col-md-6">
-                    <div class="form-check custom-radio-box p-3 rounded"
-                        style="border: 2px solid #00f2ff; background: rgba(0, 242, 255, 0.05);">
-                        <input class="form-check-input subscription-radio" type="radio"
-                            name="subscription_select" id="sub_exp" value="experimental"
-                            data-credits="999" data-end-date="—" checked>
-                        <label class="form-check-label w-100 text-white" for="sub_exp">
-                            <strong style="color: #00f2ff;">
-                                <i class="fas fa-bolt text-warning me-1"></i> Primeira Sessão Gratuita
-                            </strong>
-                            <br><small class="text-muted">1 Passe Experimental Liberado (Custo: 0 Créditos).</small>
-                        </label>
-                    </div>
-                </div>
+                <option value="experimental">⚡ Primeira Sessão (Gratuita)</option>
                 {% endif %}
-
                 {% for sub in active_subscriptions %}
-                <div class="col-md-6">
-                    <div class="form-check custom-radio-box p-3 rounded"
-                        style="border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02);">
-                        <input class="form-check-input subscription-radio" type="radio"
-                            name="subscription_select" id="sub_{{ sub.id }}" value="{{ sub.id }}"
-                            data-credits="{{ sub.credits_remaining }}"
-                            data-end-date="{{ sub.end_date.strftime('%d/%m/%Y') }}"
-                            {% if loop.first and not is_eligible_for_trial %}checked{% endif %}>
-                        <label class="form-check-label w-100 text-white" for="sub_{{ sub.id }}">
-                            <strong>{{ sub.package.name }}</strong>
-                            <br><small class="text-muted">{{ sub.credits_remaining }} crédito(s) restantes | até {{ sub.end_date.strftime('%d/%m/%Y') }}</small>
-                        </label>
-                    </div>
-                </div>
+                <option value="{{ sub.id }}">{{ sub.package.name }} ({{ sub.credits_remaining }} cr)</option>
                 {% endfor %}
-            </div>
-
-            {% if not active_subscriptions and not is_eligible_for_trial %}
-            <div class="alert border-0 mt-3 mb-0"
-                style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
-                <i class="fas fa-exclamation-triangle me-2"></i> Você não possui créditos ativos para agendar.
-                <a href="{{ url_for('shop.packages') }}" class="fw-bold ms-1 text-white text-decoration-none border-bottom">Adquira um plano aqui</a>.
-            </div>
-            {% endif %}
+            </select>
         </div>
     </div>
+    {% else %}
+    <div class="alert border-0 d-flex align-items-center p-3 mb-4 rounded shadow-sm"
+        style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-left: 4px solid #f59e0b !important;">
+        <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+        <div>
+            <h6 class="mb-1 fw-bold">Acesso Bloqueado</h6>
+            <small>Os seus créditos acabaram. <a href="{{ url_for('shop.packages') }}" class="text-white fw-bold ms-1 text-decoration-none border-bottom">Ver Planos de Performance</a>.</small>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Layout Two-Pane -->
     <div class="layout-twopane">
@@ -633,5 +619,20 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
 });
+</script>
+
+<script>
+    // Lógica Universal de Agendamento: injeta o plano selecionado no dropdown em qualquer form de booking
+    document.addEventListener('submit', function (e) {
+        if (e.target && (e.target.classList.contains('booking-cart-form') || (e.target.action && e.target.action.includes('/student/book/')))) {
+            const globalSelect = document.getElementById('global_subscription_select');
+            if (globalSelect) {
+                let subInput = e.target.querySelector('input[name="subscription_id"]');
+                if (subInput) {
+                    subInput.value = globalSelect.value;
+                }
+            }
+        }
+    });
 </script>
 {% endblock %}
