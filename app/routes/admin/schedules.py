@@ -175,6 +175,12 @@ def delete_schedule(id):
         flash('Nao e possivel excluir este horario pois existem agendamentos associados.', 'danger')
         return redirect(url_for('admin_schedules.list_schedules'))
 
+    # Excluir dependências órfãs antes de deletar a grade
+    if hasattr(schedule, 'split_config') and schedule.split_config:
+        db.session.delete(schedule.split_config)
+
+    ScheduleSlotGender.query.filter_by(schedule_id=schedule.id).delete()
+
     db.session.delete(schedule)
     db.session.commit()
 
@@ -205,10 +211,17 @@ def reject_schedule(id):
         for booking in schedule.bookings:
             if booking.status == BookingStatus.CONFIRMED and booking.subscription:
                 booking.subscription.credits_used -= booking.cost_at_booking
-        
+
+        # Excluir dependências órfãs antes de deletar a grade
+        if hasattr(schedule, 'split_config') and schedule.split_config:
+            db.session.delete(schedule.split_config)
+
+        ScheduleSlotGender.query.filter_by(schedule_id=schedule.id).delete()
+
         db.session.delete(schedule)
         db.session.commit()
         flash('Horario rejeitado e removido.', 'info')
+
     return redirect(url_for('admin_schedules.list_schedules'))
 
 
