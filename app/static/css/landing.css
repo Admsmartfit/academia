@@ -51,27 +51,37 @@ h6 {
 
 .btn-neon {
     background-color: var(--accent);
-    color: var(--text-main);
+    color: #0a0a1a !important;
+    font-weight: 800;
+    text-shadow: none !important;
     border: none;
-    padding: 12px 24px;
-    font-weight: bold;
+    padding: 12px 28px;
     text-transform: uppercase;
-    border-radius: 4px;
+    letter-spacing: 1px;
+    border-radius: 8px;
     cursor: pointer;
-    box-shadow: 0 0 10px var(--accent-glow);
+    box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
     transition: all var(--transition-speed) ease;
     display: inline-block;
+    text-decoration: none;
 }
 
 .btn-neon:hover {
-    background-color: #5effff;
-    box-shadow: 0 0 20px var(--accent-glow), 0 0 40px var(--accent-glow);
+    background-color: #0891b2;
+    color: #ffffff !important;
+    box-shadow: 0 0 25px rgba(6, 182, 212, 0.7);
     transform: translateY(-2px);
 }
 
 .btn-neon.btn-outline {
     background-color: transparent;
-    border: 1px solid var(--accent);
+    color: var(--accent) !important;
+    border: 2px solid var(--accent);
+}
+
+.btn-neon.btn-outline:hover {
+    background-color: var(--accent);
+    color: #0a0a1a !important;
 }
 
 nav {

@@ -27,13 +27,32 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-152x152.png') }}">
+
+    <style>
+        /* CSS Reset de Segurança contra Overflow Horizontal */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            overflow-x: hidden;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        img, svg {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
 </head>
 
 <body>
 
     <!-- Navigation -->
     <nav
-        style="position: absolute; top: 0; width: 100%; padding: 20px 5%; display: flex; justify-content: space-between; align-items: center; z-index: 10;">
+        style="position: absolute; top: 0; left: 0; width: 100%; padding: 20px 5%; display: flex; justify-content: space-between; align-items: center; z-index: 10; box-sizing: border-box;">
         <div class="logo">
             <h2 style="margin: 0; letter-spacing: 2px; font-weight: 800;">BIO<span class="text-accent">HACK</span>
                 STUDIO</h2>
