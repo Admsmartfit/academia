@@ -23,7 +23,7 @@
 
     <!-- PWA -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <meta name="theme-color" content="#FF6B35">
+    <meta name="theme-color" content="#00f2ff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-152x152.png') }}">
@@ -71,7 +71,7 @@
             </div>
             {% endif %}
             <a href="/login" class="btn-neon" style="text-decoration: none; font-size: 0.9rem;">
-                {% if user_summary %}Meu Dashboard{% else %}Entrar / Agendar{% endif %}
+                {% if user_summary %}Meu Dashboard{% else %}Acessar o Hub{% endif %}
             </a>
         </div>
     </nav>
@@ -112,7 +112,7 @@
     </section>
 
     <!-- 2. Problema / Solução -->
-    <section class="problem-section">
+    <section class="problem-section logo-watermark">
         <div class="container" style="max-width: 1100px; margin: 0 auto; text-align: center;">
             <h2 style="font-size: 2.5rem; margin-bottom: 15px;">POR QUE SEUS TREINOS <span class="text-accent">NÃO
                     FUNCIONAM</span></h2>
@@ -153,7 +153,7 @@
     </section>
 
     <!-- 3. Ciência Ezbody (Authority Section Enhanced) -->
-    <section id="ciencia" class="authority-section">
+    <section id="ciencia" class="authority-section logo-watermark">
         <div class="container" style="max-width: 1000px; margin: 0 auto; text-align: center;">
             <h2 style="font-size: 2.5rem; margin-bottom: 20px;">TECNOLOGIA <span class="text-accent">EZBODY
                     WIRELESS</span></h2>
@@ -336,7 +336,7 @@
                         <p style="font-size: 1.5rem; font-weight: bold;" id="traditional-hours">180 horas</p>
                     </div>
                     <div
-                        style="background: rgba(255, 107, 53, 0.1); border: 1px solid var(--accent); padding: 20px; border-radius: 8px;">
+                        style="background: rgba(0, 242, 255, 0.08); border: 1px solid var(--accent); padding: 20px; border-radius: 8px;">
                         <h4 class="text-accent" style="margin: 0 0 10px 0;">Tempo com Tecnologia FES</h4>
                         <p class="text-accent" style="font-size: 1.5rem; font-weight: bold;" id="fes-hours">24 horas</p>
                         <p style="margin: 0; font-size: 0.9rem;">Você economiza <span id="saved-hours"
@@ -348,7 +348,7 @@
     </section>
 
     <!-- 8. Pricing Plans -->
-    <section id="planos" class="pricing-section">
+    <section id="planos" class="pricing-section logo-watermark">
         <div class="container" style="max-width: 1200px; margin: 0 auto; text-align: center;">
             <h2 style="font-size: 2.5rem; margin-bottom: 50px;">SESSÕES DE <span class="text-accent">PERFORMANCE</span>
             </h2>
@@ -601,7 +601,7 @@
     </section>
 
     <!-- 12. CTA Final -->
-    <section class="cta-final-section">
+    <section class="cta-final-section logo-watermark">
         <div class="container" style="max-width: 800px; margin: 0 auto; text-align: center;">
             <div class="cta-badge">SESSÃO EXPERIMENTAL GRATUITA</div>
             <h2 style="font-size: 2.8rem; margin-bottom: 20px;">
