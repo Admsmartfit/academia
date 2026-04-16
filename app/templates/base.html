@@ -8,7 +8,7 @@
 
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <meta name="theme-color" content="#FF6B35">
+    <meta name="theme-color" content="#00f2ff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="BioStudio">
@@ -25,8 +25,9 @@
 
     <style>
         :root {
-            --primary-color: #FF6B35;
-            --secondary-color: #004E89;
+            --primary-color: #00f2ff;
+            --secondary-color: #0f172a;
+            --text-dark: #020617;
         }
 
         body {
@@ -38,11 +39,15 @@
         .btn-primary {
             background-color: var(--primary-color);
             border-color: var(--primary-color);
+            color: var(--text-dark) !important;
+            font-weight: 600;
         }
 
         .btn-primary:hover {
-            background-color: #e55a2b;
-            border-color: #e55a2b;
+            background-color: #ffffff;
+            border-color: var(--primary-color);
+            color: var(--text-dark) !important;
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
         }
 
         .text-primary {
@@ -51,6 +56,7 @@
 
         .bg-primary {
             background-color: var(--primary-color) !important;
+            color: var(--text-dark) !important;
         }
 
         main {
