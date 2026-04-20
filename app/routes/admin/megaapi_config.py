@@ -1,7 +1,7 @@
 # app/routes/admin/megaapi_config.py
 
 import requests
-from flask import Blueprint, render_template, request, flash, redirect, url_for
+from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify
 from flask_login import login_required
 from app.routes.admin.dashboard import admin_required
 from app.services.megaapi import megaapi
@@ -39,9 +39,11 @@ def get_instance_status(host=None, token=None, instance_key=None) -> dict:
     }
 
     try:
-        # Usar endpoint de status da instancia
+        # Se base_url já contém /rest, não duplicamos o prefixo
+        status_path = "/instance/status" if "/rest" in base_url else "/rest/instance/status"
+
         response = requests.get(
-            f"{base_url}/instance/status",
+            f"{base_url}{status_path}",
             headers=headers,
             timeout=10
         )
@@ -58,29 +60,11 @@ def get_instance_status(host=None, token=None, instance_key=None) -> dict:
         else:
             return {
                 'connected': False,
-                'error': f'Erro HTTP {response.status_code}'
+                'error': f'Servidor MegaAPI retornou erro {response.status_code}'
             }
 
-    except requests.exceptions.Timeout:
-        return {
-            'connected': False,
-            'error': 'Timeout na conexao'
-        }
-    except requests.exceptions.ConnectionError:
-        return {
-            'connected': False,
-            'error': 'Erro de conexao - verifique a URL'
-        }
     except Exception as e:
-        return {
-            'connected': False,
-            'error': str(e)
-        }
-    except Exception as e:
-        return {
-            'connected': False,
-            'error': str(e)
-        }
+        return {'connected': False, 'error': f"Falha na comunicação: {str(e)}"}
 
 
 @megaapi_config_bp.route('/check-status', methods=['POST'])

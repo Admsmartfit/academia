@@ -1,166 +1,100 @@
-Com base na sua auditoria e nas falhas relatadas, identifiquei uma desconexão entre o **Faturamento Global** (registado em pagamentos) e a **Receita do Split** (que depende da geração de entradas de comissão), além da falta de "atalhos" operacionais no dashboard.
+PRD: Correção da Integração MegaAPI (Hotfix)
+Versão: 3.4 (API Connectivity)
+Arquivos Afetados: app/routes/admin/megaapi_config.py e app/templates/admin/megaapi/settings.html
 
-Apresento o **PRD de Consolidação Financeira e Operacional** para o **Biohacking Studio**.
+1. Correção no Backend (megaapi_config.py)
+Precisamos ajustar o endpoint para seguir o padrão /rest exigido pelo servidor apistart01 e garantir que o retorno seja sempre JSON, mesmo em caso de erro crítico.
 
----
+Ação: Localize a função get_instance_status no ficheiro app/routes/admin/megaapi_config.py e atualize a chamada de URL:
 
-# PRD: Consolidação Financeira e Transparência Operacional
+Python
+# app/routes/admin/megaapi_config.py
 
-**Versão:** 3.3 (Finanças & UX Admin)
-**Objetivo:** Criar rastreabilidade para alertas de atraso, unificar a receita da academia no módulo de split e implementar a remuneração de aulas gratuitas.
-
-## 1. Problemas Identificados
-1.  **Alertas "Cegos":** O dashboard informa números (ex: "5 atrasados"), mas não permite clicar para ver a lista.
-2.  **Receita Zerada no Split:** O faturamento do mês no dashboard soma a tabela `Payment`, mas o módulo de Split só contabiliza receitas que geraram `CommissionEntry`.
-3.  **Remuneração de Incentivo:** Instrutores não recebem automaticamente por aulas de XP/Experimentais no fluxo de split.
-
----
-
-## 2. Etapa 1: Navegação de Alertas (Dashboard)
-
-**Ação:** Alterar `app/templates/admin/dashboard.html` para transformar os alertas em links para rotas filtradas.
-
-```html
-<div class="row">
-    <div class="col-md-6 col-lg-3">
-        <a href="{{ url_for('admin_payments.overdue') }}" class="text-decoration-none">
-            <div class="card bg-danger text-white mb-4 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="small text-white-50 fw-bold">PAGAMENTOS EM ATRASO</div>
-                            <div class="h3 fw-bold">{{ pending_payments_count }}</div>
-                        </div>
-                        <i class="fas fa-exclamation-circle fa-2x opacity-50"></i>
-                    </div>
-                </div>
-                <div class="card-footer d-flex align-items-center justify-content-between small">
-                    <span class="text-white">Ver Lista de Devedores</span>
-                    <i class="fas fa-angle-right"></i>
-                </div>
-            </div>
-        </a>
-    </div>
-
-    <div class="col-md-6 col-lg-3">
-        <a href="{{ url_for('admin_users.list_users', filter='expiring') }}" class="text-decoration-none">
-            <div class="card bg-warning text-dark mb-4 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="small text-dark-50 fw-bold">EXPIRANDO EM 7 DIAS</div>
-                            <div class="h3 fw-bold">{{ expiring_subscriptions_count }}</div>
-                        </div>
-                        <i class="fas fa-clock fa-2x opacity-50"></i>
-                    </div>
-                </div>
-                <div class="card-footer d-flex align-items-center justify-content-between small">
-                    <span class="text-dark">Ver Lista de Renovações</span>
-                    <i class="fas fa-angle-right"></i>
-                </div>
-            </div>
-        </a>
-    </div>
-</div>
-```
-
----
-
-## 3. Etapa 2: Unificação de Receita no Split (Backend)
-
-O valor na Receita da Academia do Split está zerado porque as subscrições foram pagas mas os agendamentos (`Bookings`) ainda não foram marcados como `COMPLETED` ou `NO_SHOW`, que é o gatilho para gerar a comissão.
-
-**Ação:** Atualizar a lógica de cálculo em `app/routes/admin/split.py` para mostrar tanto a receita "Realizada" (comissões processadas) quanto a receita "Bruta de Pagamentos".
-
-```python
-# app/routes/admin/split.py
-
-@admin_split_bp.route('/')
-@login_required
-@admin_required
-def dashboard():
-    # ... (lógica existente) ...
+def get_instance_status(host=None, token=None, instance_key=None) -> dict:
+    # Garante que o host termina sem barra e usa o prefixo correto
+    base_url = (host or megaapi.base_url or '').rstrip('/')
+    current_token = token or megaapi.token
     
-    # CORREÇÃO: Buscar faturamento total da tabela Payment para comparação
-    today = datetime.now().date()
-    month_start = today.replace(day=1)
-    
-    receita_bruta_mes = db.session.query(func.sum(Payment.amount)).filter(
-        Payment.status == PaymentStatusEnum.PAID,
-        Payment.paid_at >= month_start
-    ).scalar() or Decimal('0.00')
+    if not base_url or not current_token:
+        return {'connected': False, 'error': 'Credenciais não configuradas'}
+        
+    headers = {
+        'Authorization': f'Bearer {current_token}',
+        'Content-Type': 'application/json'
+    }
 
-    # Receita que já passou pelo Split (já gerou comissão)
-    receita_comissionada = db.session.query(func.sum(CommissionEntry.amount_academy)).filter(
-        CommissionEntry.status == CommissionStatus.PAID,
-        CommissionEntry.processed_at >= month_start
-    ).scalar() or Decimal('0.00')
+    try:
+        # CORREÇÃO: O endpoint oficial segundo a documentação start01 é /instance/status
+        # Se a base_url já tiver /rest, não duplicamos.
+        status_path = "/instance/status" if "/rest" in base_url else "/rest/instance/status"
+        
+        response = requests.get(
+            f"{base_url}{status_path}",
+            headers=headers,
+            timeout=10
+        )
 
-    return render_template('admin/split/dashboard.html',
-                         receita_bruta_mes=receita_bruta_mes,
-                         receita_comissionada=receita_comissionada,
-                         # ... outros dados ...
-                         )
-```
+        if response.status_code == 200:
+            return {
+                'connected': True,
+                'status': 'Online',
+                'data': response.json()
+            }
+        else:
+            return {
+                'connected': False,
+                'error': f'Servidor MegaAPI retornou erro {response.status_code}'
+            }
+    except Exception as e:
+        return {'connected': False, 'error': f"Falha na comunicação: {str(e)}"}
+2. Correção no Frontend (settings.html)
+Para evitar o erro de "JSON inválido", precisamos garantir que o fetch envie as credenciais de admin e trate erros de rede.
 
----
+Ação: Substitua a função validateConnection() no ficheiro app/templates/admin/megaapi/settings.html:
 
-## 4. Etapa 3: Regras de Remuneração para Aulas de Incentivo
+JavaScript
+// app/templates/admin/megaapi/settings.html
 
-Integramos agora a lógica onde o Studio subsidia a aula gratuita (XP ou Experimental) para o instrutor.
+function validateConnection() {
+    const btn = document.getElementById('validateBtn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Validando...';
 
-**Ação:** Atualizar `app/models/commission.py`.
+    const data = {
+        host: document.getElementById('host').value,
+        instance_key: document.getElementById('instance_key').value,
+        token: document.getElementById('token').value
+    };
 
-```python
-# app/models/commission.py
-
-@classmethod
-def create_from_booking(cls, booking, split_config=None):
-    from app.models.commission import SplitSettings
-    settings = SplitSettings.get_settings()
-    
-    # REGRA: Se o custo for 0 (Experimental/XP), usamos o valor nominal de Split
-    # Isso garante que o instrutor receba, agindo como um custo de marketing para a academia.
-    valor_referencia = booking.cost_at_booking
-    is_incentive = False
-    
-    if valor_referencia == 0:
-        valor_referencia = settings.credit_value_reais
-        is_incentive = True
-    
-    schedule = booking.schedule
-    professional = schedule.instructor
-    
-    if not split_config:
-        split_config = schedule.split_config
-
-    # Percentuais (Padrão ou Dinâmico)
-    academy_pct = split_config.academy_percentage if split_config else Decimal('40.00')
-    prof_pct = split_config.professional_percentage if split_config else Decimal('60.00')
-
-    amount_professional = (valor_referencia * prof_pct / 100).quantize(Decimal('0.01'))
-    amount_academy = (valor_referencia * academy_pct / 100).quantize(Decimal('0.01'))
-
-    entry = cls(
-        booking_id=booking.id,
-        professional_id=professional.id,
-        credit_value=valor_referencia,
-        academy_percentage=academy_pct,
-        professional_percentage=prof_pct,
-        amount_academy=amount_academy, # Aqui a academia assume o custo
-        amount_professional=amount_professional,
-        booking_status=booking.status.value,
-        status=CommissionStatus.PENDING,
-        notes="Aula de Incentivo (Subsidiada)" if is_incentive else ""
-    )
-    return entry
-```
-
----
-
-## 5. Resumo das Correções
-1.  **Links Diretos:** Ao ver "5 pagamentos em atraso" no painel, o administrador clica e vai direto para a lista de devedores.
-2.  **Rastreio de Receita:** A "Receita da Academia" no Split agora diferencia o dinheiro que entrou (Bruto) do dinheiro que sobrou após pagar os instrutores (Líquido Comissionado).
-3.  **Justiça com o Instrutor:** Aulas experimentais não geram "trabalho de graça" para o professor. O sistema calcula a comissão dele baseada no valor de mercado (R$ 15,00 por crédito, por exemplo) e debita da margem de lucro da academia como investimento.
-
-**Nota Técnica:** Para que a receita do split apareça preenchida, certifique-se de que os instrutores estão a finalizar as aulas no painel (`COMPLETED`), pois é neste momento que a `CommissionEntry` é gerada. Se a aula estiver apenas agendada (`CONFIRMED`), a comissão ainda não existe para o financeiro.
+    fetch('{{ url_for("admin_megaapi.check_status_ajax") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(async response => {
+        // CORREÇÃO: Verifica se a resposta é HTML antes de tentar converter para JSON
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            return response.json();
+        } else {
+            // Se for HTML, provavelmente é um erro 404/500 do Flask
+            throw new Error("O servidor retornou HTML em vez de JSON. Verifique se está logado como Admin.");
+        }
+    })
+    .then(data => {
+        if (data.connected) {
+            alert('✅ Conectado com sucesso!');
+            location.reload();
+        } else {
+            alert('❌ Erro: ' + (data.error || 'Falha na conexão'));
+        }
+    })
+    .catch(err => {
+        alert('⚠️ Erro de requisição: ' + err.message);
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+}
