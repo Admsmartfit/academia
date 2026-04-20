@@ -89,7 +89,13 @@ class SplitService:
 
         # Obter valor do credito
         settings = self.get_settings()
-        credit_value = settings.credit_value_reais * booking.cost_at_booking
+        # Aula gratuita (XP/Experimental): usa valor nominal como custo de marketing
+        if booking.cost_at_booking == 0:
+            credit_value = settings.credit_value_reais
+            is_incentive = True
+        else:
+            credit_value = settings.credit_value_reais * booking.cost_at_booking
+            is_incentive = False
 
         # Obter split configuration
         split_config = schedule.split_config
@@ -119,7 +125,8 @@ class SplitService:
             booking_status=booking.status.value,
             professional_type=prof_type,
             demand_level=demand,
-            status=CommissionStatus.PENDING
+            status=CommissionStatus.PENDING,
+            notes="Aula de Incentivo (Subsidiada)" if is_incentive else None
         )
 
         db.session.add(entry)

@@ -260,6 +260,14 @@ class CommissionEntry(db.Model):
             prof_pct = Decimal('60.00')
             demand = DemandLevel.STANDARD
 
+        # Regra de Incentivo: aula gratuita (XP/Experimental) usa valor nominal
+        # A academia subsidia a comissão do instrutor como custo de marketing
+        is_incentive = credit_value_reais == Decimal('0.00')
+        if is_incentive:
+            from app.models.commission import SplitSettings
+            settings = SplitSettings.get_settings()
+            credit_value_reais = settings.credit_value_reais
+
         # Calcular valores
         amount_academy = (credit_value_reais * academy_pct / 100).quantize(Decimal('0.01'))
         amount_professional = (credit_value_reais * prof_pct / 100).quantize(Decimal('0.01'))
@@ -275,7 +283,8 @@ class CommissionEntry(db.Model):
             booking_status=booking.status.value,
             professional_type=professional_type,
             demand_level=demand,
-            status=CommissionStatus.PENDING
+            status=CommissionStatus.PENDING,
+            notes="Aula de Incentivo (Subsidiada)" if is_incentive else None
         )
 
         return entry

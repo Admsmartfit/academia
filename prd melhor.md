@@ -1,200 +1,166 @@
-PRD: Bugfix E-commerce (Jinja2 Generator & Layout)
-Versão: 3.1 (Hotfix)
-Ficheiro Afetado: app/templates/shop/packages.html
+Com base na sua auditoria e nas falhas relatadas, identifiquei uma desconexão entre o **Faturamento Global** (registado em pagamentos) e a **Receita do Split** (que depende da geração de entradas de comissão), além da falta de "atalhos" operacionais no dashboard.
 
-Passo Único: Correção do Preço e da Largura da Caixa
-Abra o seu ficheiro app/templates/shop/packages.html e localize o trecho onde o preço é renderizado (por volta da linha 96) e a classe CSS .protocol-card.
+Apresento o **PRD de Consolidação Financeira e Operacional** para o **Biohacking Studio**.
 
-Para facilitar, substitua o código inteiro do ficheiro por esta versão corrigida. Adicionei um max-width: 400px; margin: 0 auto; no CSS das caixas para garantir que elas não fiquem "gordas" demais em ecrãs grandes, e corrigi a matemática do preço.
+---
 
-HTML
-{% extends "base.html" %}
+# PRD: Consolidação Financeira e Transparência Operacional
 
-{% block title %}Protocolos de Performance | Biohacking Studio{% endblock %}
+**Versão:** 3.3 (Finanças & UX Admin)
+**Objetivo:** Criar rastreabilidade para alertas de atraso, unificar a receita da academia no módulo de split e implementar a remuneração de aulas gratuitas.
 
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
-<style>
-    /* Ajustes específicos de E-commerce Biohacking */
-    body {
-        background-color: var(--bg-deep, #05070a);
-        color: var(--text-main, #f8fafc);
-    }
-    
-    .protocol-card {
-        background: var(--bg-card, #0f172a);
-        border: 1px solid rgba(0, 242, 255, 0.1);
-        border-radius: 16px;
-        padding: 40px 30px;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        overflow: hidden;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        
-        /* CORREÇÃO DE LAYOUT: Impede que a caixa fique muito larga */
-        max-width: 400px;
-        margin: 0 auto;
-    }
-    
-    .protocol-card:hover {
-        transform: translateY(-10px);
-        border-color: var(--cyan-electric, #00f2ff);
-        box-shadow: 0 10px 40px rgba(0, 242, 255, 0.15);
-    }
-    
-    /* Destaque para o plano mais rentável (CRO) */
-    .protocol-card.featured {
-        border-color: rgba(0, 242, 255, 0.5);
-        background: linear-gradient(180deg, #0f172a 0%, #0a101f 100%);
-        transform: scale(1.05); /* Ligeiramente maior que os outros */
-        z-index: 2;
-    }
-    
-    .protocol-card.featured:hover {
-        transform: scale(1.05) translateY(-10px);
-    }
+## 1. Problemas Identificados
+1.  **Alertas "Cegos":** O dashboard informa números (ex: "5 atrasados"), mas não permite clicar para ver a lista.
+2.  **Receita Zerada no Split:** O faturamento do mês no dashboard soma a tabela `Payment`, mas o módulo de Split só contabiliza receitas que geraram `CommissionEntry`.
+3.  **Remuneração de Incentivo:** Instrutores não recebem automaticamente por aulas de XP/Experimentais no fluxo de split.
 
-    .protocol-badge {
-        position: absolute;
-        top: 25px;
-        right: -35px;
-        background: var(--cyan-electric, #00f2ff);
-        color: #000;
-        padding: 5px 40px;
-        font-weight: 800;
-        font-size: 0.75rem;
-        transform: rotate(45deg);
-        letter-spacing: 2px;
-        box-shadow: 0 0 15px rgba(0, 242, 255, 0.5);
-    }
-    
-    /* Tipografia Psicológica de Preço */
-    .price-tag {
-        font-family: 'Outfit', sans-serif;
-        font-size: 3.5rem;
-        font-weight: 900;
-        line-height: 1;
-        margin: 20px 0;
-        color: white;
-    }
-    
-    .price-currency {
-        font-size: 1.5rem;
-        vertical-align: top;
-        color: var(--cyan-electric, #00f2ff);
-        margin-right: 5px;
-    }
-    
-    .feature-list {
-        list-style: none;
-        padding: 0;
-        margin: 30px 0;
-        flex-grow: 1;
-    }
-    
-    .feature-list li {
-        margin-bottom: 15px;
-        color: var(--text-dim, #94a3b8);
-        display: flex;
-        align-items: center;
-        font-size: 0.95rem;
-    }
-    
-    .feature-list li i {
-        color: var(--cyan-electric, #00f2ff);
-        margin-right: 12px;
-        font-size: 1.1rem;
-    }
+---
 
-    /* Ajuste para mobile */
-    @media (max-width: 992px) {
-        .protocol-card.featured {
-            transform: scale(1);
-        }
-        .protocol-card.featured:hover {
-            transform: translateY(-5px);
-        }
-    }
-</style>
-{% endblock %}
+## 2. Etapa 1: Navegação de Alertas (Dashboard)
 
-{% block content %}
-<div class="bg-brand-texture" style="min-height: 100vh; padding: 60px 0; position: relative;">
-    <div class="logo-watermark" style="top: 10%; right: -10%;"></div>
+**Ação:** Alterar `app/templates/admin/dashboard.html` para transformar os alertas em links para rotas filtradas.
 
-    <div class="container" style="max-width: 1100px; position: relative; z-index: 2;">
-        
-        <div class="text-center mb-5 pb-3">
-            <div style="display: inline-block; padding: 6px 16px; background: rgba(0, 242, 255, 0.1); border: 1px solid var(--cyan-glow, rgba(0,242,255,0.4)); border-radius: 50px; color: var(--cyan-electric, #00f2ff); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 20px; font-weight: 600;">
-                <i class="fas fa-shopping-cart me-2"></i> CHECKOUT SEGURO
-            </div>
-            <h1 style="font-size: clamp(2.5rem, 5vw, 4rem); font-weight: 900; margin-bottom: 15px; font-family: 'Outfit', sans-serif;">
-                PROTOCOLOS DE <span style="color: var(--cyan-electric, #00f2ff); text-shadow: 0 0 30px rgba(0,242,255,0.4);">PERFORMANCE</span>
-            </h1>
-            <p style="color: var(--text-dim, #94a3b8); font-size: 1.15rem; max-width: 600px; margin: 0 auto;">
-                Escolha o plano ideal para recodificar a sua biologia. Sessões monitorizadas de 20 minutos com tecnologia FES.
-            </p>
-        </div>
-
-        <div class="row g-4 justify-content-center align-items-center">
-            {% for package in packages %}
-            
-            {% set is_highlighted = package.is_featured or (loop.index == 2 and packages|length == 3) %}
-            
-            {% set price_str = "%.2f"|format(package.price) %}
-            {% set price_parts = price_str.split('.') %}
-            
-            <div class="col-lg-4 col-md-6">
-                <div class="protocol-card {% if is_highlighted %}featured{% endif %}">
-                    
-                    {% if is_highlighted %}
-                    <div class="protocol-badge">RECOMENDADO</div>
-                    {% endif %}
-                    
-                    <h3 style="font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 1.5rem; margin-bottom: 5px;">{{ package.name }}</h3>
-                    <p style="color: var(--cyan-electric, #00f2ff); font-weight: 600; font-size: 0.9rem; letter-spacing: 1px;">
-                        <i class="fas fa-bolt text-warning me-1"></i> {{ package.credits }} SESSÕES
-                    </p>
-                    
-                    <div class="price-tag">
-                        <span class="price-currency">R$</span>{{ price_parts[0] }}<span style="font-size: 1.2rem; color: #64748b; font-weight: 600;">,{{ price_parts[1] }}</span>
+```html
+<div class="row">
+    <div class="col-md-6 col-lg-3">
+        <a href="{{ url_for('admin_payments.overdue') }}" class="text-decoration-none">
+            <div class="card bg-danger text-white mb-4 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="small text-white-50 fw-bold">PAGAMENTOS EM ATRASO</div>
+                            <div class="h3 fw-bold">{{ pending_payments_count }}</div>
+                        </div>
+                        <i class="fas fa-exclamation-circle fa-2x opacity-50"></i>
                     </div>
-                    
-                    {% if package.description %}
-                    <p style="color: var(--text-dim, #94a3b8); font-size: 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 20px; min-height: 60px;">
-                        {{ package.description }}
-                    </p>
-                    {% else %}
-                    <div style="border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;"></div>
-                    {% endif %}
-                    
-                    <ul class="feature-list">
-                        <li><i class="fas fa-check-circle"></i> Válido por {{ package.validity_days }} dias</li>
-                        <li><i class="fas fa-check-circle"></i> Acesso total a FES (Ezbody)</li>
-                        <li><i class="fas fa-check-circle"></i> Agendamento na App Biohacking</li>
-                        <li><i class="fas fa-check-circle"></i> Suporte Personalizado</li>
-                    </ul>
-                    
-                    <a href="{{ url_for('shop.package_detail', id=package.id) }}" class="btn-neon {% if not is_highlighted %}btn-outline{% endif %} w-100 justify-content-center mt-auto" style="padding: 15px;">
-                        INICIAR PROTOCOLO
-                    </a>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between small">
+                    <span class="text-white">Ver Lista de Devedores</span>
+                    <i class="fas fa-angle-right"></i>
                 </div>
             </div>
-            {% else %}
-            <div class="col-12 text-center py-5">
-                <i class="fas fa-box-open fa-4x mb-3 opacity-25" style="color: var(--text-dim, #94a3b8);"></i>
-                <h4 style="color: var(--text-dim, #94a3b8);">A carregar novos protocolos...</h4>
-                <p class="text-muted">Nenhum plano disponível de momento.</p>
+        </a>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+        <a href="{{ url_for('admin_users.list_users', filter='expiring') }}" class="text-decoration-none">
+            <div class="card bg-warning text-dark mb-4 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="small text-dark-50 fw-bold">EXPIRANDO EM 7 DIAS</div>
+                            <div class="h3 fw-bold">{{ expiring_subscriptions_count }}</div>
+                        </div>
+                        <i class="fas fa-clock fa-2x opacity-50"></i>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between small">
+                    <span class="text-dark">Ver Lista de Renovações</span>
+                    <i class="fas fa-angle-right"></i>
+                </div>
             </div>
-            {% endfor %}
-        </div>
-        
+        </a>
     </div>
 </div>
-{% endblock %}
-Porquê que isto resolve de vez?
-Adeus Gerador: No Jinja, em vez de usar um filtro para cortar a string (o que causa o erro), criei a variável {% set price_parts = price_str.split('.') %}. O sistema agora separa o preço matematicamente entre a "Esquerda do Ponto" (Reais) e a "Direita do Ponto" (Cêntimos).
+```
 
-Caixas Elegantes: Com o max-width: 400px;, mesmo que a sua loja só tenha 1 pacote ativo, ele não vai esticar e ocupar a tela inteira de ponta a ponta como estava a acontecer. Ele ficará perfeitamente centrado e proporcional no ecrã.
+---
+
+## 3. Etapa 2: Unificação de Receita no Split (Backend)
+
+O valor na Receita da Academia do Split está zerado porque as subscrições foram pagas mas os agendamentos (`Bookings`) ainda não foram marcados como `COMPLETED` ou `NO_SHOW`, que é o gatilho para gerar a comissão.
+
+**Ação:** Atualizar a lógica de cálculo em `app/routes/admin/split.py` para mostrar tanto a receita "Realizada" (comissões processadas) quanto a receita "Bruta de Pagamentos".
+
+```python
+# app/routes/admin/split.py
+
+@admin_split_bp.route('/')
+@login_required
+@admin_required
+def dashboard():
+    # ... (lógica existente) ...
+    
+    # CORREÇÃO: Buscar faturamento total da tabela Payment para comparação
+    today = datetime.now().date()
+    month_start = today.replace(day=1)
+    
+    receita_bruta_mes = db.session.query(func.sum(Payment.amount)).filter(
+        Payment.status == PaymentStatusEnum.PAID,
+        Payment.paid_at >= month_start
+    ).scalar() or Decimal('0.00')
+
+    # Receita que já passou pelo Split (já gerou comissão)
+    receita_comissionada = db.session.query(func.sum(CommissionEntry.amount_academy)).filter(
+        CommissionEntry.status == CommissionStatus.PAID,
+        CommissionEntry.processed_at >= month_start
+    ).scalar() or Decimal('0.00')
+
+    return render_template('admin/split/dashboard.html',
+                         receita_bruta_mes=receita_bruta_mes,
+                         receita_comissionada=receita_comissionada,
+                         # ... outros dados ...
+                         )
+```
+
+---
+
+## 4. Etapa 3: Regras de Remuneração para Aulas de Incentivo
+
+Integramos agora a lógica onde o Studio subsidia a aula gratuita (XP ou Experimental) para o instrutor.
+
+**Ação:** Atualizar `app/models/commission.py`.
+
+```python
+# app/models/commission.py
+
+@classmethod
+def create_from_booking(cls, booking, split_config=None):
+    from app.models.commission import SplitSettings
+    settings = SplitSettings.get_settings()
+    
+    # REGRA: Se o custo for 0 (Experimental/XP), usamos o valor nominal de Split
+    # Isso garante que o instrutor receba, agindo como um custo de marketing para a academia.
+    valor_referencia = booking.cost_at_booking
+    is_incentive = False
+    
+    if valor_referencia == 0:
+        valor_referencia = settings.credit_value_reais
+        is_incentive = True
+    
+    schedule = booking.schedule
+    professional = schedule.instructor
+    
+    if not split_config:
+        split_config = schedule.split_config
+
+    # Percentuais (Padrão ou Dinâmico)
+    academy_pct = split_config.academy_percentage if split_config else Decimal('40.00')
+    prof_pct = split_config.professional_percentage if split_config else Decimal('60.00')
+
+    amount_professional = (valor_referencia * prof_pct / 100).quantize(Decimal('0.01'))
+    amount_academy = (valor_referencia * academy_pct / 100).quantize(Decimal('0.01'))
+
+    entry = cls(
+        booking_id=booking.id,
+        professional_id=professional.id,
+        credit_value=valor_referencia,
+        academy_percentage=academy_pct,
+        professional_percentage=prof_pct,
+        amount_academy=amount_academy, # Aqui a academia assume o custo
+        amount_professional=amount_professional,
+        booking_status=booking.status.value,
+        status=CommissionStatus.PENDING,
+        notes="Aula de Incentivo (Subsidiada)" if is_incentive else ""
+    )
+    return entry
+```
+
+---
+
+## 5. Resumo das Correções
+1.  **Links Diretos:** Ao ver "5 pagamentos em atraso" no painel, o administrador clica e vai direto para a lista de devedores.
+2.  **Rastreio de Receita:** A "Receita da Academia" no Split agora diferencia o dinheiro que entrou (Bruto) do dinheiro que sobrou após pagar os instrutores (Líquido Comissionado).
+3.  **Justiça com o Instrutor:** Aulas experimentais não geram "trabalho de graça" para o professor. O sistema calcula a comissão dele baseada no valor de mercado (R$ 15,00 por crédito, por exemplo) e debita da margem de lucro da academia como investimento.
+
+**Nota Técnica:** Para que a receita do split apareça preenchida, certifique-se de que os instrutores estão a finalizar as aulas no painel (`COMPLETED`), pois é neste momento que a `CommissionEntry` é gerada. Se a aula estiver apenas agendada (`CONFIRMED`), a comissão ainda não existe para o financeiro.

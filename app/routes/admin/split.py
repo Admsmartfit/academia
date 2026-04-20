@@ -8,6 +8,7 @@ from flask_login import login_required, current_user
 from datetime import datetime
 from decimal import Decimal
 
+from sqlalchemy import func
 from app import db
 from app.routes.admin.dashboard import admin_required
 from app.models.user import User, ProfessionalType
@@ -18,6 +19,7 @@ from app.models.commission import (
     PayoutBatch, PayoutStatus,
     DemandLevel, CollaboratorBankInfo
 )
+from app.models.payment import Payment, PaymentStatusEnum
 from app.services.split_service import split_service
 from app.services.dynamic_split_algorithm import dynamic_split
 
@@ -59,16 +61,32 @@ def dashboard():
     month_start = datetime(now.year, now.month, 1)
 
     month_commissions = db.session.query(
-        db.func.sum(CommissionEntry.amount_professional)
+        func.sum(CommissionEntry.amount_professional)
     ).filter(
         CommissionEntry.processed_at >= month_start
-    ).scalar() or 0
+    ).scalar() or Decimal('0.00')
 
     month_academy = db.session.query(
-        db.func.sum(CommissionEntry.amount_academy)
+        func.sum(CommissionEntry.amount_academy)
     ).filter(
         CommissionEntry.processed_at >= month_start
-    ).scalar() or 0
+    ).scalar() or Decimal('0.00')
+
+    # Faturamento bruto: total de pagamentos aprovados no mês
+    receita_bruta_mes = db.session.query(
+        func.sum(Payment.amount)
+    ).filter(
+        Payment.status == PaymentStatusEnum.PAID,
+        Payment.paid_date >= month_start
+    ).scalar() or Decimal('0.00')
+
+    # Receita comissionada: parte da academia já processada pelo split
+    receita_comissionada = db.session.query(
+        func.sum(CommissionEntry.amount_academy)
+    ).filter(
+        CommissionEntry.status == CommissionStatus.PAID,
+        CommissionEntry.processed_at >= month_start
+    ).scalar() or Decimal('0.00')
 
     return render_template('admin/split/dashboard.html',
         settings=settings,
@@ -78,6 +96,8 @@ def dashboard():
         collaborators=collaborators,
         month_commissions=month_commissions,
         month_academy=month_academy,
+        receita_bruta_mes=receita_bruta_mes,
+        receita_comissionada=receita_comissionada,
         current_month=now.strftime('%B %Y')
     )
 

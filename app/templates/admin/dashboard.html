@@ -128,6 +128,7 @@
 
     <!-- Pagamentos Atrasados -->
     <div class="col-md-3">
+        <a href="{{ url_for('admin_payments.overdue_payments') }}" class="text-decoration-none">
         <div class="card stat-card danger">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
@@ -140,7 +141,11 @@
                     </div>
                 </div>
             </div>
+            <div class="card-footer bg-danger bg-opacity-10 d-flex justify-content-between small text-danger">
+                <span>Ver Lista de Devedores</span><i class="fas fa-angle-right"></i>
+            </div>
         </div>
+        </a>
     </div>
 </div>
 
@@ -202,32 +207,38 @@
             <div class="card-body">
                 <ul class="list-group list-group-flush">
                     {% if expiring_soon > 0 %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <i class="fas fa-hourglass-half text-warning me-2"></i>
-                            Assinaturas expirando em 7 dias
-                        </span>
-                        <span class="badge bg-warning text-dark">{{ expiring_soon }}</span>
+                    <li class="list-group-item p-0">
+                        <a href="{{ url_for('admin_users.list_users', filter='expiring') }}" class="text-decoration-none text-dark d-flex justify-content-between w-100 align-items-center px-3 py-2">
+                            <span>
+                                <i class="fas fa-hourglass-half text-warning me-2"></i>
+                                Assinaturas expirando em 7 dias
+                            </span>
+                            <span class="badge bg-warning text-dark">{{ expiring_soon }}</span>
+                        </a>
                     </li>
                     {% endif %}
 
                     {% if overdue_payments > 0 %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <i class="fas fa-exclamation-circle text-danger me-2"></i>
-                            Pagamentos em atraso
-                        </span>
-                        <span class="badge bg-danger">{{ overdue_payments }}</span>
+                    <li class="list-group-item p-0">
+                        <a href="{{ url_for('admin_payments.overdue_payments') }}" class="text-decoration-none text-dark d-flex justify-content-between w-100 align-items-center px-3 py-2">
+                            <span>
+                                <i class="fas fa-exclamation-circle text-danger me-2"></i>
+                                Pagamentos em atraso
+                            </span>
+                            <span class="badge bg-danger">{{ overdue_payments }}</span>
+                        </a>
                     </li>
                     {% endif %}
 
                     {% if pending_payments > 0 %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <i class="fas fa-clock text-info me-2"></i>
-                            Pagamentos pendentes
-                        </span>
-                        <span class="badge bg-info">{{ pending_payments }}</span>
+                    <li class="list-group-item p-0">
+                        <a href="{{ url_for('admin_payments.pending_payments') }}" class="text-decoration-none text-dark d-flex justify-content-between w-100 align-items-center px-3 py-2">
+                            <span>
+                                <i class="fas fa-clock text-info me-2"></i>
+                                Pagamentos pendentes
+                            </span>
+                            <span class="badge bg-info">{{ pending_payments }}</span>
+                        </a>
                     </li>
                     {% endif %}
 
