@@ -304,6 +304,8 @@ class DynamicSplitAlgorithm:
         suggestions = []
         for config in configs:
             schedule = config.schedule
+            if schedule is None:
+                continue
             suggestions.append({
                 'config_id': config.id,
                 'schedule_id': schedule.id,
@@ -344,10 +346,14 @@ class DynamicSplitAlgorithm:
         if not config or not config.suggestion_pending:
             return False
 
+        schedule = config.schedule
+        if schedule is None:
+            config.suggestion_pending = False
+            db.session.commit()
+            return False
+
         config.apply_suggestion()
 
-        # Atualizar current_split_rate no schedule
-        schedule = config.schedule
         schedule.current_split_rate = config.professional_percentage
 
         db.session.commit()

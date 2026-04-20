@@ -21,6 +21,8 @@
         height: 100%;
         display: flex;
         flex-direction: column;
+        max-width: 400px;
+        margin: 0 auto;
     }
 
     .protocol-card:hover {
@@ -125,6 +127,8 @@
         <div class="row g-4 justify-content-center align-items-center">
             {% for package in packages %}
             {% set is_highlighted = package.is_featured or (loop.index == 2 and packages|length == 3) %}
+            {% set price_str = "%.2f"|format(package.price) %}
+            {% set price_parts = price_str.split('.') %}
 
             <div class="col-lg-4 col-md-6">
                 <div class="protocol-card {% if is_highlighted %}featured{% endif %}">
@@ -139,7 +143,7 @@
                     </p>
 
                     <div class="price-tag">
-                        <span class="price-currency">R$</span>{{ "%.0f"|format(package.price) }}<span style="font-size: 1.2rem; color: #64748b; font-weight: 600;">,{{ "%.2f"|format(package.price)|string|slice(-2) }}</span>
+                        <span class="price-currency">R$</span>{{ price_parts[0] }}<span style="font-size: 1.2rem; color: #64748b; font-weight: 600;">,{{ price_parts[1] }}</span>
                     </div>
 
                     {% if package.description %}

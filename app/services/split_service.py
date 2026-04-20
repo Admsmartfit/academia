@@ -17,12 +17,13 @@ from typing import List, Dict, Optional, Tuple
 from app import db
 from app.models.booking import Booking, BookingStatus
 from app.models.class_schedule import ClassSchedule
-from app.models.user import User, ProfessionalType
+from app.models.user import User
 from app.models.commission import (
     CommissionEntry, CommissionStatus,
     SplitConfiguration, SplitSettings,
     PayoutBatch, PayoutStatus,
-    DemandLevel, CollaboratorBankInfo
+    DemandLevel, CollaboratorBankInfo,
+    ProfessionalType
 )
 
 logger = logging.getLogger(__name__)
@@ -77,8 +78,9 @@ class SplitService:
             logger.error(f"Schedule {schedule.id} sem instrutor")
             return None
 
-        # Determinar tipo de profissional
-        prof_type = instructor.professional_type or ProfessionalType.INSTRUCTOR
+        # Determinar tipo de profissional (converter para o enum de commission.py)
+        raw_type = instructor.professional_type
+        prof_type = ProfessionalType(raw_type.value if raw_type else 'instructor')
 
         # Regra: Nutricionista NAO recebe em No-Show
         if booking.status == BookingStatus.NO_SHOW and prof_type == ProfessionalType.NUTRITIONIST:
@@ -160,6 +162,7 @@ class SplitService:
                 else:
                     stats['skipped'] += 1
             except Exception as e:
+                db.session.rollback()
                 logger.error(f"Erro ao processar booking {booking.id}: {e}")
                 stats['errors'] += 1
 
