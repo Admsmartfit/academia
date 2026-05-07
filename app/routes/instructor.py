@@ -68,25 +68,44 @@ def dashboard():
     # Python weekday: 0=Seg... 6=Dom
     sys_weekday = (weekday + 1) % 7
 
+    from sqlalchemy.orm import joinedload
+    from app.models.health import ScreeningType
+
     # Buscar horários do instrutor para este dia
-    schedules = ClassSchedule.query.filter_by(
+    schedules = ClassSchedule.query.options(
+        joinedload(ClassSchedule.modality)
+    ).filter_by(
         instructor_id=current_user.id,
         weekday=sys_weekday,
         is_active=True
     ).order_by(ClassSchedule.start_time).all()
 
-    for sched in schedules:
-        sched.today_bookings = Booking.query.filter(
-            Booking.schedule_id == sched.id,
+    # Buscar TODOS os bookings relevantes para as turmas deste instrutor hoje
+    schedule_ids = [s.id for s in schedules]
+    
+    all_day_bookings = []
+    if schedule_ids:
+        all_day_bookings = Booking.query.options(
+            joinedload(Booking.user)
+        ).filter(
+            Booking.schedule_id.in_(schedule_ids),
             Booking.date == selected_date,
             Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.COMPLETED, BookingStatus.NO_SHOW])
         ).all()
 
-        # Adicionar status de saude para cada booking
-        from app.models.health import ScreeningType
-        for booking in sched.today_bookings:
-            booking.user.parq_status = booking.user.get_screening_status(ScreeningType.PARQ)
-            booking.user.ems_status = booking.user.get_screening_status(ScreeningType.EMS)
+    # Mapear bookings para seus respectivos schedules
+    bookings_map = {}
+    for b in all_day_bookings:
+        if b.schedule_id not in bookings_map:
+            bookings_map[b.schedule_id] = []
+        bookings_map[b.schedule_id].append(b)
+        
+        # Injetar status de saúde (eager-ish cache)
+        b.user.parq_status = b.user.get_screening_status(ScreeningType.PARQ)
+        b.user.ems_status = b.user.get_screening_status(ScreeningType.EMS)
+
+    for sched in schedules:
+        sched.today_bookings = bookings_map.get(sched.id, [])
 
     # Metricas do dia
     all_bookings_today = Booking.query.join(ClassSchedule).filter(

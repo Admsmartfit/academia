@@ -53,13 +53,13 @@
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        background: linear-gradient(135deg, rgba(255,107,53,0.15), rgba(255,107,53,0.05));
-        border: 1px solid rgba(255,107,53,0.2);
+        background: linear-gradient(135deg, rgba(0, 242, 255,0.15), rgba(0, 242, 255,0.05));
+        border: 1px solid rgba(0, 242, 255,0.2);
         padding: 4px 14px;
         border-radius: 20px;
         font-size: 0.85rem;
         font-weight: 600;
-        color: #FF6B35;
+        color: var(--accent);
     }
 
     /* Session selector */
@@ -479,7 +479,7 @@
         <i class="fas fa-dumbbell"></i>
         <h4>Nenhum treino prescrito</h4>
         <p style="color: #64748b;">Seu instrutor ainda nao prescreveu um plano de treino para voce.</p>
-        <a href="{{ url_for('student.dashboard') }}" class="btn" style="background: #FF6B35; color: white;">
+        <a href="{{ url_for('student.dashboard') }}" class="btn" style="background: var(--accent); color: white;">
             <i class="fas fa-home me-2"></i>Voltar ao Dashboard
         </a>
     </div>

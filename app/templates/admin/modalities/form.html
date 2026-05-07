@@ -57,7 +57,7 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Cor</label>
                             <input type="color" name="color" class="form-control form-control-color w-100"
-                                value="{{ modality.color if modality else '#FF6B35' }}">
+                                value="{{ modality.color if modality else 'var(--accent)' }}">
                             <small class="text-muted">Cor exibida no calendario</small>
                         </div>
 
@@ -101,7 +101,7 @@
                         <label class="form-label">Preview</label>
                         <div class="d-flex align-items-center p-3 border rounded" id="preview-area">
                             <div class="rounded-circle me-3 d-flex align-items-center justify-content-center"
-                                id="preview-icon" data-color="{{ modality.color if modality else '#FF6B35' }}"
+                                id="preview-icon" data-color="{{ modality.color if modality else 'var(--accent)' }}"
                                 style="width: 50px; height: 50px;">
                                 <span class="text-white fs-5" id="preview-emoji">{{ modality.icon if modality and
                                     modality.icon else '💪' }}</span>

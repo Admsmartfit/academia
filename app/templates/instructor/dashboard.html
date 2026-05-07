@@ -3,107 +3,7 @@
 {% block title %}Painel do Instrutor{% endblock %}
 
 {% block extra_css %}
-<style>
-    .instructor-header {
-        background: linear-gradient(135deg, #0f172a 0%, #05070a 100%);
-        border-bottom: 2px solid #00f2ff;
-        color: white;
-        padding: 30px 0;
-        margin-bottom: 30px;
-        border-radius: 0 0 20px 20px;
-    }
-
-    .class-card {
-        border-radius: 15px;
-        margin-bottom: 25px;
-        border: none;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        overflow: hidden;
-        transition: transform 0.2s;
-    }
-
-    .class-card.current-time {
-        border: 2px solid #00f2ff;
-        box-shadow: 0 6px 20px rgba(0, 242, 255, 0.2);
-        transform: scale(1.02);
-    }
-
-    .class-card .card-header {
-        border-bottom: 1px solid #f0f0f0;
-        font-weight: 600;
-    }
-
-    .student-item {
-        border-bottom: 1px solid #f8f9fa;
-        padding: 12px 20px;
-        transition: background 0.2s;
-    }
-
-    .student-item:hover {
-        background-color: #fcfcfc;
-    }
-
-    .student-item:last-child {
-        border-bottom: none;
-    }
-
-    .modality-circle {
-        width: 40px;
-        height: 40px;
-        background-color: var(--modality-color, #00f2ff);
-        color: #020617;
-        font-weight: bold;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .date-nav {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        justify-content: center;
-        margin-bottom: 20px;
-    }
-
-    .date-nav-btn {
-        background: white;
-        border: 1px solid #dee2e6;
-        padding: 8px 15px;
-        border-radius: 8px;
-        color: #495057;
-        text-decoration: none;
-        transition: all 0.2s;
-    }
-
-    .date-nav-btn:hover {
-        background: #0f172a;
-        border-color: #00f2ff;
-        color: #00f2ff;
-    }
-
-    .date-display {
-        font-size: 1.1rem;
-        font-weight: 600;
-        min-width: 200px;
-        text-align: center;
-    }
-
-    .bulk-actions {
-        position: sticky;
-        bottom: 20px;
-        background: white;
-        padding: 15px;
-        border-radius: 10px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        display: none;
-    }
-
-    .bulk-actions.show {
-        display: flex;
-    }
-</style>
+<!-- Styles moved to studio_internal.css -->
 {% endblock %}
 
 {% block content %}
@@ -257,7 +157,7 @@
                             </span>
                             {% if sched.today_bookings|length < sched.capacity %}
                             <button type="button" class="btn btn-sm fw-bold border-0 shadow-sm"
-                                style="background: var(--primary-color, #00f2ff); color: #020617;"
+                                style="background: var(--primary-color, var(--accent)); color: #020617;"
                                 data-bs-toggle="modal" data-bs-target="#addStudentModal{{ sched.id }}"
                                 title="Encaixar Aluno">
                                 <i class="fas fa-plus"></i>
@@ -277,14 +177,14 @@
                                 <div class="modal-content border-0 shadow">
                                     <div class="modal-header border-0" style="background: #0f172a;">
                                         <h5 class="modal-title fw-bold text-white">
-                                            <i class="fas fa-user-plus me-2" style="color: #00f2ff;"></i>Encaixar Aluno na Turma
+                                            <i class="fas fa-user-plus me-2" style="color: var(--accent);"></i>Encaixar Aluno na Turma
                                         </h5>
                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                     </div>
                                     <div class="modal-body p-4">
                                         <input type="hidden" name="date" value="{{ selected_date.strftime('%Y-%m-%d') }}">
-                                        <div class="alert border-0 mb-3" style="background: rgba(0, 242, 255, 0.05); color: #0f172a; border-left: 3px solid #00f2ff !important;">
-                                            <i class="fas fa-info-circle me-2" style="color: #00f2ff;"></i>
+                                        <div class="alert border-0 mb-3" style="background: rgba(0, 242, 255, 0.05); color: #0f172a; border-left: 3px solid var(--accent) !important;">
+                                            <i class="fas fa-info-circle me-2" style="color: var(--accent);"></i>
                                             Adicionando à aula de <strong>{{ sched.modality.name }}</strong> das <strong>{{ sched.start_time.strftime('%H:%M') }}</strong>. O crédito será debitado automaticamente.
                                         </div>
                                         <div class="mb-3">
@@ -297,7 +197,7 @@
                                     <div class="modal-footer bg-light border-0">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                                         <button type="submit" class="btn fw-bold"
-                                            style="background: var(--primary-color, #00f2ff); color: #020617;"
+                                            style="background: var(--primary-color, var(--accent)); color: #020617;"
                                             onclick="setHiddenStudentId('{{ sched.id }}')">
                                             <i class="fas fa-bolt me-1"></i> Confirmar Inserção
                                         </button>

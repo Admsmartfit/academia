@@ -150,7 +150,7 @@
     <!-- Charts Row 2: Revenue por Pacote + Churn -->
     <div class="fin-charts-row">
         <div class="fin-chart-card">
-            <h5><i class="fas fa-boxes me-2" style="color: #FF6B35;"></i>Revenue por Pacote</h5>
+            <h5><i class="fas fa-boxes me-2" style="color: var(--accent);"></i>Revenue por Pacote</h5>
             <div style="display: flex; align-items: center; justify-content: center; height: 220px;">
                 <canvas id="packageChart" width="220" height="220"></canvas>
             </div>
@@ -319,7 +319,7 @@ function renderPackageChart(packages) {
     var ctx = document.getElementById('packageChart').getContext('2d');
     if (pkgChart) pkgChart.destroy();
 
-    var colors = ['#FF6B35', '#06B6D4', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899', '#F43F5E', '#64748B'];
+    var colors = ['var(--accent)', '#06B6D4', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899', '#F43F5E', '#64748B'];
     var totalRev = packages.reduce(function(s, p) { return s + p.revenue; }, 0);
 
     if (packages.length === 0) {

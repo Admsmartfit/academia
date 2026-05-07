@@ -140,8 +140,8 @@
         align-items: center;
         gap: 16px;
         padding: 16px 20px;
-        background: linear-gradient(135deg, rgba(255,107,53,0.1), rgba(255,107,53,0.02));
-        border: 1px solid rgba(255,107,53,0.15);
+        background: linear-gradient(135deg, rgba(0, 242, 255,0.1), rgba(0, 242, 255,0.02));
+        border: 1px solid rgba(0, 242, 255,0.15);
         border-radius: 12px;
     }
     .streak-fire {
@@ -150,7 +150,7 @@
     .streak-info .streak-num {
         font-size: 1.6rem;
         font-weight: 800;
-        color: #FF6B35;
+        color: var(--accent);
     }
     .streak-info .streak-text {
         font-size: 0.8rem;
@@ -194,7 +194,7 @@
             </div>
             <div class="col-3">
                 <div class="stat-box">
-                    <div class="stat-value" style="color:#FF6B35;">{{ current_streak }}</div>
+                    <div class="stat-value" style="color:var(--accent);">{{ current_streak }}</div>
                     <div class="stat-label">Streak</div>
                 </div>
             </div>

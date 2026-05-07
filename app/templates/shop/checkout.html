@@ -35,7 +35,7 @@
     /* Package preview */
     .checkout-package {
         background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
-        border: 1px solid rgba(255,107,53,0.2);
+        border: 1px solid rgba(0, 242, 255,0.2);
         border-radius: 16px;
         padding: 24px;
         text-align: center;
@@ -50,7 +50,7 @@
     .checkout-package .pkg-credits {
         font-size: 2.5rem;
         font-weight: 800;
-        color: #FF6B35;
+        color: var(--accent);
         line-height: 1;
     }
     .checkout-package .pkg-price {
@@ -70,17 +70,17 @@
         transition: all 0.2s;
         margin-bottom: 12px;
     }
-    .method-card:hover { border-color: rgba(255,107,53,0.3); }
+    .method-card:hover { border-color: rgba(0, 242, 255,0.3); }
     .method-card.selected {
-        border-color: #FF6B35;
-        background: rgba(255,107,53,0.05);
+        border-color: var(--accent);
+        background: rgba(0, 242, 255,0.05);
     }
     .method-card.disabled {
         opacity: 0.5;
         cursor: not-allowed;
     }
     .method-card .method-radio {
-        accent-color: #FF6B35;
+        accent-color: var(--accent);
         width: 18px;
         height: 18px;
     }
@@ -127,12 +127,12 @@
         padding: 14px 16px;
     }
     .terms-check .form-check-input {
-        accent-color: #FF6B35;
+        accent-color: var(--accent);
     }
 
     /* CTA button */
     .checkout-cta {
-        background: linear-gradient(135deg, #FF6B35 0%, #e55a2b 100%);
+        background: linear-gradient(135deg, var(--accent) 0%, #00b8ff 100%);
         color: white;
         border: none;
         border-radius: 12px;
@@ -146,7 +146,7 @@
         justify-content: center;
         gap: 10px;
     }
-    .checkout-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(255,107,53,0.3); }
+    .checkout-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(0, 242, 255,0.3); }
     .checkout-cta:disabled { opacity: 0.6; transform: none; box-shadow: none; }
 
     /* Security badges */
@@ -251,9 +251,9 @@
                                  alt="PIX" style="height: 20px; filter: brightness(0) invert(0.8);">
                         </div>
                         {% if not current_user.cpf %}
-                        <div style="margin-top: 10px; background: rgba(255,107,53,0.1); border-radius: 8px; padding: 8px 12px; font-size: 0.8rem; color: #FF6B35;">
+                        <div style="margin-top: 10px; background: rgba(0, 242, 255,0.1); border-radius: 8px; padding: 8px 12px; font-size: 0.8rem; color: var(--accent);">
                             <i class="fas fa-exclamation-triangle me-1"></i>
-                            <a href="{{ url_for('student.profile_edit') }}" style="color: #FF6B35; font-weight: 600;">Cadastre seu CPF</a> para usar esta opcao
+                            <a href="{{ url_for('student.profile_edit') }}" style="color: var(--accent); font-weight: 600;">Cadastre seu CPF</a> para usar esta opcao
                         </div>
                         {% endif %}
                     </div>
@@ -287,7 +287,7 @@
                     </div>
 
                     {% if package.installments > 1 %}
-                    <div style="margin-top: 12px; background: rgba(255,107,53,0.08); border: 1px solid rgba(255,107,53,0.2); border-radius: 8px; padding: 12px; font-size: 0.8rem; color: #FF6B35;">
+                    <div style="margin-top: 12px; background: rgba(0, 242, 255,0.08); border: 1px solid rgba(0, 242, 255,0.2); border-radius: 8px; padding: 12px; font-size: 0.8rem; color: var(--accent);">
                         <i class="fas fa-calendar-alt me-1"></i>
                         <strong>Parcelamento:</strong> {{ package.installments }} parcelas de R$ {{ "%.2f"|format(package.installment_price) }}.
                         Primeira vence hoje, proximas a cada 30 dias.
@@ -301,7 +301,7 @@
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="terms">
                     <label class="form-check-label" for="terms" style="font-size: 0.85rem; color: #94A3B8;">
-                        Li e concordo com os <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal" style="color: #FF6B35;">termos e condicoes</a>
+                        Li e concordo com os <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal" style="color: var(--accent);">termos e condicoes</a>
                     </label>
                 </div>
             </div>
@@ -345,7 +345,7 @@
                 <p>Nao ha reembolso de creditos nao utilizados apos o vencimento.</p>
             </div>
             <div class="modal-footer" style="border-top-color: rgba(255,255,255,0.06);">
-                <button type="button" class="btn" style="background: #FF6B35; color: white;" data-bs-dismiss="modal">Entendi</button>
+                <button type="button" class="btn" style="background: var(--accent); color: white;" data-bs-dismiss="modal">Entendi</button>
             </div>
         </div>
     </div>
@@ -357,7 +357,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header" style="border-bottom-color: rgba(255,255,255,0.06);">
-                <h5 class="modal-title"><i class="fas fa-id-card me-2" style="color: #FF6B35;"></i>Informe seu CPF</h5>
+                <h5 class="modal-title"><i class="fas fa-id-card me-2" style="color: var(--accent);"></i>Informe seu CPF</h5>
             </div>
             <div class="modal-body">
                 <p style="color: #94A3B8; font-size: 0.9rem;">Para gerar o PIX NuPay Instantaneo, precisamos do seu CPF.</p>
@@ -371,7 +371,7 @@
             </div>
             <div class="modal-footer" style="border-top-color: rgba(255,255,255,0.06);">
                 <button type="button" class="btn btn-sm" style="color: #64748B;" onclick="window.history.back()">Voltar</button>
-                <button type="submit" form="cpfForm" id="btnSaveCpf" class="btn btn-sm" style="background: #FF6B35; color: white;">Salvar e Continuar</button>
+                <button type="submit" form="cpfForm" id="btnSaveCpf" class="btn btn-sm" style="background: var(--accent); color: white;">Salvar e Continuar</button>
             </div>
         </div>
     </div>

@@ -10,7 +10,7 @@ from app.models import (
 )
 from app.models.crm import StudentHealthScore, AutomationLog
 from app.models.xp_ledger import XPLedger
-from app.services.credit_service import CreditService
+from app.services.credit_service import credit_service
 from app.services.gender_distribution_service import GenderDistributionService
 from app.models.conversion_rule import ConversionRule
 from app import db
@@ -19,37 +19,38 @@ from sqlalchemy import func
 
 student_bp = Blueprint('student', __name__, url_prefix='/student')
 
+from app.services.crm_service import CRMService
 
 @student_bp.route('/')
 @student_bp.route('/dashboard')
 @login_required
 def dashboard():
+    """Dashboard do aluno"""
     # Check profile completion for alert
     if not current_user.cpf or not current_user.gender:
         flash('Complete seu perfil (CPF e Sexo) para desbloquear todas as funcionalidades.', 'warning')
         
-    """Dashboard do aluno"""
-    # Buscar assinaturas ativas
+    # Buscar resumo de creditos e XP via CreditService
+    credit_summary = credit_service.get_user_summary(current_user.id)
+    
+    total_credits = credit_summary['credits']['total']
+    expiring_credits = credit_summary['credits']['expiring_soon']
+    xp_available = credit_summary['xp']['available']
+
+    # Buscar assinaturas ativas para exibicao detalhada
     active_subscriptions = Subscription.query.filter_by(
         user_id=current_user.id,
         status=SubscriptionStatus.ACTIVE
     ).all()
 
-    # Total de creditos disponiveis (assinaturas + wallets)
-    subscription_credits = sum(sub.credits_remaining for sub in active_subscriptions)
-    wallet_credits = CreditWallet.get_user_total_credits(current_user.id)
-    total_credits = subscription_credits + wallet_credits
+    from sqlalchemy.orm import joinedload
 
-    # Creditos expirando em 7 dias
-    expiring_wallets = CreditWallet.get_expiring_soon(current_user.id, days=7)
-    expiring_credits = sum(w.credits_remaining for w in expiring_wallets)
-
-    # XP disponivel para conversao
-    xp_available = XPLedger.get_user_available_xp(current_user.id)
-
-    # Proximas aulas
+    # Proximas aulas (Optimized with joinedload)
     today = datetime.now().date()
-    upcoming_bookings = Booking.query.filter(
+    upcoming_bookings = Booking.query.options(
+        joinedload(Booking.schedule).joinedload(ClassSchedule.modality),
+        joinedload(Booking.schedule).joinedload(ClassSchedule.instructor)
+    ).filter(
         Booking.user_id == current_user.id,
         Booking.date >= today,
         Booking.status == BookingStatus.CONFIRMED
@@ -64,13 +65,10 @@ def dashboard():
         Payment.status.in_([PaymentStatusEnum.PENDING, PaymentStatusEnum.OVERDUE])
     ).order_by(Payment.due_date).all()
 
-    # Ranking do usuario
-    user_rank = db.session.query(
-        func.count(User.id)
-    ).filter(
-        User.role == 'student',
-        User.xp > current_user.xp
-    ).scalar() + 1
+    # CRM Metrics (Rank, Streak, Rewards)
+    user_rank = CRMService.get_user_rank(current_user)
+    streak = CRMService.get_current_streak(current_user.id)
+    reward_info = CRMService.get_next_reward_info(current_user.id)
 
     # Total de aulas completadas
     total_classes = Booking.query.filter_by(
@@ -86,57 +84,9 @@ def dashboard():
         user_id=current_user.id
     ).order_by(StudentHealthScore.calculated_at.desc()).first()
 
-    # Streak de dias consecutivos
-    streak = 0
-    if total_classes > 0:
-        recent_bookings = Booking.query.filter(
-            Booking.user_id == current_user.id,
-            Booking.status == BookingStatus.COMPLETED
-        ).order_by(Booking.date.desc()).limit(60).all()
-
-        if recent_bookings:
-            dates = sorted(set(b.date for b in recent_bookings), reverse=True)
-            if dates:
-                current_date = datetime.now().date()
-                for d in dates:
-                    diff = (current_date - d).days
-                    if diff <= 1:
-                        streak += 1
-                        current_date = d
-                    else:
-                        break
-
-    # Proxima Recompensa (Gamificacao)
-    # Busca regra com XP > xp_available
-    next_reward_rule = ConversionRule.query.filter(
-        ConversionRule.is_active == True,
-        ConversionRule.xp_required > xp_available
-    ).order_by(ConversionRule.xp_required.asc()).first()
-
-    # Se nao tiver proxima (ja tem XP para todas ou nao tem regras), pega a menor regra que ele PODE comprar
-    # Ou se ele tem XP suficiente para uma regra, mostre como "Disponivel"
-    reward_status = None
-    xp_to_reward = 0
-    
-    if next_reward_rule:
-        xp_to_reward = next_reward_rule.xp_required - xp_available
-        reward_status = 'locked'
-    else:
-        # Se nao tem reward maior, ve se tem algum disponivel
-        available_reward = ConversionRule.query.filter(
-            ConversionRule.is_active == True,
-            ConversionRule.xp_required <= xp_available
-        ).order_by(ConversionRule.xp_required.desc()).first()
-        
-        if available_reward:
-            next_reward_rule = available_reward
-            reward_status = 'available'
-            xp_to_reward = 0
-
     return render_template('student/dashboard.html',
                          active_subscriptions=active_subscriptions,
                          total_credits=total_credits,
-                         wallet_credits=wallet_credits,
                          expiring_credits=expiring_credits,
                          xp_available=xp_available,
                          upcoming_bookings=upcoming_bookings,
@@ -147,16 +97,19 @@ def dashboard():
                          screening_status=screening_status,
                          health_score=health_score,
                          streak=streak,
-                         next_reward_rule=next_reward_rule,
-                         xp_to_reward=xp_to_reward,
-                         reward_status=reward_status)
+                         next_reward_rule=reward_info['next_reward_rule'],
+                         xp_to_reward=reward_info['xp_to_reward'],
+                         reward_status=reward_info['reward_status'])
 
 
 @student_bp.route('/subscriptions')
 @login_required
 def my_subscriptions():
     """Minhas assinaturas e pagamentos"""
-    subscriptions = Subscription.query.filter_by(
+    from sqlalchemy.orm import joinedload
+    subscriptions = Subscription.query.options(
+        joinedload(Subscription.package)
+    ).filter_by(
         user_id=current_user.id
     ).order_by(Subscription.created_at.desc()).all()
 
@@ -167,7 +120,11 @@ def my_subscriptions():
 @login_required
 def subscription_detail(id):
     """Detalhes de uma assinatura"""
-    subscription = Subscription.query.filter_by(
+    from sqlalchemy.orm import joinedload
+    subscription = Subscription.query.options(
+        joinedload(Subscription.package),
+        joinedload(Subscription.payments)
+    ).filter_by(
         id=id,
         user_id=current_user.id
     ).first_or_404()

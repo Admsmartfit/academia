@@ -40,7 +40,7 @@
     .col-header.contacted { border-color: #8B5CF6; }
     .col-header.visited { border-color: #F59E0B; }
     .col-header.trial { border-color: #FB923C; }
-    .col-header.proposal { border-color: #FF6B35; }
+    .col-header.proposal { border-color: var(--accent); }
     .col-header.won { border-color: #10B981; }
     .col-header.lost { border-color: #94A3B8; }
     .col-title { font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -94,10 +94,10 @@
         font-size: 0.85rem; border-radius: 8px;
     }
     .new-lead-form .btn-create {
-        background: #FF6B35; color: white; border: none; border-radius: 8px;
+        background: var(--accent); color: white; border: none; border-radius: 8px;
         padding: 10px 24px; font-weight: 600; font-size: 0.9rem;
     }
-    .new-lead-form .btn-create:hover { background: #e55a2b; }
+    .new-lead-form .btn-create:hover { background: #00b8ff; }
 </style>
 {% endblock %}
 
@@ -106,14 +106,14 @@
     <!-- Header -->
     <div class="leads-header">
         <div>
-            <h3><i class="fas fa-funnel-dollar me-2" style="color: #FF6B35;"></i>Pipeline de Leads</h3>
+            <h3><i class="fas fa-funnel-dollar me-2" style="color: var(--accent);"></i>Pipeline de Leads</h3>
             <small style="color: #94A3B8;">Gerencie prospects do primeiro contato a conversao</small>
         </div>
         <div class="d-flex gap-2">
             <a href="{{ url_for('crm.dashboard') }}" class="btn btn-sm btn-outline-secondary">
                 <i class="fas fa-heartbeat me-1"></i>CRM Dashboard
             </a>
-            <button class="btn btn-sm" style="background: #FF6B35; color: white;" data-bs-toggle="modal" data-bs-target="#newLeadModal">
+            <button class="btn btn-sm" style="background: var(--accent); color: white;" data-bs-toggle="modal" data-bs-target="#newLeadModal">
                 <i class="fas fa-plus me-1"></i>Novo Lead
             </button>
         </div>
@@ -202,7 +202,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-user-plus me-2" style="color: #FF6B35;"></i>Novo Lead</h5>
+                <h5 class="modal-title"><i class="fas fa-user-plus me-2" style="color: var(--accent);"></i>Novo Lead</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('crm.create_lead') }}" method="POST">
@@ -257,7 +257,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-sm" style="background: #FF6B35; color: white;">
+                    <button type="submit" class="btn btn-sm" style="background: var(--accent); color: white;">
                         <i class="fas fa-plus me-1"></i>Criar Lead
                     </button>
                 </div>

@@ -1,0 +1,477 @@
+/* studio_internal.css - Centralized styles for Biohacking Studio */
+
+/* Variables (if not already in root) */
+:root {
+    --accent: #00f2ff; /* Ciano Elétrico */
+    --accent-glow: rgba(0, 242, 255, 0.5);
+}
+
+/* ==========================================
+   STUDENT DASHBOARD STYLES
+   ========================================== */
+
+/* Dark Mode Override for Student Dashboard */
+body.dark-student {
+    background-color: #0F172A !important;
+    color: #f1f5f9;
+}
+
+body.dark-student .navbar,
+body.dark-student nav {
+    background-color: #1E293B !important;
+}
+
+body.dark-student .card {
+    background-color: #1E293B;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: #f1f5f9;
+}
+
+body.dark-student .card-header {
+    background-color: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    color: #f1f5f9;
+}
+
+body.dark-student .list-group-item {
+    background-color: transparent;
+    border-color: rgba(255, 255, 255, 0.06);
+    color: #f1f5f9;
+}
+
+body.dark-student .text-muted {
+    color: #94a3b8 !important;
+}
+
+body.dark-student .alert-info {
+    background-color: rgba(6, 182, 212, 0.1);
+    border-color: rgba(6, 182, 212, 0.2);
+    color: #67e8f9;
+}
+
+body.dark-student .alert-warning {
+    background-color: rgba(251, 191, 36, 0.1);
+    border-color: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+}
+
+body.dark-student .alert-success {
+    background-color: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.2);
+    color: #6ee7b7;
+}
+
+body.dark-student .alert-primary {
+    background-color: rgba(0, 242, 255, 0.1) !important;
+    border-color: rgba(0, 242, 255, 0.2);
+    color: #f1f5f9 !important;
+}
+
+/* Hero Card - Treino do Dia */
+.hero-training-card {
+    background: linear-gradient(135deg, #1E293B, rgba(0, 242, 255, 0.12));
+    border: 1px solid rgba(0, 242, 255, 0.3);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-training-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(0, 242, 255, 0.08) 0%, transparent 70%);
+    border-radius: 50%;
+}
+
+.hero-training-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.hero-training-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.hero-training-meta {
+    color: #94a3b8;
+    font-size: 0.9rem;
+}
+
+.hero-training-meta i {
+    color: #06B6D4;
+    margin-right: 4px;
+}
+
+/* Stats Row */
+.stat-card {
+    background-color: #1E293B;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+
+.stat-value {
+    font-size: 2.2rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-accent {
+    color: var(--accent);
+}
+
+.stat-cyan {
+    color: #06B6D4;
+}
+
+.stat-violet {
+    color: #8B5CF6;
+}
+
+/* Health Score Ring */
+.health-ring-container {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+}
+
+.health-ring-svg {
+    transform: rotate(-90deg);
+}
+
+.health-ring-track {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.06);
+    stroke-width: 8;
+}
+
+.health-ring-fill {
+    fill: none;
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1.5s ease, stroke 0.5s ease;
+}
+
+.health-ring-value {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.health-ring-number {
+    font-size: 1.8rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.health-ring-label {
+    font-size: 0.65rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Heartbeat animation */
+@keyframes heartbeat {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+    15% { transform: translate(-50%, -50%) scale(1.05); }
+    30% { transform: translate(-50%, -50%) scale(1); }
+    45% { transform: translate(-50%, -50%) scale(1.03); }
+}
+
+.health-pulse {
+    animation: heartbeat 2s ease-in-out infinite;
+}
+
+/* XP Header Bar */
+.xp-header-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: linear-gradient(90deg, rgba(139, 92, 246, 0.1), transparent);
+    border-radius: 10px;
+    padding: 10px 16px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(139, 92, 246, 0.15);
+}
+
+.xp-level-badge {
+    background: linear-gradient(135deg, #8B5CF6, #a78bfa);
+    color: white;
+    font-weight: 800;
+    font-size: 0.8rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+.xp-progress-track {
+    flex: 1;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.xp-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #8B5CF6, #a78bfa);
+    border-radius: 3px;
+    transition: width 1s ease;
+}
+
+.xp-text {
+    font-size: 0.8rem;
+    color: #a78bfa;
+    white-space: nowrap;
+}
+
+/* Streak badge */
+.streak-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, rgba(0, 242, 255, 0.15), rgba(0, 242, 255, 0.05));
+    border: 1px solid rgba(0, 242, 255, 0.2);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+/* Streak Widget */
+.streak-widget {
+    background: linear-gradient(135deg, #1E293B, rgba(0, 242, 255, 0.15));
+    border: 1px solid rgba(0, 242, 255, 0.25);
+    border-radius: 14px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.streak-fire {
+    font-size: 3rem;
+    line-height: 1;
+    margin-bottom: 8px;
+    filter: drop-shadow(0 0 8px rgba(0, 242, 255, 0.5));
+}
+
+.streak-count {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--accent);
+}
+
+.streak-label {
+    font-size: 0.85rem;
+    color: #94a3b8;
+}
+
+.streak-milestone {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: rgba(139, 92, 246, 0.15);
+    color: #a78bfa;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+/* XP Tip Badge */
+.xp-tip-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #a78bfa;
+    white-space: nowrap;
+}
+
+/* Penalty Alert */
+.penalty-alert {
+    background: rgba(244, 63, 94, 0.08);
+    border: 1px solid rgba(244, 63, 94, 0.2);
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    font-size: 0.85rem;
+    color: #fda4af;
+}
+
+.penalty-alert i {
+    color: #F43F5E;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+/* Booking list item */
+.booking-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.02);
+    margin-bottom: 8px;
+    transition: background 0.2s;
+}
+
+.booking-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.booking-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.booking-date {
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+/* ==========================================
+   INSTRUCTOR DASHBOARD STYLES
+   ========================================== */
+
+.instructor-header {
+    background: linear-gradient(135deg, #0f172a 0%, #05070a 100%);
+    border-bottom: 2px solid var(--accent);
+    color: white;
+    padding: 30px 0;
+    margin-bottom: 30px;
+    border-radius: 0 0 20px 20px;
+}
+
+.class-card {
+    border-radius: 15px;
+    margin-bottom: 25px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    transition: transform 0.2s;
+}
+
+.class-card.current-time {
+    border: 2px solid var(--accent);
+    box-shadow: 0 6px 20px rgba(0, 242, 255, 0.2);
+    transform: scale(1.02);
+}
+
+.class-card .card-header {
+    border-bottom: 1px solid #f0f0f0;
+    font-weight: 600;
+}
+
+.student-item {
+    border-bottom: 1px solid #f8f9fa;
+    padding: 12px 20px;
+    transition: background 0.2s;
+}
+
+.student-item:hover {
+    background-color: #fcfcfc;
+}
+
+.student-item:last-child {
+    border-bottom: none;
+}
+
+.modality-circle {
+    width: 40px;
+    height: 40px;
+    background-color: var(--modality-color, var(--accent));
+    color: #020617;
+    font-weight: bold;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.date-nav {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.date-nav-btn {
+    background: white;
+    border: 1px solid #dee2e6;
+    padding: 8px 15px;
+    border-radius: 8px;
+    color: #495057;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.date-nav-btn:hover {
+    background: #0f172a;
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.date-display {
+    font-size: 1.1rem;
+    font-weight: 600;
+    min-width: 200px;
+    text-align: center;
+}
+
+.bulk-actions {
+    position: sticky;
+    bottom: 20px;
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: none;
+}
+
+.bulk-actions.show {
+    display: flex;
+}
