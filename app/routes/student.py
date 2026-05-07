@@ -203,7 +203,12 @@ def schedule():
 def book_class(schedule_id):
     """Agendar uma aula (Avulso ou Recorrente)"""
 
-    schedule = ClassSchedule.query.get_or_404(schedule_id)
+    schedule = (
+        ClassSchedule.query
+        .filter_by(id=schedule_id)
+        .with_for_update()   # pessimistic lock — prevents double-booking last slot
+        .first_or_404()
+    )
     date_str = request.form.get('date')
     subscription_id = request.form.get('subscription_id')
     booking_type = request.form.get('booking_type', 'avulso')
@@ -246,6 +251,8 @@ def book_class(schedule_id):
             pass
 
         db.session.commit()
+        from app.services.booking_notifications import notify_booking_confirmed
+        notify_booking_confirmed(booking)
         flash('Sessão Experimental agendada com sucesso! Bem-vindo ao Biohacking Studio.', 'success')
         return redirect(url_for('student.my_bookings'))
 
@@ -344,6 +351,9 @@ def book_class(schedule_id):
     subscription.credits_used += schedule.modality.credits_cost
     db.session.commit()
 
+    from app.services.booking_notifications import notify_booking_confirmed
+    notify_booking_confirmed(booking)
+
     flash(f'Aula agendada com sucesso! {schedule.modality.name} em {date.strftime("%d/%m/%Y")} às {schedule.start_time.strftime("%H:%M")}', 'success')
     return redirect(url_for('student.my_bookings'))
 
@@ -391,6 +401,9 @@ def cancel_booking(booking_id):
     if xp_penalty > 0:
         current_user.xp = max(0, current_user.xp - xp_penalty)
         db.session.commit()
+
+    from app.services.booking_notifications import notify_booking_cancelled
+    notify_booking_cancelled(booking, cancelled_by='client')
 
     if xp_penalty > 0:
         flash(f'Aula cancelada. Credito estornado. Voce perdeu {xp_penalty} XP por cancelar proximo do horario.', 'warning')

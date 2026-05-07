@@ -12,59 +12,50 @@ megaapi_config_bp = Blueprint('admin_megaapi', __name__, url_prefix='/admin/mega
 
 def get_instance_status(host=None, token=None, instance_key=None) -> dict:
     """
-    Busca status da instancia MegaAPI.
-    
-    Args:
-        host: URL base opcional override
-        token: Token opcional override
-        instance_key: Instance Key opcional override
-
-    Returns:
-        dict com status da conexao e dados da instancia
+    Busca status da instancia MegaAPI adaptado para servidores Start/Dedicated.
     """
-    
-    # Use overrides or current config
     base_url = (host or megaapi.base_url or '').rstrip('/')
     current_token = token or megaapi.token
-    
-    if not base_url or not current_token:
-        return {
-            'connected': False,
-            'error': 'Credenciais nao configuradas'
-        }
-        
+    current_instance_key = instance_key or getattr(megaapi, 'instance_key', None)
+
+    if not base_url or not current_token or not current_instance_key:
+        return {'connected': False, 'error': 'Credenciais ou Instance Key incompletas'}
+
     headers = {
         'Authorization': f'Bearer {current_token}',
         'Content-Type': 'application/json'
     }
 
     try:
-        # Se base_url já contém /rest, não duplicamos o prefixo
-        status_path = "/instance/status" if "/rest" in base_url else "/rest/instance/status"
+        endpoint_url = f"{base_url}/instance/status/{current_instance_key}"
 
         response = requests.get(
-            f"{base_url}{status_path}",
+            endpoint_url,
             headers=headers,
             timeout=10
         )
 
         if response.status_code == 200:
             data = response.json()
+            is_online = data.get('status') == 'online' or data.get('instance', {}).get('state') == 'open'
             return {
                 'connected': True,
-                'status': data.get('status', 'unknown'),
-                'phone': data.get('phone', ''),
-                'name': data.get('name', ''),
+                'status': 'Online' if is_online else 'Desconectado',
                 'data': data
+            }
+        elif response.status_code == 404:
+            return {
+                'connected': False,
+                'error': f'Erro 404: O servidor não encontrou a instância "{current_instance_key}". Verifique se a Instance Key está correta.'
             }
         else:
             return {
                 'connected': False,
-                'error': f'Servidor MegaAPI retornou erro {response.status_code}'
+                'error': f'Erro HTTP {response.status_code} no servidor MegaAPI.'
             }
 
     except Exception as e:
-        return {'connected': False, 'error': f"Falha na comunicação: {str(e)}"}
+        return {'connected': False, 'error': f"Falha de rede: {str(e)}"}
 
 
 @megaapi_config_bp.route('/check-status', methods=['POST'])

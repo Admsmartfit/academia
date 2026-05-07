@@ -1,22 +1,36 @@
-PRD: Correção da Integração MegaAPI (Hotfix)
-Versão: 3.4 (API Connectivity)
-Arquivos Afetados: app/routes/admin/megaapi_config.py e app/templates/admin/megaapi/settings.html
+O erro **404** retornado pelo servidor `apistart01.megaapi.com.br` confirma que estamos a conseguir falar com o seu servidor dedicado, mas o "caminho" (URL) que o código está a tentar seguir não existe nessa versão específica da API.
 
-1. Correção no Backend (megaapi_config.py)
-Precisamos ajustar o endpoint para seguir o padrão /rest exigido pelo servidor apistart01 e garantir que o retorno seja sempre JSON, mesmo em caso de erro crítico.
+Para instâncias da linha **Start/Dedicada**, a MegaAPI exige obrigatoriamente o prefixo `/rest` antes de qualquer comando, e o endpoint de status deve conter a sua chave no final.
 
-Ação: Localize a função get_instance_status no ficheiro app/routes/admin/megaapi_config.py e atualize a chamada de URL:
+Abaixo, o **PRD de Ajuste Final de Roteamento** para resolver o erro 404.
 
-Python
+---
+
+# PRD: Ajuste de Roteamento MegaAPI (Fix 404 Start Server)
+
+**Versão:** 3.6 (Dedicated Routing)
+**Arquivos Afetados:** `app/routes/admin/megaapi_config.py` e `app/services/megaapi.py`
+
+## 1. Ajuste no Backend Administrativo (`megaapi_config.py`)
+
+Precisamos forçar o uso do prefixo `/rest` e garantir que o Token seja enviado corretamente para o seu servidor `apistart01`.
+
+**Ação:** Substitua a função `get_instance_status` no ficheiro `app/routes/admin/megaapi_config.py` por esta versão:
+
+```python
 # app/routes/admin/megaapi_config.py
 
 def get_instance_status(host=None, token=None, instance_key=None) -> dict:
-    # Garante que o host termina sem barra e usa o prefixo correto
+    """
+    Busca status da instância adaptado especificamente para o servidor Start (apistart01).
+    """
+    # 1. Recupera as credenciais
     base_url = (host or megaapi.base_url or '').rstrip('/')
     current_token = token or megaapi.token
+    current_instance_key = instance_key or getattr(megaapi, 'instance_key', None)
     
-    if not base_url or not current_token:
-        return {'connected': False, 'error': 'Credenciais não configuradas'}
+    if not base_url or not current_token or not current_instance_key:
+        return {'connected': False, 'error': 'Credenciais incompletas'}
         
     headers = {
         'Authorization': f'Bearer {current_token}',
@@ -24,77 +38,73 @@ def get_instance_status(host=None, token=None, instance_key=None) -> dict:
     }
 
     try:
-        # CORREÇÃO: O endpoint oficial segundo a documentação start01 é /instance/status
-        # Se a base_url já tiver /rest, não duplicamos.
-        status_path = "/instance/status" if "/rest" in base_url else "/rest/instance/status"
+        # CORREÇÃO DEFINITIVA PARA apistart01: 
+        # É obrigatório o prefixo /rest e o ID da instância na URL
+        if "/rest" not in base_url:
+            endpoint_url = f"{base_url}/rest/instance/status/{current_instance_key}"
+        else:
+            endpoint_url = f"{base_url}/instance/status/{current_instance_key}"
         
-        response = requests.get(
-            f"{base_url}{status_path}",
-            headers=headers,
-            timeout=10
-        )
+        response = requests.get(endpoint_url, headers=headers, timeout=10)
 
         if response.status_code == 200:
+            data = response.json()
+            # No Start, o status vem dentro de um objeto 'instance' ou diretamente
+            instance_data = data.get('instance', {})
+            status_api = data.get('status') or instance_data.get('state')
+            
             return {
-                'connected': True,
-                'status': 'Online',
-                'data': response.json()
+                'connected': status_api in ('online', 'open', 'CONNECTED'),
+                'status': 'Online' if status_api in ('online', 'open', 'CONNECTED') else 'Desconectado',
+                'data': data
             }
+        elif response.status_code == 404:
+            return {'connected': False, 'error': f'A instância {current_instance_key} não foi encontrada no servidor.'}
         else:
-            return {
-                'connected': False,
-                'error': f'Servidor MegaAPI retornou erro {response.status_code}'
-            }
+            return {'connected': False, 'error': f'Erro HTTP {response.status_code}'}
+            
     except Exception as e:
-        return {'connected': False, 'error': f"Falha na comunicação: {str(e)}"}
-2. Correção no Frontend (settings.html)
-Para evitar o erro de "JSON inválido", precisamos garantir que o fetch envie as credenciais de admin e trate erros de rede.
+        return {'connected': False, 'error': f"Erro de conexão: {str(e)}"}
+```
 
-Ação: Substitua a função validateConnection() no ficheiro app/templates/admin/megaapi/settings.html:
+## 2. Ajuste no Serviço de Mensagens (`megaapi.py`)
 
-JavaScript
-// app/templates/admin/megaapi/settings.html
+Para que as notificações automáticas do Biohacking Studio funcionem, o serviço principal também deve conhecer o prefixo `/rest`.
 
-function validateConnection() {
-    const btn = document.getElementById('validateBtn');
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Validando...';
+**Ação:** No ficheiro `app/services/megaapi.py`, localize o método `__init__` e adicione o `/rest` à URL:
 
-    const data = {
-        host: document.getElementById('host').value,
-        instance_key: document.getElementById('instance_key').value,
-        token: document.getElementById('token').value
-    };
+```python
+# app/services/megaapi.py (Ajuste no construtor)
 
-    fetch('{{ url_for("admin_megaapi.check_status_ajax") }}', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    })
-    .then(async response => {
-        // CORREÇÃO: Verifica se a resposta é HTML antes de tentar converter para JSON
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-            return response.json();
-        } else {
-            // Se for HTML, provavelmente é um erro 404/500 do Flask
-            throw new Error("O servidor retornou HTML em vez de JSON. Verifique se está logado como Admin.");
+class MegapiService:
+    def __init__(self):
+        # Busca a URL do ambiente ou usa a padrão
+        raw_url = os.getenv('MEGAAPI_BASE_URL', 'https://apistart01.megaapi.com.br')
+        
+        # Garante o prefixo /rest para servidores Start
+        if "megaapi.com.br" in raw_url and "/rest" not in raw_url:
+            self.base_url = f"{raw_url.rstrip('/')}/rest"
+        else:
+            self.base_url = raw_url.rstrip('/')
+            
+        self.token = os.getenv('MEGAAPI_TOKEN')
+        self.instance_key = os.getenv('MEGAAPI_INSTANCE_KEY', '')
+        self.headers = {
+            'Authorization': f'Bearer {self.token}',
+            'Content-Type': 'application/json'
         }
-    })
-    .then(data => {
-        if (data.connected) {
-            alert('✅ Conectado com sucesso!');
-            location.reload();
-        } else {
-            alert('❌ Erro: ' + (data.error || 'Falha na conexão'));
-        }
-    })
-    .catch(err => {
-        alert('⚠️ Erro de requisição: ' + err.message);
-    })
-    .finally(() => {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-    });
-}
+```
+
+---
+
+### Como configurar no painel após o código:
+
+Aceda a `http://192.168.0.65:5000/admin/megaapi/` e preencha:
+
+1.  **Host (URL da API):** `https://apistart01.megaapi.com.br` 
+    * *(Não coloque nada depois do .br, o código agora trata o /rest automaticamente)*.
+2.  **Instance Key:** `megastart-MR7EdIG0JY0`.
+3.  **Token (Bearer):** `MR7EdIG0JY0`.
+
+**Por que vai funcionar agora?**
+A imagem que enviou mostra claramente que a sua instância está **Online** no servidor `apistart01`. O erro 404 acontecia porque o sistema antigo "batia à porta errada". Ao adicionar o `/rest` e o ID da instância na URL, o servidor agora saberá exatamente quem está a perguntar o status.

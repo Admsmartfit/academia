@@ -507,6 +507,44 @@ def init_scheduler(app):
             except Exception as e:
                 print(f"[SCHEDULER] Erro ao processar creditos expirados: {e}")
 
+    # ── Marcar No-Show automaticamente (a cada 30min) ─────────────
+    @scheduler.scheduled_job(IntervalTrigger(minutes=30))
+    def mark_no_shows():
+        with app.app_context():
+            from datetime import datetime, timedelta, date as date_type
+            from app.models import Booking, BookingStatus
+            from app import db
+
+            cutoff = datetime.utcnow() - timedelta(minutes=15)
+
+            # Buscar bookings CONFIRMED cujo horário de término já passou
+            confirmed = Booking.query.filter(
+                Booking.status == BookingStatus.CONFIRMED,
+                Booking.checkin_at == None,
+                Booking.date <= cutoff.date(),
+            ).all()
+
+            changed = 0
+            for b in confirmed:
+                if b.schedule is None:
+                    continue
+                duration = b.schedule.modality.default_duration if (
+                    b.schedule.modality
+                ) else 60
+                class_end = datetime.combine(b.date, b.schedule.start_time) + timedelta(minutes=duration)
+                if class_end < cutoff:
+                    b.status = BookingStatus.NO_SHOW
+                    changed += 1
+                    try:
+                        from app.services.booking_notifications import notify_no_show
+                        notify_no_show(b)
+                    except Exception as e:
+                        print(f"[SCHEDULER] Erro ao notificar no-show booking={b.id}: {e}")
+
+            if changed:
+                db.session.commit()
+                print(f"[SCHEDULER] {changed} bookings marcados como NO_SHOW")
+
     # Iniciar scheduler
     scheduler.start()
     print("[SCHEDULER] Iniciado com sucesso!")

@@ -21,6 +21,9 @@ class Modality(db.Model):
     # Quando True, homens e mulheres não podem estar na mesma sessão
     requires_gender_segregation = db.Column(db.Boolean, default=False)
 
+    # URL-friendly identifier for onboarding slug-based lookups
+    slug = db.Column(db.String(50), nullable=True, unique=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
